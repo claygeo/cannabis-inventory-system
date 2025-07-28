@@ -9,7 +9,7 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: false,
-    minify: 'terser',
+    minify: 'esbuild', // Use esbuild instead of terser (faster and built-in)
     rollupOptions: {
       output: {
         manualChunks: {
@@ -23,12 +23,9 @@ export default defineConfig({
     },
     // Increase chunk size warning limit
     chunkSizeWarningLimit: 1000,
-    // Terser options for better minification
-    terserOptions: {
-      compress: {
-        drop_console: true,
-        drop_debugger: true,
-      },
+    // esbuild minify options
+    esbuild: {
+      drop: ['console', 'debugger'],
     },
   },
   
@@ -45,7 +42,7 @@ export default defineConfig({
     host: true,
   },
   
-  // CSS configuration - IMPORTANT: References .cjs file
+  // CSS configuration - References .cjs file
   css: {
     postcss: './postcss.config.cjs',
     devSourcemap: true,
