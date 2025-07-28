@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Cannabis Inventory Management System V5.3 - Fixed Dimensions Edition" />
+    <meta name="theme-color" content="#3b82f6" />
+    
+    <title>Cannabis Inventory Management System V5.3</title>
+    
+    <!-- Preload critical resources -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Barcode font for label generation -->
+    <style>
+      @font-face {
+        font-family: 'Free 3 of 9';
+        src: url('data:font/truetype;charset=utf-8;base64,') format('truetype');
+        font-weight: normal;
+        font-style: normal;
+      }
+      
+      /* Loading styles */
+      .loading-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: #f9fafb;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+      }
+      
+      .loading-spinner {
+        width: 40px;
+        height: 40px;
+        border: 4px solid #e5e7eb;
+        border-top: 4px solid #3b82f6;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+      
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+      
+      .loading-text {
+        margin-top: 16px;
+        color: #6b7280;
+        font-family: system-ui, sans-serif;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root">
+      <!-- Loading fallback -->
+      <div class="loading-container">
+        <div style="text-align: center;">
+          <div class="loading-spinner"></div>
+          <div class="loading-text">Loading Cannabis Inventory System...</div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Main application entry point -->
+    <script type="module" src="/src/index.js"></script>
+    
+    <!-- Fallback for browsers without JavaScript -->
+    <noscript>
+      <div style="text-align: center; padding: 50px; font-family: Arial, sans-serif;">
+        <h1>JavaScript Required</h1>
+        <p>Please enable JavaScript to use the Cannabis Inventory Management System.</p>
+      </div>
+    </noscript>
+  </body>
+</html>
