@@ -5,7 +5,7 @@ import { DataProcessor } from '../utils/dataProcessor.js';
 
 /**
  * Custom hook for inventory data management
- * Handles CSV imports, data processing, and inventory state
+ * Handles CSV/Excel imports, data processing, and inventory state
  */
 export const useInventory = () => {
   const [mainInventory, setMainInventory] = useState([]);
@@ -72,8 +72,8 @@ export const useInventory = () => {
   }, []);
 
   /**
-   * Import main inventory CSV data
-   * @param {File} file - CSV file to import
+   * Import main inventory file (CSV or Excel)
+   * @param {File} file - File to import
    * @param {Function} onProgress - Progress callback
    * @returns {Promise<Object>} - Import result
    */
@@ -91,9 +91,13 @@ export const useInventory = () => {
         throw new Error('File is empty');
       }
 
-      // Parse CSV
+      // Detect file type and show progress
+      const fileType = DataProcessor.detectFileType(file);
+      console.log(`Importing ${fileType} file:`, file.name);
+
+      // Parse file (Excel or CSV)
       setImportProgress(10);
-      const rawData = await DataProcessor.parseCSV(file, (loaded, total) => {
+      const rawData = await DataProcessor.parseFile(file, (loaded, total) => {
         const progressPercent = Math.floor((loaded / total) * 40) + 10; // 10-50%
         setImportProgress(progressPercent);
         if (onProgress) onProgress(progressPercent);
@@ -123,6 +127,7 @@ export const useInventory = () => {
       const importStats = {
         fileName: file.name,
         fileSize: file.size,
+        fileType: fileType,
         importTime: new Date().toISOString(),
         dataSource: DATA_SOURCES.MAIN_INVENTORY,
         totalRows: rawData.rowCount,
@@ -170,8 +175,8 @@ export const useInventory = () => {
   }, [logInventoryEvent]);
 
   /**
-   * Import Sweed report CSV data
-   * @param {File} file - CSV file to import
+   * Import Sweed report file (CSV or Excel)
+   * @param {File} file - File to import
    * @param {Function} onProgress - Progress callback
    * @returns {Promise<Object>} - Import result
    */
@@ -189,9 +194,13 @@ export const useInventory = () => {
         throw new Error('File is empty');
       }
 
-      // Parse CSV
+      // Detect file type and show progress
+      const fileType = DataProcessor.detectFileType(file);
+      console.log(`Importing ${fileType} Sweed file:`, file.name);
+
+      // Parse file (Excel or CSV)
       setImportProgress(10);
-      const rawData = await DataProcessor.parseCSV(file, (loaded, total) => {
+      const rawData = await DataProcessor.parseFile(file, (loaded, total) => {
         const progressPercent = Math.floor((loaded / total) * 40) + 10; // 10-50%
         setImportProgress(progressPercent);
         if (onProgress) onProgress(progressPercent);
@@ -221,6 +230,7 @@ export const useInventory = () => {
       const importStats = {
         fileName: file.name,
         fileSize: file.size,
+        fileType: fileType,
         importTime: new Date().toISOString(),
         dataSource: DATA_SOURCES.SWEED_REPORT,
         totalRows: rawData.rowCount,

@@ -17,7 +17,7 @@ export default defineConfig({
           react: ['react', 'react-dom'],
           router: ['react-router-dom'],
           ui: ['lucide-react', 'react-hot-toast'],
-          utils: ['papaparse', 'jsbarcode', 'jspdf']
+          utils: ['papaparse', 'jsbarcode', 'jspdf', 'xlsx']
         }
       }
     },
@@ -59,13 +59,14 @@ export default defineConfig({
       'jsbarcode',
       'jspdf',
       'lucide-react',
-      'date-fns'
+      'date-fns',
+      'xlsx'
     ]
   },
   
   // Define global constants
   define: {
-    __APP_VERSION__: JSON.stringify(process.env.npm_package_version || '5.3.0')
+    __APP_VERSION__: JSON.stringify(process.env.npm_package_version || '5.3.1')
   },
   
   // Resolve aliases

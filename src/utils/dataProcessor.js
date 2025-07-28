@@ -1,4 +1,5 @@
 import Papa from 'papaparse';
+import * as XLSX from 'xlsx';
 import { MAIN_INVENTORY_COLUMNS, SWEED_COLUMNS, DATA_SOURCES, FILE_STRUCTURE } from '../constants.js';
 
 /**
@@ -6,6 +7,89 @@ import { MAIN_INVENTORY_COLUMNS, SWEED_COLUMNS, DATA_SOURCES, FILE_STRUCTURE } f
  */
 
 export class DataProcessor {
+  /**
+   * Detect file type based on file extension and content
+   * @param {File} file - File to analyze
+   * @returns {string} - File type ('excel' or 'csv')
+   */
+  static detectFileType(file) {
+    const fileName = file.name.toLowerCase();
+    if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
+      return 'excel';
+    }
+    if (fileName.endsWith('.csv')) {
+      return 'csv';
+    }
+    // Default to CSV for unknown extensions
+    return 'csv';
+  }
+
+  /**
+   * Parse Excel file and return structured data
+   * @param {File} file - Excel file to parse
+   * @param {Function} onProgress - Progress callback (optional)
+   * @returns {Promise<Object>} - Parsed data with metadata
+   */
+  static async parseExcel(file, onProgress = null) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      
+      reader.onload = (e) => {
+        try {
+          if (onProgress) onProgress(50, 100);
+          
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, {
+            type: 'array',
+            cellDates: true,
+            cellStyles: false
+          });
+          
+          if (onProgress) onProgress(75, 100);
+          
+          // Get first sheet
+          const sheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[sheetName];
+          
+          // Convert to array format (similar to Papa Parse output)
+          const jsonData = XLSX.utils.sheet_to_json(worksheet, {
+            header: 1,  // Return array of arrays
+            raw: false, // Format values as strings
+            blankrows: false // Skip blank rows
+          });
+          
+          if (onProgress) onProgress(100, 100);
+          
+          const result = {
+            data: jsonData,
+            meta: {
+              delimiter: '',
+              linebreak: '',
+              aborted: false,
+              truncated: false,
+              cursor: jsonData.length
+            },
+            errors: [],
+            rowCount: jsonData.length,
+            columnCount: jsonData.length > 0 ? Math.max(...jsonData.map(row => row.length)) : 0
+          };
+          
+          resolve(result);
+          
+        } catch (error) {
+          reject(new Error(`Excel parsing failed: ${error.message}`));
+        }
+      };
+      
+      reader.onerror = () => {
+        reject(new Error('Failed to read Excel file'));
+      };
+      
+      if (onProgress) onProgress(25, 100);
+      reader.readAsArrayBuffer(file);
+    });
+  }
+
   /**
    * Parse CSV file and return structured data
    * @param {File} file - CSV file to parse
@@ -47,6 +131,22 @@ export class DataProcessor {
         }
       });
     });
+  }
+
+  /**
+   * Parse file (Excel or CSV) and return structured data
+   * @param {File} file - File to parse
+   * @param {Function} onProgress - Progress callback (optional)
+   * @returns {Promise<Object>} - Parsed data with metadata
+   */
+  static async parseFile(file, onProgress = null) {
+    const fileType = this.detectFileType(file);
+    
+    if (fileType === 'excel') {
+      return this.parseExcel(file, onProgress);
+    } else {
+      return this.parseCSV(file, onProgress);
+    }
   }
 
   /**
@@ -122,7 +222,7 @@ export class DataProcessor {
 
   /**
    * Process Main Inventory (Homestead) data into structured format
-   * @param {Array} rawData - Raw CSV data array
+   * @param {Array} rawData - Raw CSV/Excel data array
    * @returns {Object} - Processed data with statistics
    */
   static processMainInventoryData(rawData) {
@@ -261,7 +361,7 @@ export class DataProcessor {
 
   /**
    * Process Sweed Report data into structured format
-   * @param {Array} rawData - Raw CSV data array
+   * @param {Array} rawData - Raw CSV/Excel data array
    * @returns {Object} - Processed data with statistics
    */
   static processSweedData(rawData) {
@@ -525,8 +625,8 @@ export class DataProcessor {
   }
 
   /**
-   * Validate CSV structure for Main Inventory
-   * @param {Array} data - Raw CSV data
+   * Validate file structure for Main Inventory
+   * @param {Array} data - Raw file data
    * @returns {Object} - Validation result
    */
   static validateMainInventoryStructure(data) {
@@ -552,7 +652,7 @@ export class DataProcessor {
     for (let i = 0; i < Math.min(5, data.length); i++) {
       const row = data[i];
       if (row && expectedHeaders.some(header => 
-        row.some(cell => String(cell).toLowerCase().includes(header.toLowerCase()))
+        row.some(cell => cell && String(cell).toLowerCase().includes(header.toLowerCase()))
       )) {
         headerFound = true;
         break;
@@ -577,8 +677,8 @@ export class DataProcessor {
   }
 
   /**
-   * Validate CSV structure for Sweed Report
-   * @param {Array} data - Raw CSV data
+   * Validate file structure for Sweed Report
+   * @param {Array} data - Raw file data
    * @returns {Object} - Validation result
    */
   static validateSweedStructure(data) {

@@ -115,7 +115,8 @@
 
 .progress-bar-container {
   @apply w-full rounded-full h-2;
-  background-color: var(--bg-secondary);
+  background-color: var(--bg-primary);
+  border: 1px solid var(--border-primary);
 }
 
 .progress-bar-fill {
@@ -138,6 +139,15 @@
 .data-table {
   @apply min-w-full divide-y;
   border-color: var(--border-primary);
+  background-color: var(--bg-secondary);
+}
+
+.data-table thead {
+  background-color: var(--bg-primary);
+}
+
+.data-table tbody {
+  background-color: var(--bg-secondary);
 }
 
 .data-table-header {
@@ -147,6 +157,7 @@
 .data-table-header-cell {
   @apply px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer transition-colors duration-200;
   color: var(--text-secondary);
+  background-color: var(--bg-primary);
 }
 
 .data-table-header-cell:hover {
@@ -160,6 +171,7 @@
 
 .data-table-row {
   @apply transition-colors duration-150;
+  background-color: var(--bg-secondary);
 }
 
 .data-table-row:hover {
@@ -168,6 +180,7 @@
 
 .data-table-cell {
   @apply px-6 py-4 whitespace-nowrap text-sm;
+  background-color: var(--bg-secondary);
 }
 
 .data-table-cell-primary {
@@ -357,6 +370,7 @@
 .modal-header {
   @apply px-6 py-4;
   border-bottom: 1px solid var(--border-primary);
+  background-color: var(--bg-secondary);
 }
 
 .modal-title {
@@ -366,11 +380,13 @@
 
 .modal-body {
   @apply px-6 py-4;
+  background-color: var(--bg-secondary);
 }
 
 .modal-footer {
   @apply px-6 py-4 flex justify-end space-x-3;
   border-top: 1px solid var(--border-primary);
+  background-color: var(--bg-secondary);
 }
 
 .modal-close-button {
@@ -395,6 +411,7 @@
 
 .toast-content {
   @apply p-4;
+  background-color: var(--bg-secondary);
 }
 
 .toast-icon {
@@ -665,6 +682,14 @@
 
 .enhanced-data-input {
   @apply flex-1;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-primary);
+  color: var(--text-primary);
+}
+
+.enhanced-data-input:focus {
+  border-color: var(--bg-accent);
+  box-shadow: 0 0 0 2px rgba(134, 239, 172, 0.2);
 }
 
 .enhanced-data-save-button {
@@ -677,6 +702,103 @@
   background-color: var(--error-bg);
   color: var(--error-text);
   @apply btn btn-sm;
+}
+
+/* Card Components - Force dark theme */
+.card,
+.dashboard-card,
+.report-summary-card,
+.auth-card > div,
+.modal-content,
+.toast {
+  background-color: var(--bg-secondary) !important;
+  border-color: var(--border-primary) !important;
+  color: var(--text-primary) !important;
+}
+
+/* Input Components - Force dark theme */
+input,
+textarea,
+select,
+.input,
+.textarea,
+.select,
+.barcode-input,
+.auth-input,
+.enhanced-data-input {
+  background-color: var(--bg-secondary) !important;
+  border-color: var(--border-primary) !important;
+  color: var(--text-primary) !important;
+}
+
+input::placeholder,
+textarea::placeholder,
+.input::placeholder,
+.textarea::placeholder,
+.barcode-input::placeholder,
+.auth-input::placeholder {
+  color: var(--text-secondary) !important;
+}
+
+/* Table Components - Force dark theme */
+table,
+.data-table,
+.table {
+  background-color: var(--bg-secondary) !important;
+  color: var(--text-primary) !important;
+}
+
+table thead,
+.data-table thead,
+.table thead,
+.data-table-header {
+  background-color: var(--bg-primary) !important;
+}
+
+table tbody,
+.data-table tbody,
+.table tbody,
+.data-table-body {
+  background-color: var(--bg-secondary) !important;
+}
+
+table th,
+table td,
+.data-table th,
+.data-table td,
+.data-table-header-cell,
+.data-table-cell {
+  background-color: inherit !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-primary) !important;
+}
+
+/* Button Components - Ensure proper theming */
+button,
+.btn {
+  transition: all 0.2s ease-in-out;
+}
+
+.btn-primary {
+  background-color: var(--bg-accent) !important;
+  color: var(--text-on-accent) !important;
+  border-color: var(--bg-accent) !important;
+}
+
+.btn-secondary {
+  background-color: var(--bg-secondary) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-primary) !important;
+}
+
+/* Progress bars - Force dark theme */
+.progress-bar-container {
+  background-color: var(--bg-primary) !important;
+  border: 1px solid var(--border-primary) !important;
+}
+
+.progress-bar-fill {
+  background-color: var(--bg-accent) !important;
 }
 
 /* Responsive design for smaller screens */
@@ -723,4 +845,55 @@
 .scanned-item:focus-within {
   outline: 2px solid var(--bg-accent);
   outline-offset: 2px;
+}
+
+/* Override any remaining white backgrounds */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-primary) var(--bg-primary);
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: var(--bg-primary);
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--border-primary);
+  border-radius: 4px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
+}
+
+/* Ensure all text follows the theme */
+h1, h2, h3, h4, h5, h6 {
+  color: var(--text-primary) !important;
+}
+
+p, span, div {
+  color: inherit;
+}
+
+/* Special overrides for common React/browser elements */
+.react-hot-toast-container .react-hot-toast {
+  background-color: var(--bg-secondary) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border-primary) !important;
+}
+
+/* Fix any remaining white elements */
+[style*="background-color: white"],
+[style*="background-color: #fff"],
+[style*="background-color: #ffffff"],
+[style*="background: white"],
+[style*="background: #fff"],
+[style*="background: #ffffff"] {
+  background-color: var(--bg-secondary) !important;
+  color: var(--text-primary) !important;
 }
