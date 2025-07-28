@@ -1,7 +1,7 @@
 // Application constants
 export const APP_NAME = 'Cannabis Inventory Management System';
 export const APP_VERSION = '5.3.1';
-export const APP_SUBTITLE = 'Fixed Dimensions Edition';
+export const APP_SUBTITLE = 'Excel Support Edition';
 
 // Data source identifiers
 export const DATA_SOURCES = {
@@ -60,44 +60,35 @@ export const MAIN_INVENTORY_COLUMNS = {
 };
 
 // Sweed Report CSV column mapping (0-based indices)
-// Based on actual file analysis - Row 11 contains headers, data starts at Row 12
+// Flexible mapping - will be determined by header detection
 export const SWEED_COLUMNS = {
-  EXTERNAL_TRACK_CODE: 0, // Column A - "External track code"
-  BARCODE: 1,            // Column B - "Barcode"
-  STOCK_LOCATION_NAME: 2, // Column C - "Stock location name"
-  STOCK_LOCATION_TYPE: 3, // Column D - "Stock location type"
-  TIMESTAMP: 4,          // Column E - "Timestamp"
-  TRANSACTION_TYPE: 5,   // Column F - "Transaction type"
-  QUANTITY: 6,           // Column G - "Quantity"
-  PERCENTAGE: 7          // Column H - "%"
+  PRODUCT_NAME: 0,       // Column A
+  BRAND: 1,              // Column B
+  STRAIN: 2,             // Column C
+  SIZE: 3,               // Column D
+  SKU: 4,                // Column E
+  BARCODE: 5,            // Column F
+  EXTERNAL_TRACK_CODE: 6, // Column G
+  QUANTITY: 7,           // Column H
+  SHIP_TO_LOCATION: 8,   // Column I
+  SHIP_TO_ADDRESS: 9,    // Column J
+  ORDER_NUMBER: 10,      // Column K
+  REQUEST_DATE: 11       // Column L
 };
 
-// File structure configuration - Updated based on actual file analysis
+// File structure configuration
 export const FILE_STRUCTURE = {
   MAIN_INVENTORY: {
     HEADER_ROW: 2,         // Headers are in row 3 (index 2)
     DATA_START_ROW: 3,     // Data starts in row 4 (index 3)
-    MIN_ROWS: 4,           // Must have at least header + 1 data row
+    MIN_ROWS: 4,           // Must have at least 4 rows (export info + empty + headers + 1 data row)
     EXPECTED_COLUMNS: 29   // Based on actual file structure
   },
   SWEED_REPORT: {
-    HEADER_ROW: 10,        // Headers are in row 11 (index 10) - after metadata
+    HEADER_ROW: 10,        // Headers are in row 11 (index 10)
     DATA_START_ROW: 11,    // Data starts in row 12 (index 11)
-    MIN_ROWS: 12,          // Must have metadata + header + 1 data row
-    EXPECTED_COLUMNS: 8    // Based on actual Sweed file structure
-  }
-};
-
-// File type detection patterns
-export const FILE_PATTERNS = {
-  HOMESTEAD: {
-    FILENAME_CONTAINS: ['homestead', 'stockitems'],
-    EXPECTED_HEADERS: ['Facility Name', 'Product Name', 'Brand', 'SKU', 'Barcode', 'BioTrack code']
-  },
-  SWEED: {
-    FILENAME_CONTAINS: ['inventory'],
-    EXPECTED_HEADERS: ['External track code', 'Barcode', 'Stock location name'],
-    METADATA_INDICATORS: ['Advanced report: Inventory', 'Organization:', 'Export date, time:']
+    MIN_ROWS: 12,          // Must have at least 12 rows (10 info rows + headers + 1 data row)
+    EXPECTED_COLUMNS: 12   // Typical Sweed report columns
   }
 };
 
@@ -205,7 +196,6 @@ export default {
   MAIN_INVENTORY_COLUMNS,
   SWEED_COLUMNS,
   FILE_STRUCTURE,
-  FILE_PATTERNS,
   BARCODE_CONFIG,
   LABEL_SPECS,
   USER_ROLES,

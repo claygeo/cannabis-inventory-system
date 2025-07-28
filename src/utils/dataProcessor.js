@@ -156,7 +156,7 @@ export class DataProcessor {
    * @returns {number} - Header row index (-1 if not found)
    */
   static detectHeaderRow(rawData, expectedHeaders) {
-    for (let i = 0; i < Math.min(10, rawData.length); i++) {
+    for (let i = 0; i < Math.min(15, rawData.length); i++) {
       const row = rawData[i];
       if (!row || !Array.isArray(row)) continue;
       
@@ -372,30 +372,34 @@ export class DataProcessor {
 
     console.log('Processing Sweed data, total rows:', rawData.length);
 
-    // Detect header row for Sweed data
-    const expectedHeaders = ['product', 'brand', 'sku', 'barcode', 'ship', 'order'];
-    let headerRowIndex = this.detectHeaderRow(rawData, expectedHeaders);
-    
-    // If no header detected, assume first row
-    if (headerRowIndex === -1) {
-      headerRowIndex = 0;
-      console.warn('Could not detect header row, assuming first row');
-    }
-
-    const dataStartIndex = headerRowIndex + 1;
+    // Use the configured structure for Sweed files
+    const config = FILE_STRUCTURE.SWEED_REPORT;
+    const headerRowIndex = config.HEADER_ROW;      // Row 11 (index 10)
+    const dataStartIndex = config.DATA_START_ROW;  // Row 12 (index 11)
 
     // Validate we have enough rows
-    if (rawData.length < dataStartIndex + 1) {
-      throw new Error(`Insufficient data rows. Expected at least ${dataStartIndex + 1} rows, got ${rawData.length}`);
+    if (rawData.length < config.MIN_ROWS) {
+      throw new Error(`Insufficient data rows. Expected at least ${config.MIN_ROWS} rows, got ${rawData.length}`);
     }
 
-    // Get header row and detect column mapping
+    // Get header row for validation
     const headerRow = rawData[headerRowIndex];
+    if (!headerRow || headerRow.length < 5) {
+      console.warn('Sweed header row seems incomplete:', headerRow);
+    }
+
+    // Detect column mapping if headers don't match expected structure
     let columnMapping = SWEED_COLUMNS;
-    
     if (headerRow) {
-      columnMapping = this.detectColumnMapping(headerRow, SWEED_COLUMNS);
-      console.log('Detected Sweed column mapping:', columnMapping);
+      const detectedMapping = this.detectColumnMapping(headerRow, SWEED_COLUMNS);
+      // Use detected mapping if it seems more accurate
+      const detectedValid = Object.values(detectedMapping).filter(index => index >= 0).length;
+      const originalValid = Object.values(SWEED_COLUMNS).filter(index => index < headerRow.length).length;
+      
+      if (detectedValid > originalValid) {
+        console.log('Using detected Sweed column mapping:', detectedMapping);
+        columnMapping = detectedMapping;
+      }
     }
 
     // Process data rows
@@ -687,22 +691,39 @@ export class DataProcessor {
     const config = FILE_STRUCTURE.SWEED_REPORT;
 
     if (data.length < config.MIN_ROWS) {
-      errors.push(`File must have at least ${config.MIN_ROWS} rows (headers + data)`);
+      errors.push(`File must have at least ${config.MIN_ROWS} rows (10 info rows + headers + data)`);
       return { isValid: false, errors, warnings };
     }
 
-    // Look for expected header patterns
-    const expectedHeaders = ['Product', 'Brand', 'SKU', 'Barcode', 'Ship To', 'Order'];
-    const headerRowIndex = this.detectHeaderRow(data, expectedHeaders);
-    
-    if (headerRowIndex === -1) {
-      warnings.push('Could not automatically detect header row. Will assume first row contains headers.');
+    // Check if we have the expected header row at position 10 (row 11)
+    const headerRow = data[config.HEADER_ROW];
+    if (!headerRow || headerRow.length < 5) {
+      warnings.push('Header row at position 11 appears to be missing or incomplete');
     }
 
-    // Check if we have enough columns
-    const headerRow = data[headerRowIndex >= 0 ? headerRowIndex : 0];
-    if (!headerRow || headerRow.length < 5) {
-      warnings.push('Header row appears to have insufficient columns');
+    // Look for expected header patterns in the correct position
+    const expectedHeaders = ['Product', 'Brand', 'SKU', 'Barcode', 'Ship To', 'Order'];
+    let headerFound = false;
+    
+    // Check specifically around row 11 (index 10)
+    for (let i = Math.max(0, config.HEADER_ROW - 2); i <= Math.min(data.length - 1, config.HEADER_ROW + 2); i++) {
+      const row = data[i];
+      if (row && expectedHeaders.some(header => 
+        row.some(cell => cell && String(cell).toLowerCase().includes(header.toLowerCase()))
+      )) {
+        headerFound = true;
+        break;
+      }
+    }
+
+    if (!headerFound) {
+      warnings.push('Could not locate expected headers around row 11. File structure may be different than expected.');
+    }
+
+    // Check data rows
+    const sampleDataRow = data[config.DATA_START_ROW];
+    if (!sampleDataRow || sampleDataRow.length < 5) {
+      warnings.push('Data rows appear to be missing or incomplete');
     }
 
     return {
