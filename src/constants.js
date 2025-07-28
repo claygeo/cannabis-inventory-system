@@ -25,22 +25,42 @@ export const EVENT_TYPES = {
   ERROR_OCCURRED: 'error_occurred'
 };
 
-// Main Inventory CSV column mapping (0-based indices)
+// Main Inventory (Homestead) CSV column mapping (0-based indices)
+// Based on actual file structure: Row 3 contains headers, data starts at Row 4
 export const MAIN_INVENTORY_COLUMNS = {
-  FACILITY_NAME: 0,      // Column A
-  PRODUCT_NAME: 1,       // Column B
-  BRAND: 4,              // Column E
-  STRAIN: 6,             // Column G
-  SIZE: 7,               // Column H
-  SKU: 8,                // Column I
-  BARCODE: 9,            // Column J
-  BIOTRACK_CODE: 10,     // Column K
-  QUANTITY: 11,          // Column L
-  LOCATION: 19,          // Column T
-  DISTRIBUTOR: 27        // Column AB
+  FACILITY_NAME: 0,      // Column A - "Facility Name"
+  PRODUCT_NAME: 1,       // Column B - "Product Name"
+  CATEGORY: 2,           // Column C - "Category"
+  SUBCATEGORY: 3,        // Column D - "Subcategory"
+  BRAND: 4,              // Column E - "Brand"
+  PRODUCT_TYPE: 5,       // Column F - "Product Type"
+  STRAIN: 6,             // Column G - "Strain prevalence"
+  SIZE: 7,               // Column H - "Size"
+  SKU: 8,                // Column I - "SKU"
+  BARCODE: 9,            // Column J - "Barcode"
+  BIOTRACK_CODE: 10,     // Column K - "BioTrack code"
+  QUANTITY: 11,          // Column L - "QTY"
+  PRICE: 12,             // Column M - "Price"
+  WHOLESALE_COST: 13,    // Column N - "Wholesale Cost"
+  CBD_PERCENT: 14,       // Column O - "CBD,%"
+  THC_PERCENT: 15,       // Column P - "THC,%"
+  SHIPMENT_ID: 16,       // Column Q - "Shipt. ID"
+  INTERNAL_NO: 17,       // Column R - "Internal No."
+  RECEPTION_DATE: 18,    // Column S - "Reception Date"
+  LOCATION: 19,          // Column T - "Location"
+  LOCATION_STOCK_TYPE: 20, // Column U - "Location Stock Type"
+  MANUFACTURING_DATE: 21,  // Column V - "Manufacturing Date"
+  MANUFACTURING_AGE: 22,   // Column W - "Manufacturing Age, days"
+  EXPIRATION_DATE: 23,     // Column X - "Expiration Date"
+  AGE_DAYS: 24,           // Column Y - "Age days"
+  RESERVED_QTY: 25,       // Column Z - "Reserved Qty"
+  RESERVED_TRANSACTION_TYPE: 26, // Column AA - "Reserved Transaction Type"
+  DISTRIBUTOR: 27,        // Column AB - "Distributor"
+  MANUFACTURER: 28        // Column AC - "Manufacturer"
 };
 
 // Sweed Report CSV column mapping (0-based indices)
+// Flexible mapping - will be determined by header detection
 export const SWEED_COLUMNS = {
   PRODUCT_NAME: 0,       // Column A
   BRAND: 1,              // Column B
@@ -54,6 +74,22 @@ export const SWEED_COLUMNS = {
   SHIP_TO_ADDRESS: 9,    // Column J
   ORDER_NUMBER: 10,      // Column K
   REQUEST_DATE: 11       // Column L
+};
+
+// File structure configuration
+export const FILE_STRUCTURE = {
+  MAIN_INVENTORY: {
+    HEADER_ROW: 2,         // Headers are in row 3 (index 2)
+    DATA_START_ROW: 3,     // Data starts in row 4 (index 3)
+    MIN_ROWS: 4,           // Must have at least header + 1 data row
+    EXPECTED_COLUMNS: 29   // Based on actual file structure
+  },
+  SWEED_REPORT: {
+    HEADER_ROW: 0,         // Assume headers in first row
+    DATA_START_ROW: 1,     // Data starts in second row
+    MIN_ROWS: 2,           // Must have at least header + 1 data row
+    EXPECTED_COLUMNS: 12   // Typical Sweed report columns
+  }
 };
 
 // Barcode configuration for Code 39 format
@@ -159,6 +195,7 @@ export default {
   EVENT_TYPES,
   MAIN_INVENTORY_COLUMNS,
   SWEED_COLUMNS,
+  FILE_STRUCTURE,
   BARCODE_CONFIG,
   LABEL_SPECS,
   USER_ROLES,

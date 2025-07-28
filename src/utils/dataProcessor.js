@@ -1,8 +1,8 @@
 import Papa from 'papaparse';
-import { MAIN_INVENTORY_COLUMNS, SWEED_COLUMNS, DATA_SOURCES } from '../constants.js';
+import { MAIN_INVENTORY_COLUMNS, SWEED_COLUMNS, DATA_SOURCES, FILE_STRUCTURE } from '../constants.js';
 
 /**
- * Data processing utilities for CSV imports and data manipulation
+ * Data processing utilities for CSV/Excel imports and data manipulation
  */
 
 export class DataProcessor {
@@ -16,7 +16,7 @@ export class DataProcessor {
     return new Promise((resolve, reject) => {
       Papa.parse(file, {
         header: false,
-        skipEmptyLines: true,
+        skipEmptyLines: 'greedy', // Skip empty lines more aggressively
         dynamicTyping: true,
         delimitersToGuess: [',', '\t', '|', ';'],
         step: onProgress ? (results, parser) => {
@@ -27,12 +27,17 @@ export class DataProcessor {
             console.warn('CSV parsing warnings:', results.errors);
           }
           
+          // Filter out completely empty rows
+          const filteredData = results.data.filter(row => 
+            row && row.some(cell => cell !== null && cell !== undefined && cell !== '')
+          );
+          
           const data = {
-            data: results.data,
+            data: filteredData,
             meta: results.meta,
             errors: results.errors,
-            rowCount: results.data.length,
-            columnCount: results.data.length > 0 ? results.data[0].length : 0
+            rowCount: filteredData.length,
+            columnCount: filteredData.length > 0 ? Math.max(...filteredData.map(row => row.length)) : 0
           };
           
           resolve(data);
@@ -45,7 +50,78 @@ export class DataProcessor {
   }
 
   /**
-   * Process Main Inventory CSV data into structured format
+   * Detect header row in data
+   * @param {Array} rawData - Raw data array
+   * @param {Array} expectedHeaders - Array of expected header keywords
+   * @returns {number} - Header row index (-1 if not found)
+   */
+  static detectHeaderRow(rawData, expectedHeaders) {
+    for (let i = 0; i < Math.min(10, rawData.length); i++) {
+      const row = rawData[i];
+      if (!row || !Array.isArray(row)) continue;
+      
+      const headerMatches = expectedHeaders.filter(header => 
+        row.some(cell => 
+          cell && typeof cell === 'string' && 
+          cell.toLowerCase().includes(header.toLowerCase())
+        )
+      );
+      
+      // If we find at least 60% of expected headers, consider this the header row
+      if (headerMatches.length >= expectedHeaders.length * 0.6) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
+  /**
+   * Auto-detect column mapping based on headers
+   * @param {Array} headerRow - Header row data
+   * @param {Object} expectedMappings - Expected column mappings
+   * @returns {Object} - Detected column mappings
+   */
+  static detectColumnMapping(headerRow, expectedMappings) {
+    const detectedMapping = {};
+    
+    // Common header variations
+    const headerVariations = {
+      FACILITY_NAME: ['facility', 'facility name'],
+      PRODUCT_NAME: ['product', 'product name', 'name'],
+      BRAND: ['brand', 'manufacturer'],
+      STRAIN: ['strain', 'strain prevalence', 'variety'],
+      SIZE: ['size', 'weight', 'volume'],
+      SKU: ['sku', 'item code', 'product code'],
+      BARCODE: ['barcode', 'upc', 'gtin'],
+      BIOTRACK_CODE: ['biotrack', 'biotrack code', 'tracking code', 'track code'],
+      QUANTITY: ['qty', 'quantity', 'amount', 'count'],
+      LOCATION: ['location', 'warehouse', 'storage'],
+      DISTRIBUTOR: ['distributor', 'supplier', 'vendor'],
+      EXTERNAL_TRACK_CODE: ['external', 'external track', 'external tracking'],
+      SHIP_TO_LOCATION: ['ship to', 'ship to location', 'destination'],
+      SHIP_TO_ADDRESS: ['ship to address', 'address', 'shipping address'],
+      ORDER_NUMBER: ['order', 'order number', 'order #'],
+      REQUEST_DATE: ['request date', 'date', 'request']
+    };
+
+    Object.entries(expectedMappings).forEach(([key, defaultIndex]) => {
+      const variations = headerVariations[key] || [key.toLowerCase()];
+      
+      // Find column index by matching header text
+      const foundIndex = headerRow.findIndex(cell => {
+        if (!cell || typeof cell !== 'string') return false;
+        const cellLower = cell.toLowerCase();
+        return variations.some(variation => cellLower.includes(variation));
+      });
+      
+      detectedMapping[key] = foundIndex !== -1 ? foundIndex : defaultIndex;
+    });
+
+    return detectedMapping;
+  }
+
+  /**
+   * Process Main Inventory (Homestead) data into structured format
    * @param {Array} rawData - Raw CSV data array
    * @returns {Object} - Processed data with statistics
    */
@@ -55,36 +131,89 @@ export class DataProcessor {
     const errors = [];
     const seenKeys = new Set();
 
-    // Skip header rows (start from row 3, index 2)
-    for (let i = 2; i < rawData.length; i++) {
+    console.log('Processing Main Inventory data, total rows:', rawData.length);
+
+    // Use the configured structure
+    const config = FILE_STRUCTURE.MAIN_INVENTORY;
+    const headerRowIndex = config.HEADER_ROW;
+    const dataStartIndex = config.DATA_START_ROW;
+
+    // Validate we have enough rows
+    if (rawData.length < config.MIN_ROWS) {
+      throw new Error(`Insufficient data rows. Expected at least ${config.MIN_ROWS} rows, got ${rawData.length}`);
+    }
+
+    // Get header row for validation
+    const headerRow = rawData[headerRowIndex];
+    if (!headerRow || headerRow.length < 10) {
+      console.warn('Header row seems incomplete:', headerRow);
+    }
+
+    // Detect column mapping if headers don't match expected structure
+    let columnMapping = MAIN_INVENTORY_COLUMNS;
+    if (headerRow) {
+      const detectedMapping = this.detectColumnMapping(headerRow, MAIN_INVENTORY_COLUMNS);
+      // Use detected mapping if it seems more accurate
+      const detectedValid = Object.values(detectedMapping).filter(index => index >= 0).length;
+      const originalValid = Object.values(MAIN_INVENTORY_COLUMNS).filter(index => index < headerRow.length).length;
+      
+      if (detectedValid > originalValid) {
+        console.log('Using detected column mapping:', detectedMapping);
+        columnMapping = detectedMapping;
+      }
+    }
+
+    // Process data rows
+    for (let i = dataStartIndex; i < rawData.length; i++) {
       const row = rawData[i];
       
+      // Skip completely empty rows
+      if (!row || !row.some(cell => cell !== null && cell !== undefined && cell !== '')) {
+        continue;
+      }
+      
       try {
-        // Extract data according to Main Inventory column mapping
+        // Extract data according to column mapping
         const item = {
-          facilityName: this.cleanString(row[MAIN_INVENTORY_COLUMNS.FACILITY_NAME]),
-          productName: this.cleanString(row[MAIN_INVENTORY_COLUMNS.PRODUCT_NAME]),
-          brand: this.cleanString(row[MAIN_INVENTORY_COLUMNS.BRAND]),
-          strain: this.cleanString(row[MAIN_INVENTORY_COLUMNS.STRAIN]),
-          size: this.cleanString(row[MAIN_INVENTORY_COLUMNS.SIZE]),
-          sku: this.cleanString(row[MAIN_INVENTORY_COLUMNS.SKU]),
-          barcode: this.cleanString(row[MAIN_INVENTORY_COLUMNS.BARCODE]),
-          bioTrackCode: this.cleanString(row[MAIN_INVENTORY_COLUMNS.BIOTRACK_CODE]),
-          quantity: this.parseQuantity(row[MAIN_INVENTORY_COLUMNS.QUANTITY]),
-          location: this.cleanString(row[MAIN_INVENTORY_COLUMNS.LOCATION]),
-          distributor: this.cleanString(row[MAIN_INVENTORY_COLUMNS.DISTRIBUTOR]),
+          facilityName: this.cleanString(row[columnMapping.FACILITY_NAME]),
+          productName: this.cleanString(row[columnMapping.PRODUCT_NAME]),
+          category: this.cleanString(row[columnMapping.CATEGORY]),
+          subcategory: this.cleanString(row[columnMapping.SUBCATEGORY]),
+          brand: this.cleanString(row[columnMapping.BRAND]),
+          productType: this.cleanString(row[columnMapping.PRODUCT_TYPE]),
+          strain: this.cleanString(row[columnMapping.STRAIN]),
+          size: this.cleanString(row[columnMapping.SIZE]),
+          sku: this.cleanString(row[columnMapping.SKU]),
+          barcode: this.cleanString(row[columnMapping.BARCODE]),
+          bioTrackCode: this.cleanString(row[columnMapping.BIOTRACK_CODE]),
+          quantity: this.parseQuantity(row[columnMapping.QUANTITY]),
+          price: this.cleanString(row[columnMapping.PRICE]),
+          wholesaleCost: this.cleanString(row[columnMapping.WHOLESALE_COST]),
+          location: this.cleanString(row[columnMapping.LOCATION]),
+          distributor: this.cleanString(row[columnMapping.DISTRIBUTOR]),
+          manufacturer: this.cleanString(row[columnMapping.MANUFACTURER]),
           dataSource: DATA_SOURCES.MAIN_INVENTORY,
           rowIndex: i + 1
         };
 
         // Validate required fields
-        if (!item.barcode || !item.sku) {
+        if (!item.barcode && !item.sku) {
           errors.push({
             row: i + 1,
-            error: 'Missing required fields (barcode or SKU)',
+            error: 'Missing both barcode and SKU - at least one is required',
             data: item
           });
           continue;
+        }
+
+        // Use SKU as backup if no barcode
+        if (!item.barcode && item.sku) {
+          item.barcode = item.sku;
+        }
+
+        // Use barcode as backup if no SKU
+        if (!item.sku && item.barcode) {
+          item.sku = item.barcode;
         }
 
         // Check for duplicates
@@ -112,6 +241,8 @@ export class DataProcessor {
       }
     }
 
+    console.log(`Processed ${processedData.length} items from Main Inventory`);
+
     return {
       data: processedData,
       statistics: {
@@ -119,7 +250,9 @@ export class DataProcessor {
         processedRows: processedData.length,
         duplicates: duplicates.length,
         errors: errors.length,
-        skippedRows: 2 // Header rows
+        skippedRows: dataStartIndex,
+        headerRow: headerRowIndex + 1,
+        dataStartRow: dataStartIndex + 1
       },
       duplicates,
       errors
@@ -127,7 +260,7 @@ export class DataProcessor {
   }
 
   /**
-   * Process Sweed Report CSV data into structured format
+   * Process Sweed Report data into structured format
    * @param {Array} rawData - Raw CSV data array
    * @returns {Object} - Processed data with statistics
    */
@@ -137,39 +270,82 @@ export class DataProcessor {
     const errors = [];
     const seenKeys = new Set();
 
-    // Skip header rows (start from row 3, index 2)
-    for (let i = 2; i < rawData.length; i++) {
+    console.log('Processing Sweed data, total rows:', rawData.length);
+
+    // Detect header row for Sweed data
+    const expectedHeaders = ['product', 'brand', 'sku', 'barcode', 'ship', 'order'];
+    let headerRowIndex = this.detectHeaderRow(rawData, expectedHeaders);
+    
+    // If no header detected, assume first row
+    if (headerRowIndex === -1) {
+      headerRowIndex = 0;
+      console.warn('Could not detect header row, assuming first row');
+    }
+
+    const dataStartIndex = headerRowIndex + 1;
+
+    // Validate we have enough rows
+    if (rawData.length < dataStartIndex + 1) {
+      throw new Error(`Insufficient data rows. Expected at least ${dataStartIndex + 1} rows, got ${rawData.length}`);
+    }
+
+    // Get header row and detect column mapping
+    const headerRow = rawData[headerRowIndex];
+    let columnMapping = SWEED_COLUMNS;
+    
+    if (headerRow) {
+      columnMapping = this.detectColumnMapping(headerRow, SWEED_COLUMNS);
+      console.log('Detected Sweed column mapping:', columnMapping);
+    }
+
+    // Process data rows
+    for (let i = dataStartIndex; i < rawData.length; i++) {
       const row = rawData[i];
       
+      // Skip completely empty rows
+      if (!row || !row.some(cell => cell !== null && cell !== undefined && cell !== '')) {
+        continue;
+      }
+      
       try {
-        // Extract data according to Sweed column mapping
+        // Extract data according to column mapping
         const item = {
-          productName: this.cleanString(row[SWEED_COLUMNS.PRODUCT_NAME]),
-          brand: this.cleanString(row[SWEED_COLUMNS.BRAND]),
-          strain: this.cleanString(row[SWEED_COLUMNS.STRAIN]),
-          size: this.cleanString(row[SWEED_COLUMNS.SIZE]),
-          sku: this.cleanString(row[SWEED_COLUMNS.SKU]),
-          barcode: this.cleanString(row[SWEED_COLUMNS.BARCODE]),
-          externalTrackCode: this.cleanString(row[SWEED_COLUMNS.EXTERNAL_TRACK_CODE]),
-          quantity: this.parseQuantity(row[SWEED_COLUMNS.QUANTITY]),
-          shipToLocation: this.cleanString(row[SWEED_COLUMNS.SHIP_TO_LOCATION]),
-          shipToAddress: this.cleanString(row[SWEED_COLUMNS.SHIP_TO_ADDRESS]),
-          orderNumber: this.cleanString(row[SWEED_COLUMNS.ORDER_NUMBER]),
-          requestDate: this.cleanString(row[SWEED_COLUMNS.REQUEST_DATE]),
+          productName: this.cleanString(row[columnMapping.PRODUCT_NAME]),
+          brand: this.cleanString(row[columnMapping.BRAND]),
+          strain: this.cleanString(row[columnMapping.STRAIN]),
+          size: this.cleanString(row[columnMapping.SIZE]),
+          sku: this.cleanString(row[columnMapping.SKU]),
+          barcode: this.cleanString(row[columnMapping.BARCODE]),
+          externalTrackCode: this.cleanString(row[columnMapping.EXTERNAL_TRACK_CODE]),
+          quantity: this.parseQuantity(row[columnMapping.QUANTITY]),
+          shipToLocation: this.cleanString(row[columnMapping.SHIP_TO_LOCATION]),
+          shipToAddress: this.cleanString(row[columnMapping.SHIP_TO_ADDRESS]),
+          orderNumber: this.cleanString(row[columnMapping.ORDER_NUMBER]),
+          requestDate: this.cleanString(row[columnMapping.REQUEST_DATE]),
           dataSource: DATA_SOURCES.SWEED_REPORT,
           // Map externalTrackCode to bioTrackCode for compatibility
-          bioTrackCode: this.cleanString(row[SWEED_COLUMNS.EXTERNAL_TRACK_CODE]),
+          bioTrackCode: this.cleanString(row[columnMapping.EXTERNAL_TRACK_CODE]),
           rowIndex: i + 1
         };
 
         // Validate required fields
-        if (!item.barcode || !item.sku) {
+        if (!item.barcode && !item.sku) {
           errors.push({
             row: i + 1,
-            error: 'Missing required fields (barcode or SKU)',
+            error: 'Missing both barcode and SKU - at least one is required',
             data: item
           });
           continue;
+        }
+
+        // Use SKU as backup if no barcode
+        if (!item.barcode && item.sku) {
+          item.barcode = item.sku;
+        }
+
+        // Use barcode as backup if no SKU
+        if (!item.sku && item.barcode) {
+          item.sku = item.barcode;
         }
 
         // Check for duplicates
@@ -197,6 +373,8 @@ export class DataProcessor {
       }
     }
 
+    console.log(`Processed ${processedData.length} items from Sweed Report`);
+
     return {
       data: processedData,
       statistics: {
@@ -204,7 +382,9 @@ export class DataProcessor {
         processedRows: processedData.length,
         duplicates: duplicates.length,
         errors: errors.length,
-        skippedRows: 2 // Header rows
+        skippedRows: dataStartIndex,
+        headerRow: headerRowIndex + 1,
+        dataStartRow: dataStartIndex + 1
       },
       duplicates,
       errors
@@ -336,7 +516,11 @@ export class DataProcessor {
    */
   static parseQuantity(value) {
     if (value === null || value === undefined || value === '') return 0;
-    const parsed = parseFloat(value);
+    
+    // Handle string quantities with commas
+    let cleanValue = String(value).replace(/,/g, '');
+    
+    const parsed = parseFloat(cleanValue);
     return isNaN(parsed) ? 0 : parsed;
   }
 
@@ -348,31 +532,41 @@ export class DataProcessor {
   static validateMainInventoryStructure(data) {
     const errors = [];
     const warnings = [];
+    const config = FILE_STRUCTURE.MAIN_INVENTORY;
 
-    if (data.length < 3) {
-      errors.push('File must have at least 3 rows (headers + data)');
+    if (data.length < config.MIN_ROWS) {
+      errors.push(`File must have at least ${config.MIN_ROWS} rows (export info + headers + data)`);
       return { isValid: false, errors, warnings };
     }
 
-    // Check if we have enough columns
-    const firstDataRow = data[2]; // Skip header rows
-    if (!firstDataRow || firstDataRow.length < 28) {
-      errors.push('Missing required columns. Expected at least 28 columns for Main Inventory format.');
+    // Check if we have the expected structure
+    const headerRow = data[config.HEADER_ROW];
+    if (!headerRow || headerRow.length < 10) {
+      warnings.push('Header row appears to be missing or incomplete');
     }
 
-    // Check for common column indicators
-    const headerRow = data[1]; // Second row usually contains headers
-    if (headerRow) {
-      const expectedHeaders = ['Product Name', 'Brand', 'SKU', 'Barcode'];
-      const missingHeaders = expectedHeaders.filter(header => 
-        !headerRow.some(cell => 
-          String(cell).toLowerCase().includes(header.toLowerCase())
-        )
-      );
-      
-      if (missingHeaders.length > 0) {
-        warnings.push(`Potentially missing headers: ${missingHeaders.join(', ')}`);
+    // Look for expected header patterns
+    const expectedHeaders = ['Facility Name', 'Product Name', 'Brand', 'SKU', 'Barcode'];
+    let headerFound = false;
+    
+    for (let i = 0; i < Math.min(5, data.length); i++) {
+      const row = data[i];
+      if (row && expectedHeaders.some(header => 
+        row.some(cell => String(cell).toLowerCase().includes(header.toLowerCase()))
+      )) {
+        headerFound = true;
+        break;
       }
+    }
+
+    if (!headerFound) {
+      warnings.push('Could not locate expected headers. File structure may be different than expected.');
+    }
+
+    // Check data rows
+    const sampleDataRow = data[config.DATA_START_ROW];
+    if (!sampleDataRow || sampleDataRow.length < 10) {
+      warnings.push('Data rows appear to be missing or incomplete');
     }
 
     return {
@@ -390,31 +584,25 @@ export class DataProcessor {
   static validateSweedStructure(data) {
     const errors = [];
     const warnings = [];
+    const config = FILE_STRUCTURE.SWEED_REPORT;
 
-    if (data.length < 3) {
-      errors.push('File must have at least 3 rows (headers + data)');
+    if (data.length < config.MIN_ROWS) {
+      errors.push(`File must have at least ${config.MIN_ROWS} rows (headers + data)`);
       return { isValid: false, errors, warnings };
     }
 
-    // Check if we have enough columns
-    const firstDataRow = data[2]; // Skip header rows
-    if (!firstDataRow || firstDataRow.length < 12) {
-      errors.push('Missing required columns. Expected at least 12 columns for Sweed Report format.');
+    // Look for expected header patterns
+    const expectedHeaders = ['Product', 'Brand', 'SKU', 'Barcode', 'Ship To', 'Order'];
+    const headerRowIndex = this.detectHeaderRow(data, expectedHeaders);
+    
+    if (headerRowIndex === -1) {
+      warnings.push('Could not automatically detect header row. Will assume first row contains headers.');
     }
 
-    // Check for common column indicators
-    const headerRow = data[1]; // Second row usually contains headers
-    if (headerRow) {
-      const expectedHeaders = ['Product Name', 'Brand', 'SKU', 'Barcode', 'Ship To'];
-      const missingHeaders = expectedHeaders.filter(header => 
-        !headerRow.some(cell => 
-          String(cell).toLowerCase().includes(header.toLowerCase())
-        )
-      );
-      
-      if (missingHeaders.length > 0) {
-        warnings.push(`Potentially missing headers: ${missingHeaders.join(', ')}`);
-      }
+    // Check if we have enough columns
+    const headerRow = data[headerRowIndex >= 0 ? headerRowIndex : 0];
+    if (!headerRow || headerRow.length < 5) {
+      warnings.push('Header row appears to have insufficient columns');
     }
 
     return {
