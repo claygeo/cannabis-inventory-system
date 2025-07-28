@@ -104,14 +104,6 @@ export default {
     },
   },
   plugins: [
-    // Form plugin for better form styling
-    require('@tailwindcss/forms')({
-      strategy: 'class',
-    }),
-    
-    // Typography plugin for rich text content
-    require('@tailwindcss/typography'),
-    
     // Custom plugin for dark theme utilities
     function({ addUtilities, theme }) {
       const newUtilities = {

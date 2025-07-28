@@ -1,60 +1,86 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
+// https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
   
-  // Development server config
-  server: {
-    port: 3000,
-    open: true,
-    host: true // Allow external connections (useful for testing)
-  },
-  
-  // Build configuration optimized for Netlify
+  // Build configuration
   build: {
     outDir: 'dist',
-    sourcemap: false, // Disable sourcemaps in production for smaller bundle
-    minify: 'esbuild', // Fast minification
-    target: 'es2015', // Support older browsers
-    
-    // Optimize chunking for better caching
+    sourcemap: false,
+    minify: 'terser',
     rollupOptions: {
       output: {
         manualChunks: {
-          // Vendor chunk for third-party libraries
-          vendor: ['react', 'react-dom', 'react-router-dom'],
-          // UI components chunk
+          // Separate vendor chunks for better caching
+          react: ['react', 'react-dom'],
+          router: ['react-router-dom'],
           ui: ['lucide-react', 'react-hot-toast'],
-          // Utilities chunk
-          utils: ['papaparse', 'jspdf', 'html2canvas', 'date-fns']
-        },
-        // Clean asset naming
-        assetFileNames: 'assets/[name].[hash][extname]',
-        chunkFileNames: 'assets/[name].[hash].js',
-        entryFileNames: 'assets/[name].[hash].js'
+          utils: ['papaparse', 'jsbarcode', 'jspdf']
+        }
       }
     },
-    
     // Increase chunk size warning limit
     chunkSizeWarningLimit: 1000,
-    
-    // Optimize assets
-    assetsInlineLimit: 4096, // Inline small assets as base64
+    // Terser options for better minification
+    terserOptions: {
+      compress: {
+        drop_console: true,
+        drop_debugger: true,
+      },
+    },
   },
   
-  // Ensure proper asset handling
-  publicDir: 'public',
-  
-  // Define environment variables if needed
-  define: {
-    // You can add global constants here if needed
-    __APP_VERSION__: JSON.stringify(process.env.npm_package_version || '5.3.0'),
+  // Development server configuration
+  server: {
+    port: 3000,
+    open: true,
+    host: true, // Allow external connections
   },
   
-  // Preview configuration (for local testing of build)
+  // Preview server configuration
   preview: {
     port: 4173,
-    host: true
-  }
-})
+    host: true,
+  },
+  
+  // CSS configuration
+  css: {
+    postcss: './postcss.config.js',
+    devSourcemap: true,
+  },
+  
+  // Optimize dependencies
+  optimizeDeps: {
+    include: [
+      'react',
+      'react-dom',
+      'react-router-dom',
+      'react-hot-toast',
+      'papaparse',
+      'jsbarcode',
+      'jspdf',
+      'lucide-react',
+      'date-fns'
+    ]
+  },
+  
+  // Define global constants
+  define: {
+    __APP_VERSION__: JSON.stringify(process.env.npm_package_version || '5.3.0')
+  },
+  
+  // Resolve aliases (optional)
+  resolve: {
+    alias: {
+      '@': '/src',
+    },
+  },
+  
+  // Base path for deployment
+  base: '/',
+  
+  // Environment variables prefix (optional)
+  envPrefix: 'VITE_',
+}

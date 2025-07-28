@@ -1,17 +1,12 @@
 [build]
-  # Build command for Vite
   command = "npm run build"
-  
-  # Directory to publish (Vite builds to 'dist' by default)
   publish = "dist"
 
 [build.environment]
-  # Node version to use
   NODE_VERSION = "18"
-  # Increase memory limit for build
   NODE_OPTIONS = "--max-old-space-size=4096"
 
-# SPA redirect rules for React Router
+# SPA routing - redirect all routes to index.html
 [[redirects]]
   from = "/*"
   to = "/index.html"
@@ -22,22 +17,28 @@
   for = "/*"
   [headers.values]
     X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"  
     X-XSS-Protection = "1; mode=block"
-    X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
 
 # Cache static assets
 [[headers]]
-  for = "/static/*"
+  for = "/assets/*"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
 
 [[headers]]
-  for = "*.js"
+  for = "/*.js"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
 
 [[headers]]
-  for = "*.css"
+  for = "/*.css"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
+
+# Don't cache HTML files
+[[headers]]
+  for = "/*.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
