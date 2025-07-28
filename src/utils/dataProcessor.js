@@ -13,17 +13,45 @@ export class DataProcessor {
    * @returns {string} - File type ('excel' or 'csv')
    */
   static detectFileType(file) {
-    const fileName = file.name.toLowerCase();
-    console.log('🔍 Detecting file type for:', fileName);
+    console.log('🔍 Detecting file type for:', file.name);
+    console.log('📁 File details:', {
+      name: file.name,
+      type: file.type,
+      size: file.size
+    });
     
-    if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
+    const fileName = file.name.toLowerCase();
+    console.log('🔤 Lowercase filename:', fileName);
+    
+    // Check for Excel extensions
+    const isXlsx = fileName.endsWith('.xlsx');
+    const isXls = fileName.endsWith('.xls');
+    const isCsv = fileName.endsWith('.csv');
+    
+    console.log('📋 Extension checks:', { isXlsx, isXls, isCsv });
+    
+    if (isXlsx || isXls) {
       console.log('✅ Detected Excel file');
       return 'excel';
     }
-    if (fileName.endsWith('.csv')) {
+    if (isCsv) {
       console.log('✅ Detected CSV file');
       return 'csv';
     }
+    
+    // Also check MIME type as backup
+    if (file.type) {
+      console.log('🔍 Checking MIME type:', file.type);
+      if (file.type.includes('spreadsheet') || file.type.includes('excel')) {
+        console.log('✅ Detected Excel via MIME type');
+        return 'excel';
+      }
+      if (file.type.includes('csv')) {
+        console.log('✅ Detected CSV via MIME type');
+        return 'csv';
+      }
+    }
+    
     // Default to CSV for unknown extensions
     console.log('⚠️ Unknown file type, defaulting to CSV');
     return 'csv';
@@ -47,6 +75,7 @@ export class DataProcessor {
           
           const data = new Uint8Array(e.target.result);
           console.log('📁 File data loaded, size:', data.length, 'bytes');
+          console.log('🔍 First 10 bytes:', Array.from(data.slice(0, 10)));
           
           const workbook = XLSX.read(data, {
             type: 'array',
@@ -54,7 +83,8 @@ export class DataProcessor {
             cellStyles: false
           });
           
-          console.log('📋 Workbook loaded, sheets:', workbook.SheetNames);
+          console.log('📋 Workbook loaded successfully');
+          console.log('📄 Available sheets:', workbook.SheetNames);
           
           if (onProgress) onProgress(75, 100);
           
@@ -199,6 +229,7 @@ export class DataProcessor {
    */
   static async parseFile(file, onProgress = null) {
     const fileType = this.detectFileType(file);
+    console.log('🎯 Final file type decision:', fileType);
     
     if (fileType === 'excel') {
       return this.parseExcel(file, onProgress);
