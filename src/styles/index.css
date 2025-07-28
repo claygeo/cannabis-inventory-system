@@ -1,10 +1,10 @@
+/* Import component-specific styles FIRST */
+@import './components.css';
+@import './labels.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-/* Import component-specific styles */
-@import './components.css';
-@import './labels.css';
 
 /* Custom CSS Variables - Dark Theme */
 :root {
