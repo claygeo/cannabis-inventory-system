@@ -1,98 +1,4 @@
-/* Component-specific styles for Cannabis Inventory Management System */
-
-/* Header Component */
-.header {
-  @apply bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40;
-}
-
-.header-container {
-  @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
-}
-
-.header-content {
-  @apply flex justify-between items-center h-16;
-}
-
-.header-logo {
-  @apply flex items-center space-x-3;
-}
-
-.header-title {
-  @apply text-xl font-bold text-gray-900;
-}
-
-.header-subtitle {
-  @apply text-sm text-gray-500;
-}
-
-.header-nav {
-  @apply flex items-center space-x-6;
-}
-
-.header-nav-link {
-  @apply text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200;
-}
-
-.header-nav-link-active {
-  @apply text-blue-600 bg-blue-50;
-}
-
-.header-user {
-  @apply flex items-center space-x-3;
-}
-
-.header-user-info {
-  @apply text-right;
-}
-
-.header-user-name {
-  @apply text-sm font-medium text-gray-900;
-}
-
-.header-user-role {
-  @apply text-xs text-gray-500;
-}
-
-/* Sidebar/Navigation Component */
-.sidebar {
-  @apply bg-white shadow-sm border-r border-gray-200 fixed inset-y-0 left-0 z-30 w-64 transform transition-transform duration-300 ease-in-out;
-}
-
-.sidebar-open {
-  @apply translate-x-0;
-}
-
-.sidebar-closed {
-  @apply -translate-x-full;
-}
-
-.sidebar-content {
-  @apply flex flex-col h-full;
-}
-
-.sidebar-header {
-  @apply p-6 border-b border-gray-200;
-}
-
-.sidebar-nav {
-  @apply flex-1 px-4 py-6 space-y-2;
-}
-
-.sidebar-nav-item {
-  @apply flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors duration-200;
-}
-
-.sidebar-nav-item-inactive {
-  @apply text-gray-600 hover:text-gray-900 hover:bg-gray-50;
-}
-
-.sidebar-nav-item-active {
-  @apply text-blue-600 bg-blue-50;
-}
-
-.sidebar-nav-icon {
-  @apply w-5 h-5 mr-3;
-}
+/* Component-specific styles for Cannabis Inventory Management System - Dark Theme */
 
 /* Dashboard Component */
 .dashboard-grid {
@@ -100,7 +6,14 @@
 }
 
 .dashboard-card {
-  @apply bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow duration-200;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-primary);
+  @apply rounded-xl shadow-sm p-6 transition-all duration-300;
+}
+
+.dashboard-card:hover {
+  @apply shadow-lg;
+  box-shadow: 0 10px 25px rgba(134, 239, 172, 0.1);
 }
 
 .dashboard-card-header {
@@ -108,11 +21,13 @@
 }
 
 .dashboard-card-title {
-  @apply text-lg font-semibold text-gray-900;
+  @apply text-lg font-semibold;
+  color: var(--text-primary);
 }
 
 .dashboard-card-icon {
-  @apply w-8 h-8 text-gray-400;
+  @apply w-8 h-8;
+  color: var(--text-secondary);
 }
 
 .dashboard-card-content {
@@ -124,11 +39,13 @@
 }
 
 .dashboard-stat-label {
-  @apply text-sm text-gray-600;
+  @apply text-sm;
+  color: var(--text-secondary);
 }
 
 .dashboard-stat-value {
-  @apply text-lg font-medium text-gray-900;
+  @apply text-lg font-medium;
+  color: var(--text-primary);
 }
 
 /* Import Forms */
@@ -137,11 +54,19 @@
 }
 
 .file-drop-zone {
-  @apply relative border-2 border-dashed border-gray-300 rounded-lg p-6 hover:border-gray-400 transition-colors duration-200;
+  @apply relative border-2 border-dashed rounded-lg p-6 transition-colors duration-200;
+  border-color: var(--border-primary);
+  background-color: var(--bg-secondary);
+}
+
+.file-drop-zone:hover {
+  border-color: var(--bg-accent);
+  background-color: rgba(134, 239, 172, 0.05);
 }
 
 .file-drop-zone-active {
-  @apply border-blue-400 bg-blue-50;
+  border-color: var(--bg-accent);
+  background-color: rgba(134, 239, 172, 0.1);
 }
 
 .file-drop-content {
@@ -149,15 +74,19 @@
 }
 
 .file-drop-icon {
-  @apply mx-auto h-12 w-12 text-gray-400 mb-4;
+  @apply mx-auto h-12 w-12 mb-4;
+  color: var(--text-secondary);
 }
 
 .file-drop-text {
-  @apply text-sm text-gray-600;
+  @apply text-sm;
+  color: var(--text-secondary);
 }
 
 .file-drop-subtext {
-  @apply text-xs text-gray-500 mt-2;
+  @apply text-xs mt-2;
+  color: var(--text-secondary);
+  opacity: 0.8;
 }
 
 .file-input {
@@ -165,11 +94,13 @@
 }
 
 .file-selected {
-  @apply bg-green-50 border-green-300;
+  border-color: var(--success-bg);
+  background-color: rgba(16, 185, 129, 0.1);
 }
 
 .file-error {
-  @apply bg-red-50 border-red-300;
+  border-color: var(--error-bg);
+  background-color: rgba(239, 68, 68, 0.1);
 }
 
 /* Progress indicators */
@@ -179,43 +110,60 @@
 
 .progress-label {
   @apply flex justify-between text-sm;
+  color: var(--text-primary);
 }
 
 .progress-bar-container {
-  @apply w-full bg-gray-200 rounded-full h-2;
+  @apply w-full rounded-full h-2;
+  background-color: var(--bg-secondary);
 }
 
 .progress-bar-fill {
-  @apply h-2 rounded-full transition-all duration-300 bg-blue-600;
+  @apply h-2 rounded-full transition-all duration-300;
+  background-color: var(--bg-accent);
 }
 
 .progress-text {
-  @apply text-xs text-gray-500;
+  @apply text-xs;
+  color: var(--text-secondary);
 }
 
 /* Data Tables */
 .data-table-container {
-  @apply overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg;
+  @apply overflow-hidden shadow ring-1 ring-opacity-5 md:rounded-lg;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-primary);
 }
 
 .data-table {
-  @apply min-w-full divide-y divide-gray-300;
+  @apply min-w-full divide-y;
+  border-color: var(--border-primary);
 }
 
 .data-table-header {
-  @apply bg-gray-50;
+  background-color: var(--bg-primary);
 }
 
 .data-table-header-cell {
-  @apply px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100;
+  @apply px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer transition-colors duration-200;
+  color: var(--text-secondary);
+}
+
+.data-table-header-cell:hover {
+  background-color: var(--bg-secondary);
 }
 
 .data-table-body {
-  @apply bg-white divide-y divide-gray-200;
+  background-color: var(--bg-secondary);
+  border-color: var(--border-primary);
 }
 
 .data-table-row {
-  @apply hover:bg-gray-50 transition-colors duration-150;
+  @apply transition-colors duration-150;
+}
+
+.data-table-row:hover {
+  background-color: rgba(134, 239, 172, 0.05);
 }
 
 .data-table-cell {
@@ -223,11 +171,12 @@
 }
 
 .data-table-cell-primary {
-  @apply font-medium text-gray-900;
+  @apply font-medium;
+  color: var(--text-primary);
 }
 
 .data-table-cell-secondary {
-  @apply text-gray-500;
+  color: var(--text-secondary);
 }
 
 /* Scanning Interface */
@@ -240,15 +189,34 @@
 }
 
 .barcode-input {
-  @apply block w-full pl-10 pr-4 py-3 text-lg border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500;
+  @apply block w-full pl-10 pr-4 py-3 text-lg rounded-lg focus:ring-2 focus:outline-none transition-colors duration-200;
+  background-color: var(--bg-secondary);
+  border: 2px solid var(--border-primary);
+  color: var(--text-primary);
+}
+
+.barcode-input:focus {
+  border-color: var(--bg-accent);
+  box-shadow: 0 0 0 2px rgba(134, 239, 172, 0.2);
+}
+
+.barcode-input::placeholder {
+  color: var(--text-secondary);
 }
 
 .barcode-input-icon {
-  @apply absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400;
+  @apply absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5;
+  color: var(--text-secondary);
 }
 
 .barcode-scanner-button {
-  @apply inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500;
+  @apply inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2;
+  background-color: var(--success-bg);
+  color: var(--success-text);
+}
+
+.barcode-scanner-button:hover {
+  opacity: 0.9;
 }
 
 .scanned-items-list {
@@ -256,7 +224,13 @@
 }
 
 .scanned-item {
-  @apply flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg shadow-sm;
+  @apply flex items-center justify-between p-3 rounded-lg shadow-sm transition-colors duration-200;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-primary);
+}
+
+.scanned-item:hover {
+  background-color: rgba(134, 239, 172, 0.05);
 }
 
 .scanned-item-info {
@@ -264,11 +238,13 @@
 }
 
 .scanned-item-title {
-  @apply font-medium text-gray-900;
+  @apply font-medium;
+  color: var(--text-primary);
 }
 
 .scanned-item-subtitle {
-  @apply text-sm text-gray-500;
+  @apply text-sm;
+  color: var(--text-secondary);
 }
 
 .scanned-item-badge {
@@ -285,11 +261,20 @@
 }
 
 .product-option {
-  @apply p-4 border border-gray-200 rounded-lg cursor-pointer hover:border-blue-300 hover:bg-blue-50 transition-all duration-200;
+  @apply p-4 rounded-lg cursor-pointer transition-all duration-200;
+  background-color: var(--bg-secondary);
+  border: 2px solid var(--border-primary);
+}
+
+.product-option:hover {
+  border-color: var(--bg-accent);
+  background-color: rgba(134, 239, 172, 0.05);
 }
 
 .product-option-selected {
-  @apply border-blue-500 bg-blue-50 ring-2 ring-blue-200;
+  border-color: var(--bg-accent);
+  background-color: rgba(134, 239, 172, 0.1);
+  box-shadow: 0 0 0 2px rgba(134, 239, 172, 0.2);
 }
 
 .product-option-header {
@@ -297,7 +282,8 @@
 }
 
 .product-option-title {
-  @apply font-medium text-gray-900;
+  @apply font-medium;
+  color: var(--text-primary);
 }
 
 .product-option-source {
@@ -305,7 +291,8 @@
 }
 
 .product-option-details {
-  @apply space-y-1 text-sm text-gray-600;
+  @apply space-y-1 text-sm;
+  color: var(--text-secondary);
 }
 
 /* Reports */
@@ -314,11 +301,13 @@
 }
 
 .report-header {
-  @apply mb-4 pb-2 border-b border-gray-200;
+  @apply mb-4 pb-2;
+  border-bottom: 1px solid var(--border-primary);
 }
 
 .report-title {
-  @apply text-lg font-semibold text-gray-900;
+  @apply text-lg font-semibold;
+  color: var(--text-primary);
 }
 
 .report-content {
@@ -330,20 +319,25 @@
 }
 
 .report-summary-card {
-  @apply bg-gray-50 rounded-lg p-4;
+  @apply rounded-lg p-4;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-primary);
 }
 
 .report-summary-label {
-  @apply text-sm font-medium text-gray-600;
+  @apply text-sm font-medium;
+  color: var(--text-secondary);
 }
 
 .report-summary-value {
-  @apply text-2xl font-bold text-gray-900 mt-1;
+  @apply text-2xl font-bold mt-1;
+  color: var(--text-primary);
 }
 
 /* Modal/Dialog */
 .modal-overlay {
-  @apply fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity z-50;
+  @apply fixed inset-0 transition-opacity z-50;
+  background-color: rgba(21, 22, 27, 0.8);
 }
 
 .modal-container {
@@ -355,15 +349,19 @@
 }
 
 .modal-content {
-  @apply bg-white rounded-lg shadow-xl transform transition-all w-full max-w-lg;
+  @apply rounded-lg shadow-xl transform transition-all w-full max-w-lg;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-primary);
 }
 
 .modal-header {
-  @apply px-6 py-4 border-b border-gray-200;
+  @apply px-6 py-4;
+  border-bottom: 1px solid var(--border-primary);
 }
 
 .modal-title {
-  @apply text-lg font-medium text-gray-900;
+  @apply text-lg font-medium;
+  color: var(--text-primary);
 }
 
 .modal-body {
@@ -371,11 +369,17 @@
 }
 
 .modal-footer {
-  @apply px-6 py-4 border-t border-gray-200 flex justify-end space-x-3;
+  @apply px-6 py-4 flex justify-end space-x-3;
+  border-top: 1px solid var(--border-primary);
 }
 
 .modal-close-button {
-  @apply absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors duration-200;
+  @apply absolute top-4 right-4 transition-colors duration-200;
+  color: var(--text-secondary);
+}
+
+.modal-close-button:hover {
+  color: var(--text-primary);
 }
 
 /* Toast Notifications */
@@ -384,7 +388,9 @@
 }
 
 .toast {
-  @apply max-w-xs bg-white shadow-lg rounded-lg pointer-events-auto ring-1 ring-black ring-opacity-5 overflow-hidden;
+  @apply max-w-xs shadow-lg rounded-lg pointer-events-auto ring-1 ring-opacity-5 overflow-hidden;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-primary);
 }
 
 .toast-content {
@@ -396,28 +402,34 @@
 }
 
 .toast-message {
-  @apply ml-3 text-sm font-medium text-gray-900;
+  @apply ml-3 text-sm font-medium;
+  color: var(--text-primary);
 }
 
 .toast-success {
-  @apply border-l-4 border-green-400;
+  @apply border-l-4;
+  border-left-color: var(--success-bg);
 }
 
 .toast-error {
-  @apply border-l-4 border-red-400;
+  @apply border-l-4;
+  border-left-color: var(--error-bg);
 }
 
 .toast-warning {
-  @apply border-l-4 border-yellow-400;
+  @apply border-l-4;
+  border-left-color: var(--warning-bg);
 }
 
 .toast-info {
-  @apply border-l-4 border-blue-400;
+  @apply border-l-4;
+  border-left-color: var(--info-bg);
 }
 
 /* Authentication */
 .auth-container {
-  @apply min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8;
+  @apply min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8;
+  background-color: var(--bg-primary);
 }
 
 .auth-card {
@@ -433,11 +445,13 @@
 }
 
 .auth-title {
-  @apply mt-6 text-3xl font-extrabold text-gray-900;
+  @apply mt-6 text-3xl font-extrabold;
+  color: var(--text-primary);
 }
 
 .auth-subtitle {
-  @apply mt-2 text-sm text-gray-600;
+  @apply mt-2 text-sm;
+  color: var(--text-secondary);
 }
 
 .auth-form {
@@ -449,11 +463,29 @@
 }
 
 .auth-input {
-  @apply appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm;
+  @apply appearance-none rounded-md relative block w-full px-3 py-2 border focus:outline-none focus:ring-2 focus:z-10 sm:text-sm transition-colors duration-200;
+  background-color: var(--bg-secondary);
+  border-color: var(--border-primary);
+  color: var(--text-primary);
+}
+
+.auth-input:focus {
+  border-color: var(--bg-accent);
+  box-shadow: 0 0 0 2px rgba(134, 239, 172, 0.2);
+}
+
+.auth-input::placeholder {
+  color: var(--text-secondary);
 }
 
 .auth-button {
-  @apply group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500;
+  @apply group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all duration-200;
+  background-color: var(--bg-accent);
+  color: var(--text-on-accent);
+}
+
+.auth-button:hover {
+  opacity: 0.9;
 }
 
 /* Loading States */
@@ -462,11 +494,13 @@
 }
 
 .loading-spinner-lg {
-  @apply animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600;
+  @apply animate-spin rounded-full h-12 w-12 border-b-2;
+  border-color: var(--bg-accent);
 }
 
 .loading-text {
-  @apply mt-4 text-sm text-gray-600;
+  @apply mt-4 text-sm;
+  color: var(--text-secondary);
 }
 
 /* Empty States */
@@ -475,15 +509,18 @@
 }
 
 .empty-state-icon {
-  @apply mx-auto h-12 w-12 text-gray-400 mb-4;
+  @apply mx-auto h-12 w-12 mb-4;
+  color: var(--text-secondary);
 }
 
 .empty-state-title {
-  @apply text-lg font-medium text-gray-900 mb-2;
+  @apply text-lg font-medium mb-2;
+  color: var(--text-primary);
 }
 
 .empty-state-description {
-  @apply text-gray-600 mb-6;
+  @apply mb-6;
+  color: var(--text-secondary);
 }
 
 /* Error States */
@@ -492,55 +529,203 @@
 }
 
 .error-state-icon {
-  @apply mx-auto h-12 w-12 text-red-400 mb-4;
+  @apply mx-auto h-12 w-12 mb-4;
+  color: var(--error-bg);
 }
 
 .error-state-title {
-  @apply text-lg font-medium text-gray-900 mb-2;
+  @apply text-lg font-medium mb-2;
+  color: var(--text-primary);
 }
 
 .error-state-description {
-  @apply text-gray-600 mb-6;
+  @apply mb-6;
+  color: var(--text-secondary);
 }
 
-/* Responsive utilities */
-@media (max-width: 640px) {
-  .mobile-hidden {
-    @apply hidden;
+/* Label Generation Status */
+.label-generation-status {
+  @apply flex items-center space-x-2 p-3 rounded-lg;
+}
+
+.label-generation-status-success {
+  background-color: rgba(16, 185, 129, 0.1);
+  color: var(--success-text);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.label-generation-status-error {
+  background-color: rgba(239, 68, 68, 0.1);
+  color: var(--error-text);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.label-generation-status-warning {
+  background-color: rgba(245, 158, 11, 0.1);
+  color: var(--warning-text);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+.label-generation-status-info {
+  background-color: rgba(59, 130, 246, 0.1);
+  color: var(--info-text);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+/* Label Item List */
+.label-items-list {
+  @apply space-y-2 max-h-96 overflow-y-auto;
+}
+
+.label-item {
+  @apply p-3 rounded-lg transition-colors duration-200 cursor-pointer;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-primary);
+}
+
+.label-item:hover {
+  border-color: var(--text-secondary);
+}
+
+.label-item-selected {
+  border-color: #8B5CF6;
+  background-color: rgba(139, 92, 246, 0.1);
+}
+
+.label-item-configured {
+  border-color: var(--success-bg);
+  background-color: rgba(16, 185, 129, 0.1);
+}
+
+.label-item-header {
+  @apply flex items-center justify-between mb-2;
+}
+
+.label-item-sku {
+  @apply font-medium;
+  color: var(--text-primary);
+}
+
+.label-item-source-badge {
+  @apply px-2 py-1 text-xs font-medium rounded-full;
+}
+
+.label-item-source-main {
+  background-color: var(--info-bg);
+  color: var(--info-text);
+}
+
+.label-item-source-sweed {
+  background-color: var(--warning-bg);
+  color: var(--warning-text);
+}
+
+.label-item-info {
+  @apply text-sm;
+  color: var(--text-secondary);
+}
+
+.label-item-product-name {
+  @apply truncate max-w-xs;
+}
+
+.label-item-details {
+  @apply flex items-center space-x-4 text-xs mt-1;
+  color: var(--text-secondary);
+}
+
+.label-item-status {
+  @apply flex items-center space-x-1;
+}
+
+.label-item-status-icon {
+  @apply w-4 h-4;
+}
+
+.label-item-status-configured {
+  color: var(--success-bg);
+}
+
+.label-item-status-pending {
+  color: var(--text-secondary);
+}
+
+/* Enhanced Data Configuration */
+.enhanced-data-config {
+  @apply space-y-4;
+}
+
+.enhanced-data-field {
+  @apply space-y-2;
+}
+
+.enhanced-data-field-group {
+  @apply flex space-x-2;
+}
+
+.enhanced-data-input {
+  @apply flex-1;
+}
+
+.enhanced-data-save-button {
+  background-color: var(--bg-accent);
+  color: var(--text-on-accent);
+  @apply btn btn-sm;
+}
+
+.enhanced-data-clear-button {
+  background-color: var(--error-bg);
+  color: var(--error-text);
+  @apply btn btn-sm;
+}
+
+/* Responsive design for smaller screens */
+@media (max-width: 768px) {
+  .dashboard-grid {
+    @apply grid-cols-1;
   }
   
-  .mobile-visible {
-    @apply block;
+  .product-selection-grid {
+    @apply grid-cols-1;
+  }
+  
+  .report-summary-grid {
+    @apply grid-cols-1;
   }
 }
 
-@media (min-width: 641px) {
-  .mobile-only {
-    @apply hidden;
+@media (max-width: 480px) {
+  .enhanced-data-field-group {
+    @apply flex-col space-x-0 space-y-2;
+  }
+  
+  .modal-content {
+    @apply mx-4;
   }
 }
 
-/* Focus states for accessibility */
-.focus-visible {
-  @apply focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2;
-}
-
-/* High contrast mode support */
+/* High contrast mode for components */
 @media (prefers-contrast: high) {
-  .card {
+  .dashboard-card,
+  .modal-content,
+  .toast {
     @apply border-2;
   }
   
-  .btn {
+  .product-option {
     @apply border-2;
   }
 }
 
-/* Reduced motion support */
-@media (prefers-reduced-motion: reduce) {
-  * {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
+/* Color adjustments for different themes */
+.dark-theme {
+  /* All styles are already dark theme by default */
+}
+
+/* Focus improvements for accessibility */
+.dashboard-card:focus-within,
+.product-option:focus-within,
+.scanned-item:focus-within {
+  outline: 2px solid var(--bg-accent);
+  outline-offset: 2px;
 }

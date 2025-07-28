@@ -1,52 +1,58 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html lang="en" class="dark">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Cannabis Inventory Management System V5.3 - Fixed Dimensions Edition" />
-    <meta name="theme-color" content="#3b82f6" />
+    <title>Cannabis Inventory Management System v5.3</title>
+    <meta name="description" content="Professional cannabis inventory management system with barcode scanning and fixed-dimension label generation for Uline S-5627 sheets." />
+    <meta name="keywords" content="cannabis, inventory, management, barcode, labels, tracking" />
+    <meta name="author" content="Cannabis Inventory Management System" />
     
-    <title>Cannabis Inventory Management System V5.3</title>
+    <!-- Theme color for mobile browsers -->
+    <meta name="theme-color" content="#15161B" />
+    <meta name="msapplication-TileColor" content="#15161B" />
     
-    <!-- Preload critical resources -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Preload critical fonts -->
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" as="style" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
     
+    <!-- Prevent flash of unstyled content -->
     <style>
-      /* Loading styles */
+      html {
+        background-color: #15161B;
+        color: #FAFCFB;
+      }
+      body {
+        margin: 0;
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        background-color: #15161B;
+        color: #FAFCFB;
+      }
+      #root {
+        min-height: 100vh;
+        background-color: #15161B;
+      }
+      /* Loading spinner */
+      .loading-spinner {
+        display: inline-block;
+        width: 40px;
+        height: 40px;
+        border: 3px solid #39414E;
+        border-radius: 50%;
+        border-top-color: #86EFAC;
+        animation: spin 1s ease-in-out infinite;
+      }
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
       .loading-container {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: #f9fafb;
         display: flex;
         align-items: center;
         justify-content: center;
-        z-index: 9999;
-      }
-      
-      .loading-spinner {
-        width: 40px;
-        height: 40px;
-        border: 4px solid #e5e7eb;
-        border-top: 4px solid #3b82f6;
-        border-radius: 50%;
-        animation: spin 1s linear infinite;
-      }
-      
-      @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-      }
-      
-      .loading-text {
-        margin-top: 16px;
-        color: #6b7280;
-        font-family: system-ui, sans-serif;
+        min-height: 50vh;
+        flex-direction: column;
+        gap: 1rem;
       }
     </style>
   </head>
@@ -54,22 +60,10 @@
     <div id="root">
       <!-- Loading fallback -->
       <div class="loading-container">
-        <div style="text-align: center;">
-          <div class="loading-spinner"></div>
-          <div class="loading-text">Loading Cannabis Inventory System...</div>
-        </div>
+        <div class="loading-spinner"></div>
+        <div style="color: #9FA3AC; font-size: 14px;">Loading Cannabis Inventory System...</div>
       </div>
     </div>
-    
-    <!-- FIXED: Changed from /src/index.js to /src/index.jsx -->
     <script type="module" src="/src/index.jsx"></script>
-    
-    <!-- Fallback for browsers without JavaScript -->
-    <noscript>
-      <div style="text-align: center; padding: 50px; font-family: Arial, sans-serif;">
-        <h1>JavaScript Required</h1>
-        <p>Please enable JavaScript to use the Cannabis Inventory Management System.</p>
-      </div>
-    </noscript>
   </body>
 </html>
