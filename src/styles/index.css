@@ -1,11 +1,11 @@
+/* Import barcode font if available - MUST BE FIRST */
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 /* Cannabis Inventory Management System - Global Styles */
-
-/* Import barcode font if available */
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap');
 
 /* Root variables for consistent theming */
 :root {

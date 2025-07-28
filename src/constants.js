@@ -1,67 +1,34 @@
-// Application Constants
-export const APP_NAME = "Cannabis Inventory Management System";
-export const APP_VERSION = "5.3";
+// Application constants
+export const APP_NAME = 'Cannabis Inventory Management System';
+export const APP_VERSION = '5.3.0';
+export const APP_SUBTITLE = 'Fixed Dimensions Edition';
 
-// User Roles and Authentication
-export const USER_ROLES = {
-  ADMINISTRATOR: "Administrator",
-  WAREHOUSE: "Warehouse", 
-  MANAGER: "Manager"
-};
-
-export const DEFAULT_USERS = {
-  admin: { password: "admin123", role: USER_ROLES.ADMINISTRATOR },
-  warehouse: { password: "warehouse123", role: USER_ROLES.WAREHOUSE },
-  manager: { password: "manager123", role: USER_ROLES.MANAGER }
-};
-
-// Data Sources
+// Data source identifiers
 export const DATA_SOURCES = {
-  MAIN_INVENTORY: "MainInventory",
-  SWEED_REPORT: "SweedReport"
+  MAIN_INVENTORY: 'MainInventory',
+  SWEED_REPORT: 'SweedReport'
 };
 
-// Label Configuration - Uline S-5627 Format
-export const LABEL_CONFIG = {
-  // Physical dimensions (4" x 1.5")
-  WIDTH_INCHES: 4,
-  HEIGHT_INCHES: 1.5,
-  
-  // Layout (2 columns x 6 rows = 12 labels per sheet)
-  COLUMNS_PER_PAGE: 2,
-  ROWS_PER_PAGE: 6,
-  LABELS_PER_PAGE: 12,
-  
-  // Margins for Uline S-5627 compatibility
-  PAGE_MARGIN_TOP: 0.5,    // inches
-  PAGE_MARGIN_BOTTOM: 0.5, // inches  
-  PAGE_MARGIN_LEFT: 0.1875, // 3/16 inches
-  PAGE_MARGIN_RIGHT: 0.1875, // 3/16 inches
-  
-  // Label spacing
-  LABEL_SPACING_X: 0.125, // 1/8 inch between columns
-  LABEL_SPACING_Y: 0,     // No spacing between rows
-  
-  // Print settings
-  DPI: 300,
-  PRINT_SCALE: 1.0
+// Event types for session tracking
+export const EVENT_TYPES = {
+  SESSION_START: 'session_start',
+  SESSION_END: 'session_end',
+  USER_LOGIN: 'user_login',
+  USER_LOGOUT: 'user_logout',
+  INVENTORY_IMPORT: 'inventory_import',
+  SWEED_IMPORT: 'sweed_import',
+  ITEM_SCANNED: 'item_scanned',
+  LABEL_GENERATED: 'label_generated',
+  PICK_TICKET_GENERATED: 'pick_ticket_generated',
+  ENHANCED_DATA_SAVED: 'enhanced_data_saved',
+  SESSION_CLEARED: 'session_cleared',
+  ERROR_OCCURRED: 'error_occurred'
 };
 
-// Session Storage Keys
-export const STORAGE_KEYS = {
-  CURRENT_USER: "cannabis_current_user",
-  INVENTORY_DATA: "cannabis_inventory_data", 
-  SWEED_DATA: "cannabis_sweed_data",
-  SCANNED_ITEMS: "cannabis_scanned_items",
-  SCANNED_SWEED_ITEMS: "cannabis_scanned_sweed_items",
-  ENHANCED_DATA: "cannabis_enhanced_data",
-  SESSION_DATA: "cannabis_session_data"
-};
-
-// CSV Column Mappings
+// Main Inventory CSV column mapping (0-based indices)
 export const MAIN_INVENTORY_COLUMNS = {
   FACILITY_NAME: 0,      // Column A
-  PRODUCT_NAME: 1,       // Column B  
+  PRODUCT_NAME: 1,       // Column B
   BRAND: 4,              // Column E
   STRAIN: 6,             // Column G
   SIZE: 7,               // Column H
@@ -73,6 +40,7 @@ export const MAIN_INVENTORY_COLUMNS = {
   DISTRIBUTOR: 27        // Column AB
 };
 
+// Sweed Report CSV column mapping (0-based indices)
 export const SWEED_COLUMNS = {
   PRODUCT_NAME: 0,       // Column A
   BRAND: 1,              // Column B
@@ -88,37 +56,118 @@ export const SWEED_COLUMNS = {
   REQUEST_DATE: 11       // Column L
 };
 
-// Validation Rules
+// Barcode configuration for Code 39 format
+export const BARCODE_CONFIG = {
+  FORMAT: 'CODE39',
+  WIDTH: 2,              // Bar width in pixels
+  HEIGHT: 60,            // Barcode height in pixels
+  DISPLAY_VALUE: true,   // Show text below barcode
+  MARGIN: 10,            // Margin around barcode
+  FONT_SIZE: 12,         // Font size for displayed value
+  FONT_FAMILY: 'Arial',  // Font family for displayed value
+  TEXT_MARGIN: 5,        // Space between barcode and text
+  BACKGROUND: '#ffffff', // Background color
+  LINE_COLOR: '#000000'  // Bar color
+};
+
+// Label specifications for Uline S-5627
+export const LABEL_SPECS = {
+  WIDTH_INCHES: 4,
+  HEIGHT_INCHES: 1.5,
+  LABELS_PER_SHEET: 12,
+  COLUMNS: 2,
+  ROWS: 6,
+  SHEET_FORMAT: 'Uline S-5627'
+};
+
+// Authentication roles
+export const USER_ROLES = {
+  ADMIN: 'Administrator',
+  WAREHOUSE: 'Warehouse',
+  MANAGER: 'Manager'
+};
+
+// Default users (for development)
+export const DEFAULT_USERS = [
+  { username: 'admin', password: 'admin123', role: USER_ROLES.ADMIN },
+  { username: 'warehouse', password: 'warehouse123', role: USER_ROLES.WAREHOUSE },
+  { username: 'manager', password: 'manager123', role: USER_ROLES.MANAGER }
+];
+
+// Storage keys
+export const STORAGE_KEYS = {
+  AUTH_TOKEN: 'cannabis_auth_token',
+  USER_DATA: 'cannabis_user_data',
+  INVENTORY_DATA: 'cannabis_inventory_data',
+  SWEED_DATA: 'cannabis_sweed_data',
+  SCANNED_ITEMS: 'cannabis_scanned_items',
+  ENHANCED_DATA: 'cannabis_enhanced_data',
+  SESSION_DATA: 'cannabis_session_data'
+};
+
+// Validation limits
+export const VALIDATION_LIMITS = {
+  LABEL_QUANTITY: { min: 1, max: 50 },
+  CASE_QUANTITY: { min: 1, max: 1000 },
+  BOX_COUNT: { min: 1, max: 100 }
+};
+
+// Validation constants (for ValidationHelper class)
 export const VALIDATION = {
   LABEL_QUANTITY: { min: 1, max: 50 },
   CASE_QUANTITY: { min: 1, max: 1000 },
   BOX_COUNT: { min: 1, max: 100 },
   DATE_FORMATS: [
-    /^\d{1,2}\/\d{1,2}\/\d{4}$/,  // MM/DD/YYYY or DD/MM/YYYY
-    /^\d{1,2}\/\d{1,2}\/\d{2}$/,  // MM/DD/YY or DD/MM/YY
-    /^\d{1,2}-\d{1,2}-\d{4}$/,    // MM-DD-YYYY or DD-MM-YYYY
-    /^\d{1,2}-\d{1,2}-\d{2}$/     // MM-DD-YY or DD-MM-YY
+    /^\d{1,2}\/\d{1,2}\/\d{4}$/,    // DD/MM/YYYY or MM/DD/YYYY
+    /^\d{1,2}\/\d{1,2}\/\d{2}$/,     // DD/MM/YY or MM/DD/YY
+    /^\d{1,2}-\d{1,2}-\d{4}$/,      // DD-MM-YYYY or MM-DD-YYYY
+    /^\d{1,2}-\d{1,2}-\d{2}$/       // DD-MM-YY or MM-DD-YY
   ]
 };
 
-// Event Types for Session Tracking
-export const EVENT_TYPES = {
-  SESSION_START: "Session Start",
-  USER_LOGIN: "User Login", 
-  USER_LOGOUT: "User Logout",
-  MAIN_INVENTORY_IMPORT: "Main Inventory Import",
-  SWEED_IMPORT: "Sweed Import", 
-  ITEM_SCANNED: "Item Scanned",
-  LABEL_GENERATED: "Label Generated",
-  SESSION_CLEARED: "Session Cleared",
-  ERROR: "Error"
+// Date formats
+export const DATE_FORMATS = {
+  DISPLAY: 'MM/dd/yyyy',
+  INPUT: 'dd/MM/yyyy',
+  ISO: 'yyyy-MM-dd'
 };
 
-// Barcode Configuration
-export const BARCODE_CONFIG = {
-  FORMAT: "CODE39",
-  WIDTH: 2,
-  HEIGHT: 50,
-  DISPLAY_VALUE: false,
-  MARGIN: 0
+// File types for import
+export const ACCEPTED_FILE_TYPES = {
+  EXCEL: '.xlsx,.xls',
+  CSV: '.csv'
+};
+
+// Toast configuration
+export const TOAST_CONFIG = {
+  SUCCESS_DURATION: 3000,
+  ERROR_DURATION: 5000,
+  WARNING_DURATION: 4000
+};
+
+// Pagination
+export const PAGINATION = {
+  ITEMS_PER_PAGE: 20,
+  MAX_VISIBLE_PAGES: 5
+};
+
+export default {
+  APP_NAME,
+  APP_VERSION,
+  APP_SUBTITLE,
+  DATA_SOURCES,
+  EVENT_TYPES,
+  MAIN_INVENTORY_COLUMNS,
+  SWEED_COLUMNS,
+  BARCODE_CONFIG,
+  LABEL_SPECS,
+  USER_ROLES,
+  DEFAULT_USERS,
+  STORAGE_KEYS,
+  VALIDATION_LIMITS,
+  VALIDATION,
+  DATE_FORMATS,
+  ACCEPTED_FILE_TYPES,
+  TOAST_CONFIG,
+  PAGINATION
 };

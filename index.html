@@ -14,15 +14,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
     
-    <!-- Barcode font for label generation -->
     <style>
-      @font-face {
-        font-family: 'Free 3 of 9';
-        src: url('data:font/truetype;charset=utf-8;base64,') format('truetype');
-        font-weight: normal;
-        font-style: normal;
-      }
-      
       /* Loading styles */
       .loading-container {
         position: fixed;
@@ -69,8 +61,8 @@
       </div>
     </div>
     
-    <!-- Main application entry point -->
-    <script type="module" src="/src/index.js"></script>
+    <!-- FIXED: Changed from /src/index.js to /src/index.jsx -->
+    <script type="module" src="/src/index.jsx"></script>
     
     <!-- Fallback for browsers without JavaScript -->
     <noscript>

@@ -1,0 +1,32 @@
+/* App-specific styles */
+.App {
+  min-height: 100vh;
+  background-color: #f9fafb;
+}
+
+/* Ensure smooth transitions */
+* {
+  transition: all 0.2s ease-in-out;
+}
+
+/* Focus styles for accessibility */
+*:focus {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* Print optimizations */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  .print-only {
+    display: block !important;
+  }
+  
+  body {
+    background: white !important;
+    color: black !important;
+  }
+}
