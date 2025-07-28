@@ -4,11 +4,10 @@
   
   # Directory to publish (Vite builds to 'dist' by default)
   publish = "dist"
-  
-  # Node version to use
-  environment = { NODE_VERSION = "18" }
 
 [build.environment]
+  # Node version to use
+  NODE_VERSION = "18"
   # Increase memory limit for build
   NODE_OPTIONS = "--max-old-space-size=4096"
 
