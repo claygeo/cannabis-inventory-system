@@ -36,7 +36,7 @@ export default defineConfig({
   server: {
     port: 3000,
     open: true,
-    host: true, // Allow external connections
+    host: true,
   },
   
   // Preview server configuration
@@ -71,7 +71,7 @@ export default defineConfig({
     __APP_VERSION__: JSON.stringify(process.env.npm_package_version || '5.3.0')
   },
   
-  // Resolve aliases (optional)
+  // Resolve aliases
   resolve: {
     alias: {
       '@': '/src',
@@ -81,6 +81,6 @@ export default defineConfig({
   // Base path for deployment
   base: '/',
   
-  // Environment variables prefix (optional)
+  // Environment variables prefix
   envPrefix: 'VITE_',
-}
+})
