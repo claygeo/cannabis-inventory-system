@@ -1,0 +1,501 @@
+/* Label-specific styles for Cannabis Inventory Management System */
+/* Uline S-5627 fixed dimensions: 4" x 1.5" labels, 12 per sheet (2 columns x 6 rows) */
+
+/* Label Sheet Container - Fixed dimensions for Uline S-5627 */
+.label-sheet {
+  width: 8.5in;
+  height: 11in;
+  background: white;
+  margin: 0;
+  padding: 0.5in 0.25in;
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: repeat(2, 4in);
+  grid-template-rows: repeat(6, 1.5in);
+  gap: 0.125in;
+  justify-content: center;
+  align-content: start;
+}
+
+/* Individual Label - Fixed 4" x 1.5" dimensions */
+.label {
+  width: 4in;
+  height: 1.5in;
+  border: 1px solid #ddd;
+  background: white;
+  padding: 0.1in;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  font-family: 'Arial', sans-serif;
+  font-size: 8pt;
+  line-height: 1.1;
+  page-break-inside: avoid;
+  overflow: hidden;
+}
+
+/* Label Header Section */
+.label-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 0.05in;
+  height: 0.25in;
+}
+
+.label-sku {
+  font-weight: bold;
+  font-size: 9pt;
+  color: #000;
+  max-width: 2in;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.label-source {
+  font-size: 6pt;
+  background: #000;
+  color: white;
+  padding: 1px 4px;
+  border-radius: 2px;
+  font-weight: bold;
+}
+
+/* Label Body Content */
+.label-body {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.1in;
+}
+
+.label-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.02in;
+}
+
+.label-product-name {
+  font-weight: bold;
+  font-size: 7pt;
+  color: #000;
+  line-height: 1;
+  max-height: 0.3in;
+  overflow: hidden;
+  word-wrap: break-word;
+  hyphens: auto;
+}
+
+.label-brand {
+  font-size: 6pt;
+  color: #333;
+  font-weight: normal;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.label-size {
+  font-size: 6pt;
+  color: #666;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.label-strain {
+  font-size: 6pt;
+  color: #555;
+  font-style: italic;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Barcode Section */
+.label-barcode-section {
+  width: 1.3in;
+  height: 0.8in;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.label-barcode {
+  max-width: 1.3in;
+  max-height: 0.6in;
+  object-fit: contain;
+}
+
+.label-barcode svg {
+  width: 100%;
+  height: auto;
+  max-height: 0.6in;
+}
+
+.label-barcode-text {
+  font-size: 5pt;
+  color: #000;
+  font-family: monospace;
+  text-align: center;
+  margin-top: 0.02in;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 1.3in;
+}
+
+/* Label Footer */
+.label-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  font-size: 5pt;
+  color: #666;
+  height: 0.15in;
+  border-top: 1px solid #eee;
+  padding-top: 0.02in;
+}
+
+.label-dates {
+  display: flex;
+  flex-direction: column;
+  gap: 0.01in;
+}
+
+.label-date {
+  font-size: 5pt;
+  color: #666;
+}
+
+.label-quantities {
+  display: flex;
+  flex-direction: column;
+  gap: 0.01in;
+  text-align: right;
+}
+
+.label-quantity {
+  font-size: 5pt;
+  color: #666;
+  font-weight: bold;
+}
+
+/* Label Preview Styles */
+.label-preview-container {
+  background: #f5f5f5;
+  padding: 20px;
+  border-radius: 8px;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.label-preview-sheet {
+  background: white;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  border-radius: 4px;
+  transform: scale(0.8);
+  transform-origin: top center;
+  margin: 0 auto;
+}
+
+.label-preview-controls {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.label-preview-button {
+  @apply btn btn-secondary btn-sm;
+}
+
+.label-preview-button-primary {
+  @apply btn btn-primary btn-sm;
+}
+
+/* Label Configuration Form */
+.label-config-form {
+  @apply space-y-6;
+}
+
+.label-config-section {
+  @apply card;
+}
+
+.label-config-section-title {
+  @apply text-lg font-semibold text-gray-900 mb-4;
+}
+
+.label-config-field {
+  @apply space-y-2;
+}
+
+.label-config-field-label {
+  @apply block text-sm font-medium text-gray-700;
+}
+
+.label-config-field-input {
+  @apply input;
+}
+
+.label-config-field-error {
+  @apply text-sm text-red-600;
+}
+
+.label-config-field-help {
+  @apply text-sm text-gray-500;
+}
+
+/* Label Generation Status */
+.label-generation-status {
+  @apply flex items-center space-x-2 p-3 rounded-lg;
+}
+
+.label-generation-status-success {
+  @apply bg-green-50 text-green-800 border border-green-200;
+}
+
+.label-generation-status-error {
+  @apply bg-red-50 text-red-800 border border-red-200;
+}
+
+.label-generation-status-warning {
+  @apply bg-yellow-50 text-yellow-800 border border-yellow-200;
+}
+
+.label-generation-status-info {
+  @apply bg-blue-50 text-blue-800 border border-blue-200;
+}
+
+/* Label Item List */
+.label-items-list {
+  @apply space-y-2 max-h-96 overflow-y-auto;
+}
+
+.label-item {
+  @apply p-3 border border-gray-200 rounded-lg hover:border-gray-300 transition-colors duration-200 cursor-pointer;
+}
+
+.label-item-selected {
+  @apply border-purple-500 bg-purple-50;
+}
+
+.label-item-configured {
+  @apply border-green-500 bg-green-50;
+}
+
+.label-item-header {
+  @apply flex items-center justify-between mb-2;
+}
+
+.label-item-sku {
+  @apply font-medium text-gray-900;
+}
+
+.label-item-source-badge {
+  @apply px-2 py-1 text-xs font-medium rounded-full;
+}
+
+.label-item-source-main {
+  @apply bg-blue-100 text-blue-800;
+}
+
+.label-item-source-sweed {
+  @apply bg-yellow-100 text-yellow-800;
+}
+
+.label-item-info {
+  @apply text-sm text-gray-600;
+}
+
+.label-item-product-name {
+  @apply truncate max-w-xs;
+}
+
+.label-item-details {
+  @apply flex items-center space-x-4 text-xs text-gray-500 mt-1;
+}
+
+.label-item-status {
+  @apply flex items-center space-x-1;
+}
+
+.label-item-status-icon {
+  @apply w-4 h-4;
+}
+
+.label-item-status-configured {
+  @apply text-green-600;
+}
+
+.label-item-status-pending {
+  @apply text-gray-400;
+}
+
+/* Enhanced Data Configuration */
+.enhanced-data-config {
+  @apply space-y-4;
+}
+
+.enhanced-data-field {
+  @apply space-y-2;
+}
+
+.enhanced-data-field-group {
+  @apply flex space-x-2;
+}
+
+.enhanced-data-input {
+  @apply input flex-1;
+}
+
+.enhanced-data-save-button {
+  @apply btn btn-primary btn-sm;
+}
+
+.enhanced-data-clear-button {
+  @apply btn btn-error btn-sm;
+}
+
+/* Print-specific styles */
+@media print {
+  .label-sheet {
+    width: 8.5in !important;
+    height: 11in !important;
+    margin: 0 !important;
+    padding: 0.5in 0.25in !important;
+    box-shadow: none !important;
+    border: none !important;
+    page-break-after: always;
+  }
+
+  .label {
+    width: 4in !important;
+    height: 1.5in !important;
+    border: 1px solid #000 !important;
+    page-break-inside: avoid !important;
+    background: white !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .label-barcode svg {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Hide non-label elements when printing */
+  .print-hidden {
+    display: none !important;
+  }
+
+  /* Show only labels when printing */
+  body * {
+    visibility: hidden;
+  }
+
+  .label-sheet,
+  .label-sheet * {
+    visibility: visible;
+  }
+
+  .label-sheet {
+    position: absolute;
+    left: 0;
+    top: 0;
+  }
+}
+
+/* PDF Generation styles */
+.pdf-label-sheet {
+  width: 612px; /* 8.5" at 72 DPI */
+  height: 792px; /* 11" at 72 DPI */
+  background: white;
+  margin: 0;
+  padding: 36px 18px; /* 0.5" 0.25" at 72 DPI */
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: repeat(2, 288px); /* 4" at 72 DPI */
+  grid-template-rows: repeat(6, 108px); /* 1.5" at 72 DPI */
+  gap: 9px; /* 0.125" at 72 DPI */
+  justify-content: center;
+  align-content: start;
+}
+
+.pdf-label {
+  width: 288px; /* 4" at 72 DPI */
+  height: 108px; /* 1.5" at 72 DPI */
+  border: 1px solid #000;
+  background: white;
+  padding: 7px; /* 0.1" at 72 DPI */
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  font-family: Arial, sans-serif;
+  font-size: 9px; /* 8pt converted to px */
+  line-height: 1.1;
+}
+
+/* Responsive design for label preview */
+@media (max-width: 768px) {
+  .label-preview-sheet {
+    transform: scale(0.6);
+  }
+  
+  .label-preview-container {
+    padding: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .label-preview-sheet {
+    transform: scale(0.4);
+  }
+  
+  .label-config-field-group {
+    @apply flex-col space-x-0 space-y-2;
+  }
+}
+
+/* High contrast mode for labels */
+@media (prefers-contrast: high) {
+  .label {
+    border: 2px solid #000 !important;
+  }
+  
+  .label-footer {
+    border-top: 2px solid #000 !important;
+  }
+}
+
+/* Color adjustments for different themes */
+.label-theme-default {
+  /* Default theme - already defined above */
+}
+
+.label-theme-high-contrast {
+  background: white !important;
+  color: black !important;
+}
+
+.label-theme-high-contrast .label-header,
+.label-theme-high-contrast .label-body,
+.label-theme-high-contrast .label-footer {
+  color: black !important;
+}
+
+.label-theme-high-contrast .label-source {
+  background: black !important;
+  color: white !important;
+  border: 1px solid black !important;
+}
