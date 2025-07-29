@@ -97,7 +97,7 @@ export class PDFGenerator {
   }
 
   /**
-   * Calculate label position with PRECISE Uline S-5627 physical alignment
+   * Calculate label position exactly like Uline template (with proper left AND right margins)
    * @param {number} labelIndex - Index of label (0-based)
    * @returns {Object} - Position coordinates in points
    */
@@ -111,32 +111,26 @@ export class PDFGenerator {
     const pageWidth = 612;
     const pageHeight = 792;
     
-    // Label dimensions (exact Uline specifications)
-    const labelWidth = 288; // 4 inches exact
-    const labelHeight = 108; // 1.5 inches exact
+    // Label dimensions
+    const labelWidth = 288; // 4 inches
+    const labelHeight = 108; // 1.5 inches
     
-    // CORRECTED MARGINS FOR PERFECT ULINE S-5627 ALIGNMENT
-    // These values are based on actual Uline S-5627 template measurements
-    const topMargin = 45;     // 0.625" - Precise top margin for header alignment
-    const bottomMargin = 45;  // 0.625" - Even bottom margin for footer alignment  
-    const leftMargin = 18;    // 0.25" - Left margin
-    const rightMargin = 18;   // 0.25" - Right margin (maintains symmetry)
-    const columnGap = 18;     // 0.25" - Gap between columns
+    // Proper margins for Uline template
+    const leftMargin = 12; // Left margin
+    const rightMargin = 12; // Right margin  
+    const topMargin = 36; // Top margin
+    const columnGap = 12; // Gap between columns
     
-    // Calculate available space and distribute evenly
-    const availableHeight = pageHeight - topMargin - bottomMargin; // 702pt
-    const totalLabelHeight = labelsPerCol * labelHeight; // 6 × 108 = 648pt
-    const remainingVerticalSpace = availableHeight - totalLabelHeight; // 54pt
-    const rowGap = remainingVerticalSpace / (labelsPerCol - 1); // ~10.8pt between rows
+    // Calculate positions with proper margins
+    // Available width: 612 - 12 - 12 = 588pt
+    // 2 labels (288pt each) + gap (12pt) = 588pt ✓
     
-    // Calculate X position (columns)
     let xPos = leftMargin;
     if (col === 1) {
       xPos = leftMargin + labelWidth + columnGap;
     }
     
-    // Calculate Y position with even distribution
-    const yPos = topMargin + (row * (labelHeight + rowGap));
+    const yPos = topMargin + (row * labelHeight);
     
     return {
       x: xPos,
@@ -458,18 +452,7 @@ export class PDFGenerator {
       pageSize: { width: 612, height: 792 }, // 8.5" x 11" in points
       labelSpecs: specs,
       labelPositions: positions,
-      totalLabelsPerSheet: specs.LABELS_PER_SHEET,
-      spacingInfo: {
-        topMargin: 45,     // 0.625"
-        bottomMargin: 45,  // 0.625"
-        leftMargin: 18,    // 0.25"
-        rightMargin: 18,   // 0.25"
-        columnGap: 18,     // 0.25"
-        rowGap: 10.8,      // ~0.15" (calculated)
-        availableHeight: 702, // 792 - 45 - 45
-        totalLabelHeight: 648, // 6 × 108
-        distributedSpace: 54   // For even spacing
-      }
+      totalLabelsPerSheet: specs.LABELS_PER_SHEET
     };
   }
 
