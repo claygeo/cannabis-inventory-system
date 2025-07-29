@@ -1,21 +1,56 @@
-/* App-specific styles */
+/* App-specific styles - Dark Theme */
 .App {
   min-height: 100vh;
-  background-color: #f9fafb;
+  background-color: #15161B !important;
+  color: #FAFCFB !important;
 }
 
-/* Ensure smooth transitions */
+/* Force dark theme on all elements */
 * {
   transition: all 0.2s ease-in-out;
 }
 
-/* Focus styles for accessibility */
+/* Override any conflicting styles */
+body,
+html,
+#root {
+  background-color: #15161B !important;
+  color: #FAFCFB !important;
+}
+
+/* Focus styles for accessibility - Dark theme */
 *:focus {
-  outline: 2px solid #3b82f6;
+  outline: 2px solid #86EFAC !important;
   outline-offset: 2px;
 }
 
-/* Print optimizations */
+/* Button focus styles */
+button:focus,
+.btn:focus {
+  outline: 2px solid #86EFAC !important;
+  outline-offset: 2px;
+}
+
+/* Input focus styles */
+input:focus,
+textarea:focus,
+select:focus,
+.input:focus,
+.textarea:focus,
+.select:focus {
+  outline: 2px solid #86EFAC !important;
+  outline-offset: 2px;
+  border-color: #86EFAC !important;
+  box-shadow: 0 0 0 2px rgba(134, 239, 172, 0.2) !important;
+}
+
+/* Link focus styles */
+a:focus {
+  outline: 2px solid #86EFAC !important;
+  outline-offset: 2px;
+}
+
+/* Print optimizations - Maintain dark theme where possible */
 @media print {
   .no-print {
     display: none !important;
@@ -25,8 +60,330 @@
     display: block !important;
   }
   
+  /* Only change to white for actual printing */
   body {
     background: white !important;
     color: black !important;
   }
+  
+  /* Keep dark backgrounds for non-essential elements */
+  .print-dark {
+    background-color: #181B22 !important;
+    color: #FAFCFB !important;
+  }
+}
+
+/* Dark theme scrollbars for the app */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #39414E #15161B;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: #15161B;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: #39414E;
+  border-radius: 4px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: #9FA3AC;
+}
+
+/* Remove any default browser styling that conflicts */
+button {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  outline: none;
+  cursor: pointer;
+}
+
+/* Ensure all text inputs follow dark theme */
+input,
+textarea,
+select {
+  background-color: #181B22 !important;
+  border: 1px solid #39414E !important;
+  color: #FAFCFB !important;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #9FA3AC !important;
+}
+
+/* Dark theme for any remaining elements */
+div,
+section,
+article,
+aside,
+nav,
+main,
+header,
+footer {
+  background-color: inherit;
+  color: inherit;
+}
+
+/* Override any remaining light theme classes */
+.bg-white,
+.bg-gray-50,
+.bg-gray-100 {
+  background-color: #181B22 !important;
+}
+
+.text-black,
+.text-gray-900,
+.text-gray-800,
+.text-gray-700 {
+  color: #FAFCFB !important;
+}
+
+.text-gray-600,
+.text-gray-500,
+.text-gray-400 {
+  color: #9FA3AC !important;
+}
+
+.border-white,
+.border-gray-200,
+.border-gray-300 {
+  border-color: #39414E !important;
+}
+
+/* Animation optimizations */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* High contrast support */
+@media (prefers-contrast: high) {
+  * {
+    border-width: 2px !important;
+  }
+  
+  .btn {
+    border-width: 2px !important;
+  }
+  
+  .card {
+    border-width: 2px !important;
+  }
+}
+
+/* Dark mode media query support */
+@media (prefers-color-scheme: dark) {
+  /* We're already dark, so just ensure consistency */
+  * {
+    color-scheme: dark;
+  }
+}
+
+/* Force any React components to follow theme */
+[data-react-component] {
+  background-color: inherit !important;
+  color: inherit !important;
+}
+
+/* Toast notifications override */
+.react-hot-toast-container {
+  z-index: 9999;
+}
+
+.react-hot-toast-container .react-hot-toast {
+  background-color: #181B22 !important;
+  color: #FAFCFB !important;
+  border: 1px solid #39414E !important;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Modal overlays */
+.modal-overlay,
+[role="dialog"] {
+  background-color: rgba(21, 22, 27, 0.8) !important;
+}
+
+/* Dropdown menus */
+.dropdown-menu,
+.select-menu,
+[role="menu"],
+[role="listbox"] {
+  background-color: #181B22 !important;
+  border: 1px solid #39414E !important;
+  color: #FAFCFB !important;
+}
+
+/* Table overrides */
+table {
+  background-color: #181B22 !important;
+  color: #FAFCFB !important;
+}
+
+table thead {
+  background-color: #15161B !important;
+}
+
+table th,
+table td {
+  border-color: #39414E !important;
+  background-color: inherit !important;
+  color: #FAFCFB !important;
+}
+
+/* Form element consistency */
+fieldset {
+  border-color: #39414E !important;
+}
+
+legend {
+  color: #FAFCFB !important;
+}
+
+/* Link styling */
+a {
+  color: #86EFAC;
+  text-decoration: none;
+}
+
+a:hover {
+  color: #86EFAC;
+  opacity: 0.8;
+}
+
+a:visited {
+  color: #86EFAC;
+}
+
+/* Selection styling */
+::selection {
+  background-color: #86EFAC;
+  color: #00001C;
+}
+
+::-moz-selection {
+  background-color: #86EFAC;
+  color: #00001C;
+}
+
+/* Error boundaries and loading states */
+.error-boundary,
+.loading-state {
+  background-color: #181B22 !important;
+  color: #FAFCFB !important;
+  border: 1px solid #39414E !important;
+}
+
+/* Code blocks and pre elements */
+code,
+pre {
+  background-color: #15161B !important;
+  color: #FAFCFB !important;
+  border: 1px solid #39414E !important;
+}
+
+/* Blockquotes */
+blockquote {
+  border-left: 4px solid #86EFAC !important;
+  background-color: #181B22 !important;
+  color: #FAFCFB !important;
+}
+
+/* HR elements */
+hr {
+  border-color: #39414E !important;
+}
+
+/* Mark/highlight elements */
+mark {
+  background-color: #86EFAC !important;
+  color: #00001C !important;
+}
+
+/* Details and summary elements */
+details {
+  background-color: #181B22 !important;
+  border: 1px solid #39414E !important;
+}
+
+summary {
+  background-color: #15161B !important;
+  color: #FAFCFB !important;
+}
+
+/* Progress elements */
+progress {
+  background-color: #15161B !important;
+  border: 1px solid #39414E !important;
+}
+
+progress::-webkit-progress-bar {
+  background-color: #15161B !important;
+}
+
+progress::-webkit-progress-value {
+  background-color: #86EFAC !important;
+}
+
+progress::-moz-progress-bar {
+  background-color: #86EFAC !important;
+}
+
+/* Meter elements */
+meter {
+  background-color: #15161B !important;
+  border: 1px solid #39414E !important;
+}
+
+meter::-webkit-meter-bar {
+  background-color: #15161B !important;
+}
+
+meter::-webkit-meter-optimum-value {
+  background-color: #10B981 !important;
+}
+
+meter::-webkit-meter-suboptimum-value {
+  background-color: #F59E0B !important;
+}
+
+meter::-webkit-meter-even-less-good-value {
+  background-color: #EF4444 !important;
+}
+
+/* Ensure all custom elements follow theme */
+[class*="component-"],
+[class*="widget-"],
+[class*="element-"] {
+  background-color: inherit !important;
+  color: inherit !important;
+}
+
+/* Final override for any stubborn elements */
+[style*="background: white"],
+[style*="background: #fff"],
+[style*="background: #ffffff"],
+[style*="background-color: white"],
+[style*="background-color: #fff"],
+[style*="background-color: #ffffff"] {
+  background-color: #181B22 !important;
+  color: #FAFCFB !important;
+}
+
+[style*="color: black"],
+[style*="color: #000"],
+[style*="color: #000000"] {
+  color: #FAFCFB !important;
 }

@@ -1,24 +1,23 @@
-import { VALIDATION } from '../constants.js';
+import { VALIDATION, DATE_FORMATS } from '../constants.js';
 
 /**
- * Validation utilities for Cannabis Inventory Management System
+ * Validation helper utilities for label generation
  */
-
 export class ValidationHelper {
   /**
    * Validate label quantity
-   * @param {any} value - Value to validate
+   * @param {string|number} value - Label quantity value
    * @returns {Object} - Validation result
    */
   static validateLabelQuantity(value) {
-    const result = { isValid: false, error: '', value: null };
+    const result = { isValid: false, error: '', cleanValue: null };
     
-    if (value === '' || value === null || value === undefined) {
+    if (!value && value !== 0) {
       result.error = 'Label quantity is required';
       return result;
     }
 
-    const numValue = parseInt(value, 10);
+    const numValue = parseInt(value);
     
     if (isNaN(numValue)) {
       result.error = 'Label quantity must be a number';
@@ -36,24 +35,24 @@ export class ValidationHelper {
     }
 
     result.isValid = true;
-    result.value = numValue;
+    result.cleanValue = numValue;
     return result;
   }
 
   /**
    * Validate case quantity
-   * @param {any} value - Value to validate
+   * @param {string|number} value - Case quantity value
    * @returns {Object} - Validation result
    */
   static validateCaseQuantity(value) {
-    const result = { isValid: true, error: '', value: null };
+    const result = { isValid: true, error: '', cleanValue: null };
     
     // Case quantity is optional
-    if (value === '' || value === null || value === undefined) {
+    if (!value) {
       return result;
     }
 
-    const numValue = parseInt(value, 10);
+    const numValue = parseInt(value);
     
     if (isNaN(numValue)) {
       result.isValid = false;
@@ -73,24 +72,25 @@ export class ValidationHelper {
       return result;
     }
 
-    result.value = numValue;
+    result.cleanValue = numValue;
     return result;
   }
 
   /**
    * Validate box count
-   * @param {any} value - Value to validate
+   * @param {string|number} value - Box count value
    * @returns {Object} - Validation result
    */
   static validateBoxCount(value) {
-    const result = { isValid: true, error: '', value: null };
+    const result = { isValid: true, error: '', cleanValue: null };
     
-    // Box count is optional
-    if (value === '' || value === null || value === undefined) {
+    // Box count is optional (defaults to 1)
+    if (!value) {
+      result.cleanValue = 1;
       return result;
     }
 
-    const numValue = parseInt(value, 10);
+    const numValue = parseInt(value);
     
     if (isNaN(numValue)) {
       result.isValid = false;
@@ -110,369 +110,395 @@ export class ValidationHelper {
       return result;
     }
 
-    result.value = numValue;
+    result.cleanValue = numValue;
     return result;
   }
 
   /**
-   * Validate date format (accepts multiple formats)
-   * @param {string} dateStr - Date string to validate
+   * Validate date format
+   * @param {string} value - Date value
    * @returns {Object} - Validation result
    */
-  static validateDate(dateStr) {
-    const result = { isValid: true, error: '', value: null, formattedDate: '' };
+  static validateDate(value) {
+    const result = { isValid: true, error: '', cleanValue: null };
     
-    // Empty dates are allowed
-    if (!dateStr || dateStr.trim() === '') {
+    // Date is optional
+    if (!value) {
       return result;
     }
 
-    const trimmedDate = dateStr.trim();
+    const trimmedValue = value.trim();
     
-    // Check against supported formats
-    const matchedFormat = VALIDATION.DATE_FORMATS.find(format => 
-      format.test(trimmedDate)
+    if (!trimmedValue) {
+      return result;
+    }
+
+    // Check against supported date formats
+    const isValidFormat = VALIDATION.DATE_FORMATS.some(pattern => 
+      pattern.test(trimmedValue)
     );
 
-    if (!matchedFormat) {
+    if (!isValidFormat) {
       result.isValid = false;
-      result.error = 'Date must be in format DD/MM/YYYY, MM/DD/YYYY, DD/MM/YY, or use hyphens instead of slashes';
+      result.error = 'Date must be in MM/DD/YYYY, DD/MM/YYYY, MM/DD/YY, or DD/MM/YY format';
       return result;
     }
 
-    // Replace hyphens with slashes for consistent parsing
-    const normalizedDate = trimmedDate.replace(/-/g, '/');
-    const dateParts = normalizedDate.split('/');
-    
-    if (dateParts.length !== 3) {
-      result.isValid = false;
-      result.error = 'Invalid date format';
-      return result;
-    }
-
-    let [part1, part2, part3] = dateParts.map(part => parseInt(part, 10));
-    
-    // Handle 2-digit years
-    if (part3 < 100) {
-      if (part3 <= 50) {
-        part3 += 2000; // 00-50 becomes 2000-2050
-      } else {
-        part3 += 1900; // 51-99 becomes 1951-1999
+    // Additional validation for reasonable date values
+    const parts = trimmedValue.split(/[\/\-]/);
+    if (parts.length >= 2) {
+      const month = parseInt(parts[0]);
+      const day = parseInt(parts[1]);
+      
+      if (month > 12 || month < 1) {
+        result.isValid = false;
+        result.error = 'Month must be between 1 and 12';
+        return result;
+      }
+      
+      if (day > 31 || day < 1) {
+        result.isValid = false;
+        result.error = 'Day must be between 1 and 31';
+        return result;
       }
     }
 
-    // Try to determine if it's DD/MM/YYYY or MM/DD/YYYY
-    let day, month, year;
-    
-    // If first part > 12, it must be DD/MM/YYYY
-    if (part1 > 12) {
-      day = part1;
-      month = part2;
-      year = part3;
-    }
-    // If second part > 12, it must be MM/DD/YYYY
-    else if (part2 > 12) {
-      month = part1;
-      day = part2;
-      year = part3;
-    }
-    // Both could be valid, assume DD/MM/YYYY (more common internationally)
-    else {
-      day = part1;
-      month = part2;
-      year = part3;
-    }
-
-    // Validate ranges
-    if (month < 1 || month > 12) {
-      result.isValid = false;
-      result.error = 'Invalid month';
-      return result;
-    }
-
-    if (day < 1 || day > 31) {
-      result.isValid = false;
-      result.error = 'Invalid day';
-      return result;
-    }
-
-    if (year < 1900 || year > 2100) {
-      result.isValid = false;
-      result.error = 'Year must be between 1900 and 2100';
-      return result;
-    }
-
-    // Validate day for specific month
-    const daysInMonth = this.getDaysInMonth(month, year);
-    if (day > daysInMonth) {
-      result.isValid = false;
-      result.error = `Invalid day for ${this.getMonthName(month)}`;
-      return result;
-    }
-
-    // Create formatted date for display
-    result.formattedDate = `${day.toString().padStart(2, '0')}/${month.toString().padStart(2, '0')}/${year}`;
-    result.value = { day, month, year };
-    
+    result.cleanValue = trimmedValue;
     return result;
   }
 
   /**
-   * Get number of days in a month
-   * @param {number} month - Month (1-12)
-   * @param {number} year - Year
-   * @returns {number} - Number of days in month
-   */
-  static getDaysInMonth(month, year) {
-    switch (month) {
-      case 1: case 3: case 5: case 7: case 8: case 10: case 12:
-        return 31;
-      case 4: case 6: case 9: case 11:
-        return 30;
-      case 2:
-        return this.isLeapYear(year) ? 29 : 28;
-      default:
-        return 30;
-    }
-  }
-
-  /**
-   * Check if year is a leap year
-   * @param {number} year - Year to check
-   * @returns {boolean} - True if leap year
-   */
-  static isLeapYear(year) {
-    return (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
-  }
-
-  /**
-   * Get month name
-   * @param {number} month - Month number (1-12)
-   * @returns {string} - Month name
-   */
-  static getMonthName(month) {
-    const months = [
-      '', 'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'
-    ];
-    return months[month] || 'Unknown';
-  }
-
-  /**
-   * Validate barcode format
-   * @param {string} barcode - Barcode to validate
+   * Validate all enhanced data
+   * @param {Object} enhancedData - Enhanced data object
    * @returns {Object} - Validation result
    */
-  static validateBarcode(barcode) {
-    const result = { isValid: false, error: '', value: null };
+  static validateEnhancedData(enhancedData) {
+    const errors = [];
+    const warnings = [];
     
-    if (!barcode || barcode.trim() === '') {
-      result.error = 'Barcode is required';
-      return result;
+    if (!enhancedData) {
+      errors.push('Enhanced data is required');
+      return { isValid: false, errors, warnings };
     }
 
-    const trimmedBarcode = barcode.trim();
+    // Validate label quantity (required)
+    const labelQtyValidation = this.validateLabelQuantity(enhancedData.labelQuantity);
+    if (!labelQtyValidation.isValid) {
+      errors.push(labelQtyValidation.error);
+    }
+
+    // Validate case quantity (optional)
+    if (enhancedData.caseQuantity) {
+      const caseQtyValidation = this.validateCaseQuantity(enhancedData.caseQuantity);
+      if (!caseQtyValidation.isValid) {
+        errors.push(caseQtyValidation.error);
+      }
+    }
+
+    // Validate box count (optional)
+    if (enhancedData.boxCount) {
+      const boxCountValidation = this.validateBoxCount(enhancedData.boxCount);
+      if (!boxCountValidation.isValid) {
+        errors.push(boxCountValidation.error);
+      }
+    }
+
+    // Validate harvest date (optional)
+    if (enhancedData.harvestDate) {
+      const harvestDateValidation = this.validateDate(enhancedData.harvestDate);
+      if (!harvestDateValidation.isValid) {
+        errors.push(`Harvest date: ${harvestDateValidation.error}`);
+      }
+    }
+
+    // Validate packaged date (optional)
+    if (enhancedData.packagedDate) {
+      const packagedDateValidation = this.validateDate(enhancedData.packagedDate);
+      if (!packagedDateValidation.isValid) {
+        errors.push(`Packaged date: ${packagedDateValidation.error}`);
+      }
+    }
+
+    // Business logic validations
+    if (enhancedData.harvestDate && enhancedData.packagedDate) {
+      const harvestDate = this.parseDate(enhancedData.harvestDate);
+      const packagedDate = this.parseDate(enhancedData.packagedDate);
+      
+      if (harvestDate && packagedDate && harvestDate > packagedDate) {
+        warnings.push('Harvest date appears to be after packaged date');
+      }
+    }
+
+    // Check for future dates
+    const today = new Date();
+    if (enhancedData.harvestDate) {
+      const harvestDate = this.parseDate(enhancedData.harvestDate);
+      if (harvestDate && harvestDate > today) {
+        warnings.push('Harvest date is in the future');
+      }
+    }
+
+    if (enhancedData.packagedDate) {
+      const packagedDate = this.parseDate(enhancedData.packagedDate);
+      if (packagedDate && packagedDate > today) {
+        warnings.push('Packaged date is in the future');
+      }
+    }
+
+    // Check for reasonable label quantity vs box count
+    if (enhancedData.labelQuantity && enhancedData.boxCount) {
+      const labelQty = parseInt(enhancedData.labelQuantity);
+      const boxCount = parseInt(enhancedData.boxCount);
+      
+      if (labelQty < boxCount) {
+        warnings.push('Label quantity is less than box count - each box should have at least one label');
+      }
+    }
+
+    return {
+      isValid: errors.length === 0,
+      errors,
+      warnings
+    };
+  }
+
+  /**
+   * Parse date string into Date object
+   * @param {string} dateStr - Date string
+   * @returns {Date|null} - Parsed date or null if invalid
+   */
+  static parseDate(dateStr) {
+    if (!dateStr) return null;
     
-    // Basic barcode validation - must be alphanumeric
-    if (!/^[A-Za-z0-9]+$/.test(trimmedBarcode)) {
-      result.error = 'Barcode must contain only letters and numbers';
-      return result;
+    const trimmed = dateStr.trim();
+    const parts = trimmed.split(/[\/\-]/);
+    
+    if (parts.length < 2) return null;
+    
+    let month = parseInt(parts[0]);
+    let day = parseInt(parts[1]);
+    let year = parts[2] ? parseInt(parts[2]) : new Date().getFullYear();
+    
+    // Handle 2-digit years
+    if (year < 100) {
+      // Assume 20xx for years 00-30, 19xx for years 31-99
+      year += (year <= 30) ? 2000 : 1900;
     }
-
-    // Minimum length check
-    if (trimmedBarcode.length < 4) {
-      result.error = 'Barcode must be at least 4 characters long';
-      return result;
+    
+    // Create date (month is 0-based in JavaScript Date)
+    const date = new Date(year, month - 1, day);
+    
+    // Verify the date is valid
+    if (date.getFullYear() !== year || 
+        date.getMonth() !== (month - 1) || 
+        date.getDate() !== day) {
+      return null;
     }
-
-    // Maximum length check
-    if (trimmedBarcode.length > 20) {
-      result.error = 'Barcode cannot exceed 20 characters';
-      return result;
-    }
-
-    result.isValid = true;
-    result.value = trimmedBarcode;
-    return result;
+    
+    return date;
   }
 
   /**
    * Validate SKU format
-   * @param {string} sku - SKU to validate
+   * @param {string} sku - SKU value
    * @returns {Object} - Validation result
    */
   static validateSKU(sku) {
-    const result = { isValid: false, error: '', value: null };
+    const result = { isValid: false, error: '', cleanValue: null };
     
-    if (!sku || sku.trim() === '') {
+    if (!sku) {
       result.error = 'SKU is required';
       return result;
     }
 
-    const trimmedSKU = sku.trim();
+    const trimmed = sku.trim();
     
-    // Minimum length check
-    if (trimmedSKU.length < 2) {
-      result.error = 'SKU must be at least 2 characters long';
+    if (!trimmed) {
+      result.error = 'SKU cannot be empty';
       return result;
     }
 
-    // Maximum length check
-    if (trimmedSKU.length > 50) {
+    if (trimmed.length > 50) {
       result.error = 'SKU cannot exceed 50 characters';
       return result;
     }
 
-    result.isValid = true;
-    result.value = trimmedSKU;
-    return result;
-  }
-
-  /**
-   * Validate file for CSV import
-   * @param {File} file - File to validate
-   * @param {Array} allowedTypes - Allowed MIME types
-   * @param {number} maxSizeMB - Maximum file size in MB
-   * @returns {Object} - Validation result
-   */
-  static validateFile(file, allowedTypes = ['text/csv', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'], maxSizeMB = 10) {
-    const result = { isValid: false, error: '', file: null };
-    
-    if (!file) {
-      result.error = 'Please select a file';
-      return result;
-    }
-
-    // Check file type
-    const isValidType = allowedTypes.includes(file.type) || 
-                       file.name.toLowerCase().endsWith('.csv') ||
-                       file.name.toLowerCase().endsWith('.xlsx') ||
-                       file.name.toLowerCase().endsWith('.xls');
-    
-    if (!isValidType) {
-      result.error = 'Please select a CSV or Excel file';
-      return result;
-    }
-
-    // Check file size
-    const maxSizeBytes = maxSizeMB * 1024 * 1024;
-    if (file.size > maxSizeBytes) {
-      result.error = `File size cannot exceed ${maxSizeMB}MB`;
-      return result;
-    }
-
-    // Check if file is empty
-    if (file.size === 0) {
-      result.error = 'File is empty';
+    // Check for valid characters (alphanumeric, hyphens, underscores)
+    if (!/^[A-Za-z0-9\-_]+$/.test(trimmed)) {
+      result.error = 'SKU can only contain letters, numbers, hyphens, and underscores';
       return result;
     }
 
     result.isValid = true;
-    result.file = file;
+    result.cleanValue = trimmed.toUpperCase();
     return result;
   }
 
   /**
-   * Validate user credentials
-   * @param {string} username - Username
-   * @param {string} password - Password
+   * Validate barcode format
+   * @param {string} barcode - Barcode value
    * @returns {Object} - Validation result
    */
-  static validateCredentials(username, password) {
-    const result = { isValid: false, errors: [] };
+  static validateBarcode(barcode) {
+    const result = { isValid: false, error: '', cleanValue: null };
     
-    if (!username || username.trim() === '') {
-      result.errors.push('Username is required');
+    if (!barcode) {
+      result.error = 'Barcode is required';
+      return result;
     }
 
-    if (!password || password.trim() === '') {
-      result.errors.push('Password is required');
+    const trimmed = barcode.trim();
+    
+    if (!trimmed) {
+      result.error = 'Barcode cannot be empty';
+      return result;
     }
 
-    if (username && username.trim().length < 3) {
-      result.errors.push('Username must be at least 3 characters long');
+    // Code 39 supports: 0-9, A-Z, space, and special characters: - . $ / + % *
+    if (!/^[0-9A-Z\-\.\$\/\+\%\s]*$/i.test(trimmed)) {
+      result.error = 'Barcode contains invalid characters for Code 39 format';
+      return result;
     }
 
-    if (password && password.length < 6) {
-      result.errors.push('Password must be at least 6 characters long');
+    if (trimmed.length > 43) {
+      result.error = 'Barcode too long for Code 39 format (maximum 43 characters)';
+      return result;
     }
 
-    result.isValid = result.errors.length === 0;
+    result.isValid = true;
+    result.cleanValue = trimmed.toUpperCase();
     return result;
   }
 
   /**
-   * Sanitize input for display
-   * @param {string} input - Input to sanitize
-   * @returns {string} - Sanitized input
-   */
-  static sanitizeInput(input) {
-    if (!input) return '';
-    
-    return String(input)
-      .trim()
-      .replace(/[<>]/g, '') // Remove potential HTML tags
-      .substring(0, 1000); // Limit length
-  }
-
-  /**
-   * Format barcode for display with hyphens
-   * @param {string} barcode - Barcode to format
-   * @returns {string} - Formatted barcode
-   */
-  static formatBarcodeForDisplay(barcode) {
-    if (!barcode) return '';
-    
-    const cleanBarcode = String(barcode).replace(/[^A-Za-z0-9]/g, '');
-    
-    // Add hyphen every 4 characters for better readability
-    return cleanBarcode.replace(/(.{4})/g, '$1-').replace(/-$/, '');
-  }
-
-  /**
-   * Validate enhanced data object
-   * @param {Object} data - Enhanced data to validate
+   * Validate product name
+   * @param {string} productName - Product name
    * @returns {Object} - Validation result
    */
-  static validateEnhancedData(data) {
-    const result = { isValid: true, errors: [] };
+  static validateProductName(productName) {
+    const result = { isValid: true, error: '', cleanValue: null };
     
-    if (data.labelQuantity !== undefined && data.labelQuantity !== '') {
-      const labelValidation = this.validateLabelQuantity(data.labelQuantity);
-      if (!labelValidation.isValid) {
-        result.errors.push(labelValidation.error);
-      }
+    if (!productName) {
+      result.isValid = false;
+      result.error = 'Product name is required';
+      return result;
     }
 
-    if (data.caseQuantity !== undefined && data.caseQuantity !== '') {
-      const caseValidation = this.validateCaseQuantity(data.caseQuantity);
-      if (!caseValidation.isValid) {
-        result.errors.push(caseValidation.error);
-      }
+    const trimmed = productName.trim();
+    
+    if (!trimmed) {
+      result.isValid = false;
+      result.error = 'Product name cannot be empty';
+      return result;
     }
 
-    if (data.boxCount !== undefined && data.boxCount !== '') {
-      const boxValidation = this.validateBoxCount(data.boxCount);
-      if (!boxValidation.isValid) {
-        result.errors.push(boxValidation.error);
-      }
+    if (trimmed.length > 200) {
+      result.isValid = false;
+      result.error = 'Product name cannot exceed 200 characters';
+      return result;
     }
 
-    if (data.harvestDate !== undefined && data.harvestDate !== '') {
-      const dateValidation = this.validateDate(data.harvestDate);
-      if (!dateValidation.isValid) {
-        result.errors.push(`Harvest date: ${dateValidation.error}`);
-      }
-    }
-
-    if (data.packagedDate !== undefined && data.packagedDate !== '') {
-      const dateValidation = this.validateDate(data.packagedDate);
-      if (!dateValidation.isValid) {
-        result.errors.push(`Packaged date: ${dateValidation.error}`);
-      }
-    }
-
-    result.isValid = result.errors.length === 0;
+    result.cleanValue = trimmed;
     return result;
+  }
+
+  /**
+   * Validate complete item data for labeling
+   * @param {Object} item - Item data
+   * @param {Object} enhancedData - Enhanced data
+   * @returns {Object} - Validation result
+   */
+  static validateItemForLabeling(item, enhancedData) {
+    const errors = [];
+    const warnings = [];
+
+    // Validate basic item data
+    if (!item.sku && !item.barcode) {
+      errors.push('Either SKU or Barcode is required');
+    }
+
+    const skuValidation = this.validateSKU(item.sku);
+    if (item.sku && !skuValidation.isValid) {
+      errors.push(`SKU: ${skuValidation.error}`);
+    }
+
+    const barcodeValidation = this.validateBarcode(item.barcode);
+    if (item.barcode && !barcodeValidation.isValid) {
+      errors.push(`Barcode: ${barcodeValidation.error}`);
+    }
+
+    const productNameValidation = this.validateProductName(item.productName);
+    if (!productNameValidation.isValid) {
+      errors.push(`Product name: ${productNameValidation.error}`);
+    }
+
+    // Validate enhanced data
+    const enhancedValidation = this.validateEnhancedData(enhancedData);
+    if (!enhancedValidation.isValid) {
+      errors.push(...enhancedValidation.errors);
+    }
+    warnings.push(...enhancedValidation.warnings);
+
+    return {
+      isValid: errors.length === 0,
+      errors,
+      warnings
+    };
+  }
+
+  /**
+   * Clean and format input value
+   * @param {any} value - Input value
+   * @param {string} type - Value type (number, text, date)
+   * @returns {string} - Cleaned value
+   */
+  static cleanValue(value, type = 'text') {
+    if (value === null || value === undefined) return '';
+    
+    let cleaned = String(value).trim();
+    
+    switch (type) {
+      case 'number':
+        // Remove non-numeric characters except decimal point
+        cleaned = cleaned.replace(/[^\d.]/g, '');
+        break;
+        
+      case 'date':
+        // Remove extra spaces and normalize separators
+        cleaned = cleaned.replace(/\s+/g, ' ').replace(/[^\d\/\-\s]/g, '');
+        break;
+        
+      case 'text':
+      default:
+        // Remove extra whitespace
+        cleaned = cleaned.replace(/\s+/g, ' ');
+        break;
+    }
+    
+    return cleaned;
+  }
+
+  /**
+   * Get validation error summary
+   * @param {Array} errors - Array of error messages
+   * @param {Array} warnings - Array of warning messages
+   * @returns {string} - Summary message
+   */
+  static getValidationSummary(errors, warnings) {
+    const parts = [];
+    
+    if (errors.length > 0) {
+      parts.push(`${errors.length} error${errors.length > 1 ? 's' : ''}`);
+    }
+    
+    if (warnings.length > 0) {
+      parts.push(`${warnings.length} warning${warnings.length > 1 ? 's' : ''}`);
+    }
+    
+    if (parts.length === 0) {
+      return 'All validations passed';
+    }
+    
+    return `Found ${parts.join(' and ')}`;
   }
 }

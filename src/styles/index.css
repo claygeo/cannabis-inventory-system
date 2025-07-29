@@ -32,16 +32,80 @@
   --info-text: #DBEAFE;
 }
 
-/* Base styles */
+/* CRITICAL: TOAST OVERLAY PREVENTION - MUST BE AT THE TOP */
+/* These rules prevent React Hot Toast from creating problematic overlays */
+
+/* 1. Control ALL toast containers */
+[data-react-hot-toast] {
+  z-index: 40 !important; /* Lower than modals (50+) */
+  position: fixed !important;
+  pointer-events: none !important; /* Container doesn't block clicks */
+}
+
+/* 2. Individual toasts can receive clicks */
+[data-react-hot-toast] > div {
+  pointer-events: auto !important;
+}
+
+/* 3. Aggressively target rogue high z-index elements */
+div[style*="z-index: 9999"]:not([class]):not([id*="modal"]):not([id*="header"]):not([data-react-hot-toast]) {
+  /* Hide divs with z-index 9999 that have no class/id and aren't essential */
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* 4. Target React Hot Toast's specific problematic containers */
+div[id*="_rht_"]:not([data-react-hot-toast]) {
+  /* Hide any RHT containers that don't have the proper data attribute */
+  display: none !important;
+}
+
+/* 5. Prevent multiple toast containers */
+body > div:not([id]):not([class]):not([data-react-hot-toast]) {
+  /* Hide anonymous divs that might be stuck toast portals */
+  z-index: 10 !important;
+}
+
+/* 6. Force proper toast container behavior */
+.toast-container-fixed {
+  position: fixed !important;
+  z-index: 40 !important;
+  top: 1rem !important;
+  right: 1rem !important;
+  pointer-events: none !important;
+  max-width: 420px !important;
+}
+
+/* 7. Ensure our application modals have higher z-index */
+.modal-backdrop,
+.modal-container {
+  z-index: 50 !important;
+}
+
+/* 8. Prevent any full-screen overlays that aren't intentional */
+div[style*="position: fixed"][style*="inset: 0"]:not(.modal-backdrop):not([class*="modal"]):not([data-react-hot-toast]) {
+  display: none !important;
+}
+
+div[style*="position: fixed"][style*="top: 0"][style*="left: 0"][style*="right: 0"][style*="bottom: 0"]:not(.modal-backdrop):not([class*="modal"]):not([data-react-hot-toast]) {
+  display: none !important;
+}
+
+/* Base styles - Force dark theme */
 @layer base {
   html {
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background-color: #15161B !important;
+    color: #FAFCFB !important;
   }
   
   body {
-    background-color: var(--bg-primary);
-    color: var(--text-primary);
+    background-color: #15161B !important;
+    color: #FAFCFB !important;
     line-height: 1.6;
+    min-height: 100vh;
   }
 
   * {
@@ -50,78 +114,142 @@
 
   #root {
     min-height: 100vh;
-    background-color: var(--bg-primary);
+    background-color: #15161B !important;
+    color: #FAFCFB !important;
+  }
+
+  /* Force all text elements to follow theme */
+  h1, h2, h3, h4, h5, h6 {
+    color: #FAFCFB !important;
+  }
+
+  p, span, div, label {
+    color: inherit;
+  }
+
+  /* Force all backgrounds to follow theme */
+  .bg-white {
+    background-color: #181B22 !important;
+  }
+
+  .text-gray-900 {
+    color: #FAFCFB !important;
+  }
+
+  .text-gray-600 {
+    color: #9FA3AC !important;
+  }
+
+  .text-gray-500 {
+    color: #9FA3AC !important;
+  }
+
+  .text-gray-400 {
+    color: #9FA3AC !important;
+  }
+
+  .border-gray-200 {
+    border-color: #39414E !important;
+  }
+
+  .border-gray-300 {
+    border-color: #39414E !important;
+  }
+
+  .bg-gray-50 {
+    background-color: #15161B !important;
+  }
+
+  .bg-gray-100 {
+    background-color: #181B22 !important;
+  }
+
+  .hover\:bg-gray-100:hover {
+    background-color: #39414E !important;
+  }
+
+  .hover\:bg-gray-50:hover {
+    background-color: #181B22 !important;
   }
 }
 
 /* Component layer for reusable components */
 @layer components {
+  /* Container utilities */
+  .container-cannabis {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+
   /* Background utilities */
   .bg-primary {
-    background-color: var(--bg-primary);
+    background-color: #15161B !important;
   }
 
   .bg-secondary {
-    background-color: var(--bg-secondary);
+    background-color: #181B22 !important;
   }
 
   .bg-accent {
-    background-color: var(--bg-accent);
+    background-color: #86EFAC !important;
   }
 
   /* Text utilities */
   .text-primary {
-    color: var(--text-primary);
+    color: #FAFCFB !important;
   }
 
   .text-secondary {
-    color: var(--text-secondary);
+    color: #9FA3AC !important;
   }
 
   .text-on-accent {
-    color: var(--text-on-accent);
+    color: #00001C !important;
   }
 
   /* Border utilities */
   .border-border-primary {
-    border-color: var(--border-primary);
+    border-color: #39414E !important;
   }
 
-  /* Buttons */
+  /* Buttons - Force theme */
   .btn {
     @apply inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;
+    border-radius: 0.5rem;
   }
 
   .btn-primary {
-    background-color: var(--bg-accent);
-    color: var(--text-on-accent);
-    @apply hover:opacity-90 focus:ring-2;
-    box-shadow: 0 0 0 2px var(--bg-accent);
+    background-color: #86EFAC !important;
+    color: #00001C !important;
+    border-color: #86EFAC !important;
+  }
+
+  .btn-primary:hover {
+    opacity: 0.9;
   }
 
   .btn-secondary {
-    background-color: var(--bg-secondary);
-    color: var(--text-primary);
-    border: 1px solid var(--border-primary);
-    @apply hover:bg-opacity-80 focus:ring-2;
+    background-color: #181B22 !important;
+    color: #FAFCFB !important;
+    border: 1px solid #39414E !important;
+  }
+
+  .btn-secondary:hover {
+    background-color: #39414E !important;
   }
 
   .btn-success {
-    background-color: var(--success-bg);
-    color: var(--success-text);
-    @apply hover:opacity-90 focus:ring-green-500;
+    background-color: #10B981 !important;
+    color: #D1FAE5 !important;
   }
 
   .btn-warning {
-    background-color: var(--warning-bg);
-    color: var(--warning-text);
-    @apply hover:opacity-90 focus:ring-yellow-500;
+    background-color: #F59E0B !important;
+    color: #FEF3C7 !important;
   }
 
   .btn-error {
-    background-color: var(--error-bg);
-    color: var(--error-text);  
-    @apply hover:opacity-90 focus:ring-red-500;
+    background-color: #EF4444 !important;
+    color: #FEE2E2 !important;
   }
 
   .btn-sm {
@@ -132,16 +260,17 @@
     @apply px-6 py-3 text-base;
   }
 
-  /* Cards */
+  /* Cards - Force theme */
   .card {
-    background-color: var(--bg-secondary);
-    border: 1px solid var(--border-primary);
+    background-color: #181B22 !important;
+    border: 1px solid #39414E !important;
+    color: #FAFCFB !important;
     @apply rounded-xl shadow-sm p-6;
   }
 
   .card-header {
     @apply pb-4 mb-4;
-    border-bottom: 1px solid var(--border-primary);
+    border-bottom: 1px solid #39414E;
   }
 
   .card-body {
@@ -150,96 +279,95 @@
 
   .card-footer {
     @apply pt-4 mt-4;
-    border-top: 1px solid var(--border-primary);
+    border-top: 1px solid #39414E;
   }
 
-  /* Forms */
+  /* Forms - Force theme */
   .form-group {
     @apply space-y-2;
   }
 
   .form-label {
     @apply block text-sm font-medium;
-    color: var(--text-primary);
+    color: #FAFCFB !important;
   }
 
   .form-label-required::after {
-    color: var(--error-bg);
+    color: #EF4444;
     @apply ml-1;
     content: "*";
   }
 
   .input {
-    background-color: var(--bg-secondary);
-    border: 1px solid var(--border-primary);
-    color: var(--text-primary);
+    background-color: #181B22 !important;
+    border: 1px solid #39414E !important;
+    color: #FAFCFB !important;
     @apply block w-full px-3 py-2 rounded-lg shadow-sm focus:outline-none focus:ring-2 transition-colors duration-200;
-    box-shadow: 0 0 0 2px transparent;
   }
 
   .input:focus {
-    border-color: var(--bg-accent);
-    box-shadow: 0 0 0 2px var(--bg-accent);
+    border-color: #86EFAC !important;
+    box-shadow: 0 0 0 2px rgba(134, 239, 172, 0.2) !important;
   }
 
   .input::placeholder {
-    color: var(--text-secondary);
+    color: #9FA3AC !important;
   }
 
   .input-error {
-    border-color: var(--error-bg);
+    border-color: #EF4444 !important;
   }
 
   .input-error:focus {
-    box-shadow: 0 0 0 2px var(--error-bg);
+    box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2) !important;
   }
 
   .input-success {
-    border-color: var(--success-bg);
+    border-color: #10B981 !important;
   }
 
   .input-success:focus {
-    box-shadow: 0 0 0 2px var(--success-bg);
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2) !important;
   }
 
   .form-error {
     @apply text-sm mt-1;
-    color: var(--error-text);
+    color: #FEE2E2 !important;
   }
 
   .form-help {
     @apply text-sm mt-1;
-    color: var(--text-secondary);
+    color: #9FA3AC !important;
   }
 
   /* Select */
   .select {
-    background-color: var(--bg-secondary);
-    border: 1px solid var(--border-primary);
-    color: var(--text-primary);
+    background-color: #181B22 !important;
+    border: 1px solid #39414E !important;
+    color: #FAFCFB !important;
     @apply block w-full pl-3 pr-10 py-2 text-base focus:outline-none focus:ring-2 rounded-lg;
   }
 
   .select:focus {
-    border-color: var(--bg-accent);
-    box-shadow: 0 0 0 2px var(--bg-accent);
+    border-color: #86EFAC !important;
+    box-shadow: 0 0 0 2px rgba(134, 239, 172, 0.2) !important;
   }
 
   /* Textarea */
   .textarea {
-    background-color: var(--bg-secondary);
-    border: 1px solid var(--border-primary);
-    color: var(--text-primary);
+    background-color: #181B22 !important;
+    border: 1px solid #39414E !important;
+    color: #FAFCFB !important;
     @apply block w-full px-3 py-2 rounded-lg shadow-sm focus:outline-none focus:ring-2 resize-vertical;
   }
 
   .textarea:focus {
-    border-color: var(--bg-accent);
-    box-shadow: 0 0 0 2px var(--bg-accent);
+    border-color: #86EFAC !important;
+    box-shadow: 0 0 0 2px rgba(134, 239, 172, 0.2) !important;
   }
 
   .textarea::placeholder {
-    color: var(--text-secondary);
+    color: #9FA3AC !important;
   }
 
   /* Badges */
@@ -248,63 +376,94 @@
   }
 
   .badge-blue {
-    background-color: var(--info-bg);
-    color: var(--info-text);
+    background-color: #3B82F6 !important;
+    color: #DBEAFE !important;
   }
 
   .badge-green {
-    background-color: var(--success-bg);
-    color: var(--success-text);
+    background-color: #10B981 !important;
+    color: #D1FAE5 !important;
   }
 
   .badge-yellow {
-    background-color: var(--warning-bg);
-    color: var(--warning-text);
+    background-color: #F59E0B !important;
+    color: #FEF3C7 !important;
   }
 
   .badge-red {
-    background-color: var(--error-bg);
-    color: var(--error-text);
+    background-color: #EF4444 !important;
+    color: #FEE2E2 !important;
   }
 
   .badge-gray {
-    background-color: var(--bg-secondary);
-    color: var(--text-secondary);
-    border: 1px solid var(--border-primary);
+    background-color: #181B22 !important;
+    color: #9FA3AC !important;
+    border: 1px solid #39414E !important;
   }
 
   .badge-purple {
-    @apply bg-purple-100 text-purple-800;
+    background-color: #8B5CF6 !important;
+    color: #E9D5FF !important;
   }
 
-  /* Tables */
+  /* Tables - Force theme */
   .table {
     @apply min-w-full divide-y;
-    border-color: var(--border-primary);
+    border-color: #39414E !important;
+    background-color: #181B22 !important;
   }
 
   .table-header {
-    background-color: var(--bg-secondary);
+    background-color: #15161B !important;
   }
 
   .table-header th {
     @apply px-6 py-3 text-left text-xs font-medium uppercase tracking-wider;
-    color: var(--text-secondary);
+    color: #9FA3AC !important;
+    background-color: #15161B !important;
   }
 
   .table-body {
-    background-color: var(--bg-primary);
-    border-color: var(--border-primary);
+    background-color: #181B22 !important;
+    border-color: #39414E !important;
   }
 
   .table-body td {
     @apply px-6 py-4 whitespace-nowrap text-sm;
-    color: var(--text-primary);
+    color: #FAFCFB !important;
+    background-color: #181B22 !important;
   }
 
   .table-row-hover {
     @apply hover:bg-opacity-50 transition-colors duration-150;
-    background-color: var(--bg-secondary);
+    background-color: #39414E !important;
+  }
+
+  /* Data Tables - Force theme */
+  .data-table {
+    @apply min-w-full;
+    background-color: #181B22 !important;
+    color: #FAFCFB !important;
+  }
+
+  .data-table thead {
+    background-color: #15161B !important;
+  }
+
+  .data-table tbody {
+    background-color: #181B22 !important;
+  }
+
+  .data-table th {
+    background-color: #15161B !important;
+    color: #9FA3AC !important;
+    border-color: #39414E !important;
+  }
+
+  .data-table td {
+    background-color: #181B22 !important;
+    color: #FAFCFB !important;
+    border-color: #39414E !important;
   }
 
   /* Alerts */
@@ -313,48 +472,50 @@
   }
 
   .alert-info {
-    background-color: var(--info-bg);
-    border-color: var(--info-bg);
-    color: var(--info-text);
+    background-color: rgba(59, 130, 246, 0.1) !important;
+    border-color: #3B82F6 !important;
+    color: #DBEAFE !important;
   }
 
   .alert-success {
-    background-color: var(--success-bg);
-    border-color: var(--success-bg);
-    color: var(--success-text);
+    background-color: rgba(16, 185, 129, 0.1) !important;
+    border-color: #10B981 !important;
+    color: #D1FAE5 !important;
   }
 
   .alert-warning {
-    background-color: var(--warning-bg);
-    border-color: var(--warning-bg);
-    color: var(--warning-text);
+    background-color: rgba(245, 158, 11, 0.1) !important;
+    border-color: #F59E0B !important;
+    color: #FEF3C7 !important;
   }
 
   .alert-error {
-    background-color: var(--error-bg);
-    border-color: var(--error-bg);
-    color: var(--error-text);
+    background-color: rgba(239, 68, 68, 0.1) !important;
+    border-color: #EF4444 !important;
+    color: #FEE2E2 !important;
   }
 
   /* Loading */
   .loading-spinner {
     @apply animate-spin rounded-full h-8 w-8 border-b-2;
-    border-color: var(--bg-accent);
+    border-color: #86EFAC !important;
   }
 
   .loading-dot {
     @apply inline-block w-2 h-2 rounded-full animate-pulse;
-    background-color: var(--bg-accent);
+    background-color: #86EFAC !important;
   }
 
-  /* Modal backdrop */
+  /* Modal backdrop - HIGHER Z-INDEX THAN TOASTS */
   .modal-backdrop {
-    @apply fixed inset-0 bg-opacity-75 transition-opacity z-50;
-    background-color: var(--bg-primary);
+    @apply fixed inset-0 bg-opacity-75 transition-opacity;
+    background-color: rgba(21, 22, 27, 0.8) !important;
+    z-index: 50 !important; /* Higher than toast containers (40) */
   }
 
   .modal-container {
-    @apply fixed inset-0 z-50 overflow-y-auto;
+    @apply fixed inset-0 overflow-y-auto;
+    z-index: 50 !important; /* Higher than toast containers (40) */
   }
 
   .modal-wrapper {
@@ -363,14 +524,17 @@
 
   .modal-content {
     @apply relative transform overflow-hidden rounded-lg shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg;
-    background-color: var(--bg-secondary);
-    border: 1px solid var(--border-primary);
+    background-color: #181B22 !important;
+    border: 1px solid #39414E !important;
+    color: #FAFCFB !important;
+    z-index: 51 !important; /* Even higher for modal content */
   }
 
   /* Progress bars */
   .progress-bar {
     @apply w-full rounded-full h-2.5;
-    background-color: var(--bg-secondary);
+    background-color: #15161B !important;
+    border: 1px solid #39414E !important;
   }
 
   .progress-fill {
@@ -378,87 +542,22 @@
   }
 
   .progress-fill-blue {
-    background-color: var(--info-bg);
+    background-color: #3B82F6 !important;
   }
 
   .progress-fill-green {
-    background-color: var(--success-bg);
+    background-color: #10B981 !important;
   }
 
   /* Dividers */
   .divider {
     @apply my-6;
-    border-color: var(--border-primary);
+    border-color: #39414E !important;
   }
 
   .divider-vertical {
     @apply mx-6;
-    border-color: var(--border-primary);
-  }
-
-  /* Header Component */
-  .header {
-    background-color: var(--bg-secondary);
-    border-bottom: 1px solid var(--border-primary);
-    @apply shadow-sm sticky top-0 z-40;
-  }
-
-  .header-container {
-    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
-  }
-
-  .header-content {
-    @apply flex justify-between items-center h-16;
-  }
-
-  .header-logo {
-    @apply flex items-center space-x-3;
-  }
-
-  .header-title {
-    @apply text-xl font-bold;
-    color: var(--text-primary);
-  }
-
-  .header-subtitle {
-    @apply text-sm;
-    color: var(--text-secondary);
-  }
-
-  .header-nav {
-    @apply flex items-center space-x-6;
-  }
-
-  .header-nav-link {
-    @apply px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200;
-    color: var(--text-secondary);
-  }
-
-  .header-nav-link:hover {
-    color: var(--text-primary);
-  }
-
-  .header-nav-link-active {
-    color: var(--bg-accent);
-    background-color: rgba(134, 239, 172, 0.1);
-  }
-
-  .header-user {
-    @apply flex items-center space-x-3;
-  }
-
-  .header-user-info {
-    @apply text-right;
-  }
-
-  .header-user-name {
-    @apply text-sm font-medium;
-    color: var(--text-primary);
-  }
-
-  .header-user-role {
-    @apply text-xs;
-    color: var(--text-secondary);
+    border-color: #39414E !important;
   }
 }
 
@@ -493,22 +592,6 @@
     -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
-  }
-
-  /* Custom focus rings */
-  .focus-ring {
-    @apply focus:outline-none focus:ring-2 focus:ring-offset-2;
-    --tw-ring-color: var(--bg-accent);
-  }
-
-  .focus-ring-red {
-    @apply focus:outline-none focus:ring-2 focus:ring-offset-2;
-    --tw-ring-color: var(--error-bg);
-  }
-
-  .focus-ring-green {
-    @apply focus:outline-none focus:ring-2 focus:ring-offset-2;
-    --tw-ring-color: var(--success-bg);
   }
 
   /* Animation utilities */
@@ -553,7 +636,8 @@
 
   /* Print utilities */
   @media print {
-    .print-hidden {
+    .print-hidden,
+    .no-print {
       display: none !important;
     }
 
@@ -581,16 +665,22 @@
   }
 
   ::-webkit-scrollbar-track {
-    background: var(--bg-primary);
+    background: #15161B;
   }
 
   ::-webkit-scrollbar-thumb {
-    background: var(--border-primary);
+    background: #39414E;
     border-radius: 4px;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: var(--text-secondary);
+    background: #9FA3AC;
+  }
+
+  /* Force scrollbar styles */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #39414E #15161B;
   }
 }
 
@@ -614,7 +704,41 @@
 /* Focus states for accessibility */
 .focus-visible {
   @apply focus:outline-none focus:ring-2 focus:ring-offset-2;
-  --tw-ring-color: var(--bg-accent);
+  --tw-ring-color: #86EFAC;
+}
+
+/* Force override any remaining light theme elements */
+* {
+  /* Remove any white backgrounds */
+  background-color: inherit;
+}
+
+div, section, article, aside, nav, main, header, footer {
+  background-color: inherit;
+}
+
+/* React Hot Toast specific styling */
+.react-hot-toast-container .react-hot-toast {
+  background-color: #181B22 !important;
+  color: #FAFCFB !important;
+  border: 1px solid #39414E !important;
+}
+
+/* Force any remaining problematic elements */
+[style*="background-color: white"],
+[style*="background-color: #fff"],
+[style*="background-color: #ffffff"],
+[style*="background: white"],
+[style*="background: #fff"],
+[style*="background: #ffffff"] {
+  background-color: #181B22 !important;
+  color: #FAFCFB !important;
+}
+
+[style*="color: black"],
+[style*="color: #000"],
+[style*="color: #000000"] {
+  color: #FAFCFB !important;
 }
 
 /* High contrast mode support */
@@ -634,5 +758,32 @@
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+/* DEVELOPMENT MODE: Additional safety net for hot reloading */
+@media screen {
+  /* In development, be extra aggressive about preventing overlay issues */
+  
+  /* Target any element that might be a stuck React Hot Toast portal */
+  body > div:empty:not([id]):not([class]):not([data-react-hot-toast]) {
+    display: none !important;
+  }
+  
+  /* Prevent elements from taking full viewport with high z-index unless they're essential */
+  div[style*="position: fixed"][style*="z-index"]:not([class*="modal"]):not([class*="header"]):not([class*="nav"]):not([data-react-hot-toast]):not(.status-bar) {
+    z-index: 10 !important; /* Force low z-index */
+  }
+  
+  /* Ensure our essential UI components always show */
+  header, 
+  .status-bar,
+  [class*="debugger"],
+  [data-react-hot-toast],
+  .modal-backdrop,
+  .modal-container,
+  .modal-content {
+    display: block !important;
+    pointer-events: auto !important;
   }
 }

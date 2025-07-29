@@ -115,27 +115,27 @@ export function InventoryProvider({ children }) {
     }
   }, []);
 
-  // Import main inventory from CSV
+  // Import main inventory from Excel or CSV file
   const importMainInventory = useCallback(async (file, onProgress = null) => {
     dispatch({ type: INVENTORY_ACTIONS.SET_LOADING, payload: true });
     dispatch({ type: INVENTORY_ACTIONS.CLEAR_ERROR });
 
     try {
-      // Parse CSV file
-      const csvData = await DataProcessor.parseCSV(file, onProgress);
+      // Parse file (Excel or CSV) - FIXED: Now uses parseFile instead of parseCSV
+      const fileData = await DataProcessor.parseFile(file, onProgress);
       
-      if (csvData.errors.length > 0) {
-        console.warn('CSV parsing warnings:', csvData.errors);
+      if (fileData.errors.length > 0) {
+        console.warn('File parsing warnings:', fileData.errors);
       }
 
       // Validate structure
-      const validation = DataProcessor.validateMainInventoryStructure(csvData.data);
+      const validation = DataProcessor.validateMainInventoryStructure(fileData.data);
       if (!validation.isValid) {
         throw new Error(`Invalid file structure: ${validation.errors.join(', ')}`);
       }
 
       // Process the data
-      const processedData = DataProcessor.processMainInventoryData(csvData.data);
+      const processedData = DataProcessor.processMainInventoryData(fileData.data);
       
       if (processedData.errors.length > 0) {
         console.warn('Data processing errors:', processedData.errors);
@@ -190,27 +190,27 @@ export function InventoryProvider({ children }) {
     }
   }, []);
 
-  // Import Sweed data from CSV
+  // Import Sweed data from Excel or CSV file
   const importSweedData = useCallback(async (file, onProgress = null) => {
     dispatch({ type: INVENTORY_ACTIONS.SET_LOADING, payload: true });
     dispatch({ type: INVENTORY_ACTIONS.CLEAR_ERROR });
 
     try {
-      // Parse CSV file
-      const csvData = await DataProcessor.parseCSV(file, onProgress);
+      // Parse file (Excel or CSV) - FIXED: Now uses parseFile instead of parseCSV
+      const fileData = await DataProcessor.parseFile(file, onProgress);
       
-      if (csvData.errors.length > 0) {
-        console.warn('CSV parsing warnings:', csvData.errors);
+      if (fileData.errors.length > 0) {
+        console.warn('File parsing warnings:', fileData.errors);
       }
 
       // Validate structure
-      const validation = DataProcessor.validateSweedStructure(csvData.data);
+      const validation = DataProcessor.validateSweedStructure(fileData.data);
       if (!validation.isValid) {
         throw new Error(`Invalid file structure: ${validation.errors.join(', ')}`);
       }
 
       // Process the data
-      const processedData = DataProcessor.processSweedData(csvData.data);
+      const processedData = DataProcessor.processSweedData(fileData.data);
       
       if (processedData.errors.length > 0) {
         console.warn('Data processing errors:', processedData.errors);

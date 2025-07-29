@@ -9,12 +9,8 @@ import {
   ArrowLeft, 
   Search,
   Trash2,
-  FileText,
   Tag,
-  AlertCircle,
-  CheckCircle,
-  Clock,
-  Package
+  AlertCircle
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -40,8 +36,13 @@ export default function ScanningForm() {
 
   // Load scanned items details on mount and when session changes
   useEffect(() => {
-    const details = getScannedItemsDetails(mainInventory, sweedData);
-    setScannedItemsList(details);
+    try {
+      const details = getScannedItemsDetails(mainInventory, sweedData);
+      setScannedItemsList(details || []);
+    } catch (error) {
+      console.error('Error loading scanned items:', error);
+      setScannedItemsList([]);
+    }
   }, [mainInventory, sweedData, getScannedItemsDetails, sessionStats.totalItemsScanned]);
 
   // Focus barcode input on mount
@@ -50,6 +51,18 @@ export default function ScanningForm() {
       barcodeInputRef.current.focus();
     }
   }, []);
+
+  // Auto-close product selection on escape key
+  useEffect(() => {
+    const handleEscape = (e) => {
+      if (e.key === 'Escape' && showProductSelection) {
+        handleProductSelectionCancelled();
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [showProductSelection]);
 
   // Handle barcode input change
   const handleBarcodeChange = (e) => {
@@ -79,7 +92,7 @@ export default function ScanningForm() {
       const result = processBarcodeScan(cleanBarcode, mainInventory, sweedData);
       
       if (result.success) {
-        if (result.requiresSelection) {
+        if (result.requiresSelection && result.matches && result.matches.length > 1) {
           // Multiple matches - show selection dialog
           setSelectedProducts(result.matches);
           setShowProductSelection(true);
@@ -99,9 +112,14 @@ export default function ScanningForm() {
       } else {
         // Handle errors
         if (result.alreadyScanned) {
-          const item = result.matches[0];
-          setProductDetails(buildAlreadyScannedMessage(item, cleanBarcode));
-          toast.warn(`Already scanned: ${item.sku}`);
+          const item = result.matches && result.matches[0];
+          if (item) {
+            setProductDetails(buildAlreadyScannedMessage(item, cleanBarcode));
+            toast.warn(`Already scanned: ${item.sku}`);
+          } else {
+            setProductDetails('Product already scanned');
+            toast.warn('Product already scanned');
+          }
         } else {
           setProductDetails(buildNotFoundMessage(cleanBarcode));
           toast.error(result.error || 'Barcode not found');
@@ -126,6 +144,7 @@ export default function ScanningForm() {
 
   // Handle product selection from dialog
   const handleProductSelected = (selectedProduct) => {
+    console.log('Product selected:', selectedProduct);
     setShowProductSelection(false);
     setSelectedProducts([]);
     
@@ -142,6 +161,7 @@ export default function ScanningForm() {
 
   // Handle product selection cancelled
   const handleProductSelectionCancelled = () => {
+    console.log('Product selection cancelled');
     setShowProductSelection(false);
     setSelectedProducts([]);
     
@@ -154,10 +174,15 @@ export default function ScanningForm() {
   // Clear all scanned items
   const handleClearAll = () => {
     if (window.confirm('Clear all scanned items? This cannot be undone.')) {
-      clearScannedItems();
-      setScannedItemsList([]);
-      setProductDetails('All scanned items cleared. Ready to start scanning again.');
-      toast.success('All scanned items cleared');
+      try {
+        clearScannedItems();
+        setScannedItemsList([]);
+        setProductDetails('All scanned items cleared. Ready to start scanning again.');
+        toast.success('All scanned items cleared');
+      } catch (error) {
+        console.error('Error clearing items:', error);
+        toast.error('Error clearing items');
+      }
     }
   };
 
@@ -166,26 +191,16 @@ export default function ScanningForm() {
     return `========== PRODUCT SCANNED SUCCESSFULLY ==========
 
 SCANNED BARCODE: ${scannedBarcode}
-DATA SOURCE: ${item.source.toUpperCase()}
 
 === PRODUCT DETAILS ===
-SKU: ${item.sku}
-Product Name: ${item.productName}
-Brand: ${item.brand}
+SKU: ${item.sku || 'N/A'}
+Product Name: ${item.productName || 'N/A'}
+Brand: ${item.brand || 'N/A'}
 Strain: ${item.strain || 'N/A'}
 Size: ${item.size || 'N/A'}
-Barcode: ${item.barcode}
+Barcode: ${item.barcode || 'N/A'}
 BioTrack/External: ${item.bioTrackCode || 'N/A'}
-Quantity: ${item.quantity}
-
-${item.source === 'SweedReport' ? 
-  `=== SHIPPING DETAILS ===
-Ship To Location: ${item.shipToLocation || 'N/A'}
-Order Number: ${item.orderNumber || 'N/A'}` :
-  `=== INVENTORY DETAILS ===
-Location: ${item.location || 'N/A'}
-Distributor: ${item.distributor || 'N/A'}`
-}
+Quantity: ${item.quantity || 'N/A'}
 
 STATUS: SUCCESSFULLY ADDED TO SCAN LIST
 ==============================================`;
@@ -202,7 +217,7 @@ This barcode is used by multiple SKUs.
 Please select the correct product from the dialog.
 
 Products found:
-${matches.map(item => `• ${item.displaySource} ${item.sku} - ${item.productName}`).join('\n')}
+${matches.map(item => `• ${item.sku} - ${item.productName}`).join('\n')}
 
 =========================================`;
   };
@@ -212,10 +227,9 @@ ${matches.map(item => `• ${item.displaySource} ${item.sku} - ${item.productNam
     return `========== ALREADY SCANNED ==========
 
 Product Information:
-  SKU: ${item.sku}
-  Product: ${item.productName}
-  Source: ${item.source}
-  BioTrack: ${item.bioTrackCode}
+  SKU: ${item.sku || 'N/A'}
+  Product: ${item.productName || 'N/A'}
+  BioTrack: ${item.bioTrackCode || 'N/A'}
 
 This exact product has already been scanned.
 No further action needed.
@@ -231,8 +245,8 @@ Continue scanning other items.
 Scanned Barcode: ${scannedBarcode}
 
 This barcode was NOT found in either:
-   • Main Inventory (${inventoryStats.mainInventoryCount} items)
-   • Sweed Report (${inventoryStats.sweedDataCount} items)
+   • Main Inventory (${inventoryStats.mainInventoryCount || 0} items)
+   • Sweed Report (${inventoryStats.sweedDataCount || 0} items)
 
 Possible reasons:
 • Barcode not in imported data
@@ -259,234 +273,170 @@ Please try scanning again or contact support.
   const canScan = inventoryStats.totalItems > 0;
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="flex items-center space-x-3 mb-2">
-            <div className="p-2 bg-green-100 rounded-lg">
-              <Scan className="h-6 w-6 text-green-600" />
-            </div>
-            <h1 className="text-2xl font-bold text-gray-900">Enhanced Barcode Scanning</h1>
+    <div className="min-h-screen bg-[#15161B] p-6">
+      <div className="max-w-6xl mx-auto space-y-8">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-[#FAFCFB]">Barcode Scanning</h1>
           </div>
-          <p className="text-gray-600">
-            Scan barcodes to find matching products from both inventories
-          </p>
+
+          <Link
+            to="/dashboard"
+            className="bg-[#181B22] text-[#FAFCFB] border border-[#39414E] hover:bg-[#39414E] px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            <span>Dashboard</span>
+          </Link>
         </div>
 
-        <Link
-          to="/dashboard"
-          className="btn btn-secondary flex items-center space-x-2"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          <span>Back to Dashboard</span>
-        </Link>
-      </div>
-
-      {/* Status Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <div className="flex items-center space-x-3">
-            <Package className="h-8 w-8 text-blue-600" />
-            <div>
-              <div className="text-xl font-bold text-blue-700">{inventoryStats.totalItems}</div>
-              <div className="text-sm text-blue-600">Total Items Available</div>
-            </div>
-          </div>
+        {/* Debug Info */}
+        <div className="bg-[#181B22] border border-[#39414E] rounded-xl p-4 text-xs text-[#9FA3AC]">
+          <div>Debug: showProductSelection = {showProductSelection.toString()}</div>
+          <div>Debug: selectedProducts length = {selectedProducts.length}</div>
+          <div>Debug: scannedItemsList length = {scannedItemsList.length}</div>
         </div>
 
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-          <div className="flex items-center space-x-3">
-            <CheckCircle className="h-8 w-8 text-green-600" />
-            <div>
-              <div className="text-xl font-bold text-green-700">{sessionStats.totalItemsScanned}</div>
-              <div className="text-sm text-green-600">Items Scanned</div>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-          <div className="flex items-center space-x-3">
-            <Clock className="h-8 w-8 text-purple-600" />
-            <div>
-              <div className="text-xl font-bold text-purple-700">
-                {inventoryStats.mainInventoryCount}/{inventoryStats.sweedDataCount}
+        {/* Scanning Interface */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Scanning Input */}
+          <div className="bg-[#181B22] border border-[#39414E] rounded-xl p-6">
+            <h2 className="text-lg font-semibold text-[#FAFCFB] mb-4">Barcode Scanner</h2>
+            
+            {!canScan && (
+              <div className="mb-4 p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+                <div className="flex items-center space-x-2">
+                  <AlertCircle className="h-5 w-5 text-yellow-400" />
+                  <span className="text-yellow-400">
+                    Please import inventory data before scanning
+                  </span>
+                </div>
               </div>
-              <div className="text-sm text-purple-600">Main/Sweed Split</div>
-            </div>
-          </div>
-        </div>
-      </div>
+            )}
 
-      {/* Scanning Interface */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Scanning Input */}
-        <div className="card">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Barcode Scanner</h2>
-          
-          {!canScan && (
-            <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-              <div className="flex items-center space-x-2">
-                <AlertCircle className="h-5 w-5 text-yellow-600" />
-                <span className="text-yellow-800">
-                  Please import inventory data before scanning
-                </span>
+            <div className="space-y-4">
+              <div>
+                <label htmlFor="barcode" className="block text-sm font-medium text-[#FAFCFB] mb-2">
+                  Scan or Enter Barcode:
+                </label>
+                <div className="flex space-x-2">
+                  <input
+                    ref={barcodeInputRef}
+                    id="barcode"
+                    type="text"
+                    value={barcode}
+                    onChange={handleBarcodeChange}
+                    onKeyPress={handleKeyPress}
+                    placeholder="Scan barcode or type manually..."
+                    className="flex-1 bg-[#181B22] border border-[#39414E] text-[#FAFCFB] rounded-lg px-4 py-2 font-mono text-lg focus:border-[#86EFAC] focus:outline-none transition-colors"
+                    disabled={!canScan || scanning}
+                    autoComplete="off"
+                  />
+                  <button
+                    onClick={handleScan}
+                    disabled={!canScan || scanning || !barcode.trim()}
+                    className="bg-[#86EFAC] text-[#00001C] hover:opacity-90 disabled:opacity-50 px-4 py-2 rounded-lg flex items-center space-x-2 transition-opacity"
+                  >
+                    <Search className="h-4 w-4" />
+                    <span>{scanning ? 'Scanning...' : 'Scan'}</span>
+                  </button>
+                </div>
               </div>
             </div>
-          )}
-
-          <div className="space-y-4">
-            <div>
-              <label htmlFor="barcode" className="form-label">
-                Scan or Enter Barcode:
-              </label>
-              <div className="flex space-x-2">
-                <input
-                  ref={barcodeInputRef}
-                  id="barcode"
-                  type="text"
-                  value={barcode}
-                  onChange={handleBarcodeChange}
-                  onKeyPress={handleKeyPress}
-                  placeholder="Scan barcode or type manually..."
-                  className="input flex-1 font-mono text-lg"
-                  disabled={!canScan || scanning}
-                  autoComplete="off"
-                />
-                <button
-                  onClick={handleScan}
-                  disabled={!canScan || scanning || !barcode.trim()}
-                  className="btn btn-success flex items-center space-x-2"
-                >
-                  <Search className="h-4 w-4" />
-                  <span>{scanning ? 'Scanning...' : 'Scan'}</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Instructions */}
-            <div className="text-sm text-gray-600 space-y-1">
-              <div>• Scan barcode with scanner or type manually</div>
-              <div>• Press Enter or click Scan to process</div>
-              <div>• System handles multiple SKUs per barcode</div>
-              <div>• Enhanced features: Product selection, duplicate detection</div>
-            </div>
           </div>
-        </div>
 
-        {/* Product Details */}
-        <div className="card">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Last Scanned Product Details</h2>
-          
-          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 h-80 overflow-y-auto">
-            <pre className="text-xs font-mono text-gray-700 whitespace-pre-wrap">
-              {productDetails || `Welcome to Enhanced Barcode Scanning V5.3!
-
-New Features in V5.3:
-• Enhanced interface with better visibility
-• Improved product selection
-• Better progress tracking
-• Enhanced label generation with FIXED DIMENSIONS for Uline S-5627 labels
-
-Ready to scan items from both inventories.
+          {/* Product Details */}
+          <div className="bg-[#181B22] border border-[#39414E] rounded-xl p-6">
+            <h2 className="text-lg font-semibold text-[#FAFCFB] mb-4">Last Scanned Product Details</h2>
+            
+            <div className="bg-[#15161B] border border-[#39414E] rounded-lg p-4 h-80 overflow-y-auto">
+              <pre className="text-xs font-mono text-[#FAFCFB] whitespace-pre-wrap">
+                {productDetails || `Ready to scan items from both inventories.
 
 Available Items:
-• Main Inventory: ${inventoryStats.mainInventoryCount} items
-• Sweed Report: ${inventoryStats.sweedDataCount} items`}
-            </pre>
-          </div>
-        </div>
-      </div>
-
-      {/* Scanned Items List */}
-      <div className="card">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">Scanned Items List</h2>
-          
-          <div className="flex items-center space-x-2">
-            {sessionStats.totalItemsScanned > 0 && (
-              <>
-                <Link
-                  to="/labels"
-                  className="btn btn-primary btn-sm flex items-center space-x-2"
-                >
-                  <Tag className="h-4 w-4" />
-                  <span>Generate Labels</span>
-                </Link>
-                
-                <Link
-                  to="/reports"
-                  className="btn btn-secondary btn-sm flex items-center space-x-2"
-                >
-                  <FileText className="h-4 w-4" />
-                  <span>Pick Tickets</span>
-                </Link>
-                
-                <button
-                  onClick={handleClearAll}
-                  className="btn btn-error btn-sm flex items-center space-x-2"
-                >
-                  <Trash2 className="h-4 w-4" />
-                  <span>Clear All</span>
-                </button>
-              </>
-            )}
+• Main Inventory: ${inventoryStats.mainInventoryCount || 0} items
+• Sweed Report: ${inventoryStats.sweedDataCount || 0} items`}
+              </pre>
+            </div>
           </div>
         </div>
 
-        {scannedItemsList.length === 0 ? (
-          <div className="text-center py-12 text-gray-500">
-            <Scan className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-            <h3 className="text-lg font-medium mb-2">No items scanned yet</h3>
-            <p>Start scanning barcodes to see them appear here</p>
+        {/* Scanned Items List */}
+        <div className="bg-[#181B22] border border-[#39414E] rounded-xl p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-[#FAFCFB]">Scanned Items List</h2>
+            
+            <div className="flex items-center space-x-2">
+              {sessionStats.totalItemsScanned > 0 && (
+                <>
+                  <Link
+                    to="/labels"
+                    className="bg-[#86EFAC] text-[#00001C] hover:opacity-90 px-4 py-2 rounded-lg flex items-center space-x-2 transition-opacity"
+                  >
+                    <Tag className="h-4 w-4" />
+                    <span>Generate Labels</span>
+                  </Link>
+                  
+                  <button
+                    onClick={handleClearAll}
+                    className="bg-red-500 text-white hover:bg-red-600 px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    <span>Clear All</span>
+                  </button>
+                </>
+              )}
+            </div>
           </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Source</th>
-                  <th>SKU</th>
-                  <th>Product Name</th>
-                  <th>Brand</th>
-                  <th>Barcode</th>
-                  <th>BioTrack</th>
-                  <th>Quantity</th>
-                  <th>Location/Ship To</th>
-                </tr>
-              </thead>
-              <tbody>
-                {scannedItemsList.map((item, index) => (
-                  <tr key={index} className={item.source === 'Sweed Report' ? 'bg-orange-50' : 'bg-blue-50'}>
-                    <td>
-                      <span className={`badge ${item.source === 'Sweed Report' ? 'badge-yellow' : 'badge-blue'}`}>
-                        {item.displaySource}
-                      </span>
-                    </td>
-                    <td className="font-mono">{item.sku}</td>
-                    <td>{item.productName}</td>
-                    <td>{item.brand}</td>
-                    <td className="font-mono">{item.barcode}</td>
-                    <td className="font-mono">{item.bioTrackCode}</td>
-                    <td>{item.quantity}</td>
-                    <td>{item.location || item.shipToLocation || 'N/A'}</td>
+
+          {scannedItemsList.length === 0 ? (
+            <div className="text-center py-12 text-[#9FA3AC]">
+              <Scan className="h-12 w-12 mx-auto mb-4 text-[#39414E]" />
+              <h3 className="text-lg font-medium mb-2 text-[#FAFCFB]">No items scanned yet</h3>
+              <p>Start scanning barcodes to see them appear here</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full">
+                <thead>
+                  <tr className="border-b border-[#39414E]">
+                    <th className="px-4 py-3 text-left text-sm font-medium text-[#9FA3AC]">SKU</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-[#9FA3AC]">Product Name</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-[#9FA3AC]">Brand</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-[#9FA3AC]">Barcode</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-[#9FA3AC]">BioTrack</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-[#9FA3AC]">Quantity</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-[#9FA3AC]">Location</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {scannedItemsList.map((item, index) => (
+                    <tr key={index} className="border-b border-[#39414E]">
+                      <td className="px-4 py-3 text-sm text-[#FAFCFB] font-mono">{item.sku || 'N/A'}</td>
+                      <td className="px-4 py-3 text-sm text-[#FAFCFB]">{item.productName || 'N/A'}</td>
+                      <td className="px-4 py-3 text-sm text-[#FAFCFB]">{item.brand || 'N/A'}</td>
+                      <td className="px-4 py-3 text-sm text-[#FAFCFB] font-mono">{item.barcode || 'N/A'}</td>
+                      <td className="px-4 py-3 text-sm text-[#FAFCFB] font-mono">{item.bioTrackCode || 'N/A'}</td>
+                      <td className="px-4 py-3 text-sm text-[#FAFCFB]">{item.quantity || 'N/A'}</td>
+                      <td className="px-4 py-3 text-sm text-[#FAFCFB]">{item.location || item.shipToLocation || 'N/A'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {/* Product Selection Dialog - Only render when needed */}
+        {showProductSelection && selectedProducts && selectedProducts.length > 0 && (
+          <ProductSelectionForm
+            products={selectedProducts}
+            barcode={barcode}
+            onProductSelected={handleProductSelected}
+            onCancel={handleProductSelectionCancelled}
+          />
         )}
       </div>
-
-      {/* Product Selection Dialog */}
-      {showProductSelection && (
-        <ProductSelectionForm
-          products={selectedProducts}
-          barcode={barcode}
-          onProductSelected={handleProductSelected}
-          onCancel={handleProductSelectionCancelled}
-        />
-      )}
     </div>
   );
 }

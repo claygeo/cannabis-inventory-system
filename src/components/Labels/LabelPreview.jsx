@@ -1,297 +1,316 @@
 import React, { useState } from 'react';
-import { X, Download, Printer, Eye } from 'lucide-react';
 import UlineS5627Label from './UlineS5627Label.jsx';
+import { PDFGenerator } from '../../utils/pdfGenerator.js';
+import { 
+  X, 
+  Download, 
+  Printer, 
+  Eye, 
+  EyeOff,
+  AlertCircle,
+  CheckCircle,
+  Maximize2,
+  Minimize2
+} from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function LabelPreview({ item, enhancedData, user, onClose }) {
-  const [scale, setScale] = useState(1);
-  const [showMultiple, setShowMultiple] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [showAllLabels, setShowAllLabels] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
 
-  // Generate labels based on quantity
-  const generateLabels = () => {
-    const quantity = parseInt(enhancedData.labelQuantity) || 1;
-    const labels = [];
+  // Calculate how many labels to generate
+  const labelQuantity = parseInt(enhancedData?.labelQuantity || '1');
+  const totalBoxes = parseInt(enhancedData?.boxCount || '1');
+
+  // Generate PDF
+  const handleGeneratePDF = async () => {
+    setIsGenerating(true);
     
-    for (let i = 1; i <= quantity; i++) {
-      labels.push({
+    try {
+      const labelData = {
         ...item,
         enhancedData,
-        labelNumber: i,
-        totalLabels: quantity,
         user: user?.username || 'Unknown',
-        timestamp: new Date()
-      });
+        timestamp: new Date().toISOString()
+      };
+
+      const pdfBlob = await PDFGenerator.generateLabels([labelData]);
+      
+      // Create download link
+      const url = URL.createObjectURL(pdfBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `labels_${item.sku}_${new Date().toISOString().slice(0, 10)}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast.success(`PDF generated successfully for ${item.sku}`);
+      
+    } catch (error) {
+      console.error('PDF generation error:', error);
+      toast.error('Failed to generate PDF: ' + error.message);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  // Print labels directly
+  const handlePrint = () => {
+    window.print();
+  };
+
+  // Render labels for preview
+  const renderLabels = () => {
+    const labels = [];
+    const displayCount = showAllLabels ? labelQuantity : Math.min(labelQuantity, 4);
+    
+    for (let i = 0; i < displayCount; i++) {
+      // Calculate box number for this label
+      const currentBox = Math.floor(i / Math.max(1, Math.floor(labelQuantity / totalBoxes))) + 1;
+      
+      labels.push(
+        <div key={i} className="border-2 border-[#39414E] rounded-lg overflow-hidden bg-[#181B22]">
+          <div className="bg-[#15161B] px-2 py-1 text-xs font-medium text-[#9FA3AC]">
+            Label {i + 1} of {labelQuantity}
+          </div>
+          <div className="p-2">
+            <UlineS5627Label 
+              item={item}
+              enhancedData={enhancedData}
+              user={user}
+              boxNumber={currentBox}
+              totalBoxes={totalBoxes}
+              preview={true}
+            />
+          </div>
+        </div>
+      );
     }
     
     return labels;
   };
 
-  const labels = generateLabels();
-
-  // Handle print
-  const handlePrint = () => {
-    window.print();
-    toast.success('Print dialog opened');
-  };
-
-  // Handle PDF generation (placeholder - would integrate with jsPDF)
-  const handleDownloadPDF = () => {
-    toast.success('PDF generation would be implemented here with jsPDF');
-    // TODO: Implement PDF generation using jsPDF
-  };
-
-  // Handle scale change
-  const handleScaleChange = (newScale) => {
-    setScale(newScale);
-  };
-
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[95vh] overflow-hidden">
+    <div 
+      className="modal-backdrop fixed inset-0 flex items-center justify-center p-4"
+      style={{ 
+        backgroundColor: 'rgba(21, 22, 27, 0.8)',
+        zIndex: 50 // Use the defined modal z-index
+      }}
+      onClick={onClose}
+    >
+      <div 
+        className={`modal-content bg-[#181B22] border border-[#39414E] rounded-lg shadow-xl transition-all duration-300 ${
+          isExpanded 
+            ? 'w-full h-full max-w-none max-h-none' 
+            : 'w-full max-w-6xl max-h-[90vh]'
+        }`}
+        style={{ zIndex: 51 }} // Slightly higher than backdrop
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
-        <div className="bg-purple-50 border-b border-purple-200 px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-semibold text-purple-900">
-                Label Preview - Fixed Dimensions
-              </h2>
-              <p className="text-sm text-purple-700">
-                SKU: {item.sku} • Quantity: {enhancedData.labelQuantity} • 
-                Format: Uline S-5627 (4" x 1.5")
-              </p>
-            </div>
-            
+        <div className="flex items-center justify-between p-6 border-b border-[#39414E]">
+          <div>
+            <h2 className="text-xl font-bold text-[#FAFCFB]">Label Preview</h2>
+            <p className="text-[#9FA3AC] mt-1">
+              Uline S-5627 Format (4" × 1.5") - {labelQuantity} label{labelQuantity > 1 ? 's' : ''} for {item.sku}
+            </p>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="p-2 text-[#9FA3AC] hover:text-[#FAFCFB] transition-colors rounded"
+              title={isExpanded ? "Minimize" : "Expand"}
+            >
+              {isExpanded ? <Minimize2 className="h-5 w-5" /> : <Maximize2 className="h-5 w-5" />}
+            </button>
+
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 transition-colors"
+              className="p-2 text-[#9FA3AC] hover:text-[#FAFCFB] transition-colors rounded"
             >
-              <X className="h-6 w-6" />
+              <X className="h-5 w-5" />
             </button>
           </div>
         </div>
 
-        {/* Controls */}
-        <div className="bg-gray-50 border-b border-gray-200 px-6 py-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                <label className="text-sm font-medium text-gray-700">Scale:</label>
-                <select
-                  value={scale}
-                  onChange={(e) => handleScaleChange(parseFloat(e.target.value))}
-                  className="text-sm border border-gray-300 rounded px-2 py-1"
-                >
-                  <option value={0.5}>50%</option>
-                  <option value={0.75}>75%</option>
-                  <option value={1}>100%</option>
-                  <option value={1.25}>125%</option>
-                  <option value={1.5}>150%</option>
-                </select>
+        {/* Content */}
+        <div className={`flex flex-col ${isExpanded ? 'h-full' : ''}`}>
+          {/* Item Information */}
+          <div className="p-6 bg-[#15161B] border-b border-[#39414E]">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
+              <div>
+                <span className="font-medium text-[#9FA3AC]">SKU:</span>
+                <div className="font-mono text-[#FAFCFB]">{item.sku}</div>
               </div>
-
-              <div className="flex items-center space-x-2">
-                <label className="text-sm font-medium text-gray-700">View:</label>
-                <select
-                  value={showMultiple ? 'multiple' : 'single'}
-                  onChange={(e) => setShowMultiple(e.target.value === 'multiple')}
-                  className="text-sm border border-gray-300 rounded px-2 py-1"
-                >
-                  <option value="single">Single Label</option>
-                  <option value="multiple">All Labels</option>
-                </select>
+              <div>
+                <span className="font-medium text-[#9FA3AC]">Barcode:</span>
+                <div className="font-mono text-[#FAFCFB]">{item.barcode}</div>
+              </div>
+              <div>
+                <span className="font-medium text-[#9FA3AC]">Source:</span>
+                <div className={`badge ${
+                  item.source === 'SweedReport' ? 'badge-yellow' : 'badge-blue'
+                }`}>
+                  {item.displaySource}
+                </div>
+              </div>
+              <div>
+                <span className="font-medium text-[#9FA3AC]">Labels:</span>
+                <div className="text-[#FAFCFB]">{labelQuantity} label{labelQuantity > 1 ? 's' : ''}</div>
               </div>
             </div>
 
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={handlePrint}
-                className="btn btn-secondary btn-sm flex items-center space-x-2"
-              >
-                <Printer className="h-4 w-4" />
-                <span>Print</span>
-              </button>
-
-              <button
-                onClick={handleDownloadPDF}
-                className="btn btn-primary btn-sm flex items-center space-x-2"
-              >
-                <Download className="h-4 w-4" />
-                <span>Download PDF</span>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Preview Content */}
-        <div className="p-6 overflow-auto max-h-[70vh]">
-          <div className="space-y-6">
-            {/* Label Specifications */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <h3 className="font-medium text-blue-900 mb-2">Label Specifications</h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                <div>
-                  <div className="font-medium text-blue-800">Dimensions:</div>
-                  <div className="text-blue-700">4" × 1.5" (FIXED)</div>
-                </div>
-                <div>
-                  <div className="font-medium text-blue-800">Layout:</div>
-                  <div className="text-blue-700">2×6 (12 per sheet)</div>
-                </div>
-                <div>
-                  <div className="font-medium text-blue-800">Paper:</div>
-                  <div className="text-blue-700">Uline S-5627</div>
-                </div>
-                <div>
-                  <div className="font-medium text-blue-800">Quantity:</div>
-                  <div className="text-blue-700">{enhancedData.labelQuantity} label(s)</div>
-                </div>
-              </div>
+            <div className="mt-3">
+              <span className="font-medium text-[#9FA3AC]">Product:</span>
+              <div className="text-[#FAFCFB]">{item.productName}</div>
             </div>
 
             {/* Enhanced Data Summary */}
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-              <h3 className="font-medium text-green-900 mb-2">Enhanced Features</h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                <div>
-                  <div className="font-medium text-green-800">Case Quantity:</div>
-                  <div className="text-green-700">{enhancedData.caseQuantity || 'Not set'}</div>
-                </div>
-                <div>
-                  <div className="font-medium text-green-800">Box Count:</div>
-                  <div className="text-green-700">{enhancedData.boxCount || 'Not set'}</div>
-                </div>
-                <div>
-                  <div className="font-medium text-green-800">Harvest Date:</div>
-                  <div className="text-green-700">{enhancedData.harvestDate || 'Not set'}</div>
-                </div>
-                <div>
-                  <div className="font-medium text-green-800">Packaged Date:</div>
-                  <div className="text-green-700">{enhancedData.packagedDate || 'Not set'}</div>
+            <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+              <div>
+                <span className="text-[#9FA3AC]">Harvest:</span>
+                <div className="font-medium text-[#FAFCFB]">
+                  {enhancedData?.harvestDate || 'Not set'}
                 </div>
               </div>
-            </div>
-
-            {/* Label Preview */}
-            <div className="bg-white border-2 border-gray-300 rounded-lg p-6">
-              <h3 className="font-medium text-gray-900 mb-4">Label Preview</h3>
-              
-              <div 
-                className="transform-gpu transition-transform duration-200"
-                style={{ transform: `scale(${scale})`, transformOrigin: 'top left' }}
-              >
-                {showMultiple ? (
-                  // Show all labels in grid layout (2×6 for Uline S-5627)
-                  <div className="grid grid-cols-2 gap-x-1 gap-y-0" style={{ width: '8.5in' }}>
-                    {labels.map((labelData, index) => (
-                      <div key={index} className="page-break-avoid">
-                        <UlineS5627Label data={labelData} />
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  // Show single label
-                  <UlineS5627Label data={labels[0]} />
-                )}
-              </div>
-            </div>
-
-            {/* Product Information */}
-            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-              <h3 className="font-medium text-gray-900 mb-2">Product Information</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                <div className="space-y-2">
-                  <div>
-                    <span className="font-medium">SKU:</span> 
-                    <span className="ml-2 font-mono">{item.sku}</span>
-                  </div>
-                  <div>
-                    <span className="font-medium">Product Name:</span> 
-                    <span className="ml-2">{item.productName}</span>
-                  </div>
-                  <div>
-                    <span className="font-medium">Brand:</span> 
-                    <span className="ml-2">{item.brand}</span>
-                  </div>
-                  <div>
-                    <span className="font-medium">Strain:</span> 
-                    <span className="ml-2">{item.strain || 'N/A'}</span>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <div>
-                    <span className="font-medium">Barcode:</span> 
-                    <span className="ml-2 font-mono">{item.barcode}</span>
-                  </div>
-                  <div>
-                    <span className="font-medium">BioTrack:</span> 
-                    <span className="ml-2 font-mono">{item.bioTrackCode}</span>
-                  </div>
-                  <div>
-                    <span className="font-medium">Source:</span> 
-                    <span className="ml-2">{item.source}</span>
-                  </div>
-                  <div>
-                    <span className="font-medium">Quantity:</span> 
-                    <span className="ml-2">{item.quantity}</span>
-                  </div>
+              <div>
+                <span className="text-[#9FA3AC]">Packaged:</span>
+                <div className="font-medium text-[#FAFCFB]">
+                  {enhancedData?.packagedDate || 'Not set'}
                 </div>
               </div>
-            </div>
-
-            {/* Print Instructions */}
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-              <h3 className="font-medium text-yellow-900 mb-2">Print Instructions</h3>
-              <div className="text-sm text-yellow-800 space-y-1">
-                <div>• Use Uline S-5627 label sheets (or Avery 5197 equivalent)</div>
-                <div>• Set printer to 100% scale (no scaling/fitting)</div>
-                <div>• Use high quality print mode for barcode clarity</div>
-                <div>• Labels are precisely sized at 4" × 1.5" with proper margins</div>
-                <div>• 12 labels per sheet in 2×6 layout</div>
+              <div>
+                <span className="text-[#9FA3AC]">Case Qty:</span>
+                <div className="font-medium text-[#FAFCFB]">
+                  {enhancedData?.caseQuantity || 'Not set'}
+                </div>
+              </div>
+              <div>
+                <span className="text-[#9FA3AC]">Boxes:</span>
+                <div className="font-medium text-[#FAFCFB]">
+                  {enhancedData?.boxCount || '1'} box{(enhancedData?.boxCount || 1) > 1 ? 'es' : ''}
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Footer */}
-        <div className="bg-gray-50 border-t border-gray-200 px-6 py-4">
-          <div className="flex items-center justify-between text-sm text-gray-600">
-            <div>
-              Cannabis Inventory Management System V5.3 - Fixed Dimensions Edition
+          {/* Preview Controls */}
+          <div className="p-4 border-b border-[#39414E] flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2 text-sm text-[#9FA3AC]">
+                <CheckCircle className="h-4 w-4 text-green-500" />
+                <span>Ready for printing on Uline S-5627 sheets</span>
+              </div>
+
+              {labelQuantity > 4 && (
+                <button
+                  onClick={() => setShowAllLabels(!showAllLabels)}
+                  className="flex items-center space-x-2 text-sm text-blue-400 hover:text-blue-300 transition-colors"
+                >
+                  {showAllLabels ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  <span>
+                    {showAllLabels ? 'Show less' : `Show all ${labelQuantity} labels`}
+                  </span>
+                </button>
+              )}
             </div>
-            <div>
-              Generated: {new Date().toLocaleString()} • User: {user?.username}
+
+            <div className="text-sm text-[#9FA3AC]">
+              Showing {showAllLabels ? labelQuantity : Math.min(labelQuantity, 4)} of {labelQuantity} labels
+            </div>
+          </div>
+
+          {/* Labels Preview */}
+          <div className={`p-6 bg-[#15161B] ${isExpanded ? 'flex-1' : ''} overflow-auto`}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {renderLabels()}
+            </div>
+
+            {labelQuantity > 4 && !showAllLabels && (
+              <div className="mt-6 text-center">
+                <div className="inline-flex items-center space-x-2 text-[#9FA3AC] bg-[#181B22] px-4 py-2 rounded-lg border border-[#39414E]">
+                  <AlertCircle className="h-4 w-4" />
+                  <span>
+                    {labelQuantity - 4} more labels will be included in the PDF
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Action Buttons */}
+          <div className="p-6 border-t border-[#39414E] bg-[#181B22]">
+            <div className="flex items-center justify-between">
+              <div className="text-sm text-[#9FA3AC]">
+                Labels will be properly positioned for Uline S-5627 label sheets
+              </div>
+
+              <div className="flex items-center space-x-3">
+                <button
+                  onClick={onClose}
+                  className="btn btn-secondary"
+                >
+                  Close Preview
+                </button>
+
+                <button
+                  onClick={handlePrint}
+                  className="btn btn-secondary flex items-center space-x-2"
+                >
+                  <Printer className="h-4 w-4" />
+                  <span>Print Preview</span>
+                </button>
+
+                <button
+                  onClick={handleGeneratePDF}
+                  disabled={isGenerating}
+                  className="btn btn-primary flex items-center space-x-2"
+                >
+                  {isGenerating ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-[#00001C] border-t-transparent rounded-full animate-spin"></div>
+                      <span>Generating...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Download className="h-4 w-4" />
+                      <span>Download PDF</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Technical Info */}
+            <div className="mt-4 text-xs text-[#9FA3AC] border-t border-[#39414E] pt-4">
+              <div className="flex items-center justify-between">
+                <span>Label Dimensions: 4" × 1.5" (288pt × 108pt) • Format: Uline S-5627</span>
+                <span>Generated: {new Date().toLocaleString()}</span>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Custom print styles */}
+      {/* Print Styles */}
       <style jsx global>{`
         @media print {
           body * {
             visibility: hidden;
           }
-          
-          .print-content,
-          .print-content * {
+          .print-labels, .print-labels * {
             visibility: visible;
           }
-          
-          .print-content {
+          .print-labels {
             position: absolute;
             left: 0;
             top: 0;
             width: 100%;
-            height: 100%;
-          }
-          
-          @page {
-            size: letter;
-            margin: 0.5in 0.1875in;
-          }
-          
-          .no-print {
-            display: none !important;
           }
         }
       `}</style>

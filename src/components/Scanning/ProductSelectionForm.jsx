@@ -12,6 +12,13 @@ export default function ProductSelectionForm({
   const { addScannedItem } = useSession();
   const [selectedProduct, setSelectedProduct] = useState(null);
 
+  // Early return if no products or missing props
+  if (!products || !Array.isArray(products) || products.length === 0) {
+    console.warn('ProductSelectionForm: No products provided, auto-canceling');
+    if (onCancel) onCancel();
+    return null;
+  }
+
   // Handle product selection
   const handleProductClick = (product) => {
     setSelectedProduct(product);
@@ -24,47 +31,76 @@ export default function ProductSelectionForm({
       return;
     }
 
-    // Add the selected product to scanned items
-    const wasAdded = addScannedItem(
-      selectedProduct.barcode, 
-      selectedProduct.sku, 
-      selectedProduct.source
-    );
+    try {
+      // Add the selected product to scanned items
+      const wasAdded = addScannedItem(
+        selectedProduct.barcode, 
+        selectedProduct.sku, 
+        selectedProduct.source
+      );
 
-    if (wasAdded) {
-      onProductSelected(selectedProduct);
-    } else {
-      toast.warn('This product has already been scanned');
+      if (wasAdded) {
+        onProductSelected(selectedProduct);
+      } else {
+        toast.warn('This product has already been scanned');
+        onCancel();
+      }
+    } catch (error) {
+      console.error('Error adding scanned item:', error);
+      toast.error('Error adding product');
       onCancel();
     }
   };
 
   // Handle cancel
   const handleCancel = () => {
-    onCancel();
+    if (onCancel) {
+      onCancel();
+    }
+  };
+
+  // Handle escape key
+  const handleKeyDown = (e) => {
+    if (e.key === 'Escape') {
+      handleCancel();
+    }
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+    <div 
+      className="modal-backdrop fixed inset-0 flex items-center justify-center p-4"
+      style={{ 
+        backgroundColor: 'rgba(21, 22, 27, 0.8)',
+        zIndex: 50 // Use the defined modal z-index
+      }}
+      onClick={handleCancel}
+      onKeyDown={handleKeyDown}
+      tabIndex={-1}
+    >
+      <div 
+        className="modal-content bg-[#181B22] border border-[#39414E] rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden"
+        style={{ zIndex: 51 }} // Slightly higher than backdrop
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
-        <div className="bg-yellow-50 border-b border-yellow-200 px-6 py-4">
+        <div className="bg-yellow-500/10 border-b border-yellow-500/20 px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <AlertTriangle className="h-6 w-6 text-yellow-600" />
+              <AlertTriangle className="h-6 w-6 text-yellow-400" />
               <div>
-                <h2 className="text-lg font-semibold text-yellow-900">
+                <h2 className="text-lg font-semibold text-[#FAFCFB]">
                   Multiple Products Found
                 </h2>
-                <p className="text-sm text-yellow-700">
-                  Scanned Barcode: <span className="font-mono">{barcode}</span>
+                <p className="text-sm text-[#9FA3AC]">
+                  Scanned Barcode: <span className="font-mono text-[#FAFCFB]">{barcode}</span>
                 </p>
               </div>
             </div>
             
             <button
               onClick={handleCancel}
-              className="text-gray-400 hover:text-gray-600 transition-colors"
+              className="text-[#9FA3AC] hover:text-[#FAFCFB] transition-colors p-1 rounded"
+              aria-label="Close"
             >
               <X className="h-6 w-6" />
             </button>
@@ -72,8 +108,8 @@ export default function ProductSelectionForm({
         </div>
 
         {/* Instructions */}
-        <div className="px-6 py-4 bg-blue-50 border-b border-blue-200">
-          <p className="text-sm text-blue-800">
+        <div className="px-6 py-4 bg-blue-500/10 border-b border-blue-500/20">
+          <p className="text-sm text-blue-400">
             Multiple SKUs use this barcode. Please select the correct product you are scanning:
           </p>
         </div>
@@ -83,12 +119,12 @@ export default function ProductSelectionForm({
           <div className="space-y-2">
             {products.map((product, index) => (
               <div
-                key={index}
+                key={`${product.sku}-${index}`}
                 onClick={() => handleProductClick(product)}
                 className={`border rounded-lg p-4 cursor-pointer transition-all duration-200 ${
                   selectedProduct === product
-                    ? 'border-blue-500 bg-blue-50 shadow-md'
-                    : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                    ? 'border-[#86EFAC] bg-[#86EFAC]/10 shadow-md'
+                    : 'border-[#39414E] hover:border-[#9FA3AC] hover:bg-[#39414E]/50'
                 }`}
               >
                 <div className="flex items-center justify-between">
@@ -96,27 +132,18 @@ export default function ProductSelectionForm({
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                       {/* Basic Info */}
                       <div>
-                        <div className="flex items-center space-x-2 mb-2">
-                          <span className={`badge ${
-                            product.source === 'SweedReport' 
-                              ? 'badge-yellow' 
-                              : 'badge-blue'
-                          }`}>
-                            {product.displaySource}
-                          </span>
-                        </div>
                         <div className="space-y-1 text-sm">
                           <div>
-                            <span className="font-medium">SKU:</span>
-                            <span className="ml-2 font-mono">{product.sku}</span>
+                            <span className="font-medium text-[#9FA3AC]">SKU:</span>
+                            <span className="ml-2 font-mono text-[#FAFCFB]">{product.sku || 'N/A'}</span>
                           </div>
                           <div>
-                            <span className="font-medium">Barcode:</span>
-                            <span className="ml-2 font-mono">{product.barcode}</span>
+                            <span className="font-medium text-[#9FA3AC]">Barcode:</span>
+                            <span className="ml-2 font-mono text-[#FAFCFB]">{product.barcode || 'N/A'}</span>
                           </div>
                           <div>
-                            <span className="font-medium">BioTrack:</span>
-                            <span className="ml-2 font-mono">{product.bioTrackCode}</span>
+                            <span className="font-medium text-[#9FA3AC]">BioTrack:</span>
+                            <span className="ml-2 font-mono text-[#FAFCFB]">{product.bioTrackCode || 'N/A'}</span>
                           </div>
                         </div>
                       </div>
@@ -125,20 +152,20 @@ export default function ProductSelectionForm({
                       <div>
                         <div className="space-y-1 text-sm">
                           <div>
-                            <span className="font-medium">Product:</span>
-                            <span className="ml-2">{product.productName}</span>
+                            <span className="font-medium text-[#9FA3AC]">Product:</span>
+                            <span className="ml-2 text-[#FAFCFB]">{product.productName || 'N/A'}</span>
                           </div>
                           <div>
-                            <span className="font-medium">Brand:</span>
-                            <span className="ml-2">{product.brand}</span>
+                            <span className="font-medium text-[#9FA3AC]">Brand:</span>
+                            <span className="ml-2 text-[#FAFCFB]">{product.brand || 'N/A'}</span>
                           </div>
                           <div>
-                            <span className="font-medium">Strain:</span>
-                            <span className="ml-2">{product.strain || 'N/A'}</span>
+                            <span className="font-medium text-[#9FA3AC]">Strain:</span>
+                            <span className="ml-2 text-[#FAFCFB]">{product.strain || 'N/A'}</span>
                           </div>
                           <div>
-                            <span className="font-medium">Size:</span>
-                            <span className="ml-2">{product.size || 'N/A'}</span>
+                            <span className="font-medium text-[#9FA3AC]">Size:</span>
+                            <span className="ml-2 text-[#FAFCFB]">{product.size || 'N/A'}</span>
                           </div>
                         </div>
                       </div>
@@ -147,29 +174,29 @@ export default function ProductSelectionForm({
                       <div>
                         <div className="space-y-1 text-sm">
                           <div>
-                            <span className="font-medium">Quantity:</span>
-                            <span className="ml-2">{product.quantity}</span>
+                            <span className="font-medium text-[#9FA3AC]">Quantity:</span>
+                            <span className="ml-2 text-[#FAFCFB]">{product.quantity || 'N/A'}</span>
                           </div>
                           {product.source === 'SweedReport' ? (
                             <>
                               <div>
-                                <span className="font-medium">Ship To:</span>
-                                <span className="ml-2">{product.shipToLocation || 'N/A'}</span>
+                                <span className="font-medium text-[#9FA3AC]">Ship To:</span>
+                                <span className="ml-2 text-[#FAFCFB]">{product.shipToLocation || 'N/A'}</span>
                               </div>
                               <div>
-                                <span className="font-medium">Order #:</span>
-                                <span className="ml-2 font-mono">{product.orderNumber || 'N/A'}</span>
+                                <span className="font-medium text-[#9FA3AC]">Order #:</span>
+                                <span className="ml-2 font-mono text-[#FAFCFB]">{product.orderNumber || 'N/A'}</span>
                               </div>
                             </>
                           ) : (
                             <>
                               <div>
-                                <span className="font-medium">Location:</span>
-                                <span className="ml-2">{product.location || 'N/A'}</span>
+                                <span className="font-medium text-[#9FA3AC]">Location:</span>
+                                <span className="ml-2 text-[#FAFCFB]">{product.location || 'N/A'}</span>
                               </div>
                               <div>
-                                <span className="font-medium">Distributor:</span>
-                                <span className="ml-2">{product.distributor || 'N/A'}</span>
+                                <span className="font-medium text-[#9FA3AC]">Distributor:</span>
+                                <span className="ml-2 text-[#FAFCFB]">{product.distributor || 'N/A'}</span>
                               </div>
                             </>
                           )}
@@ -181,7 +208,7 @@ export default function ProductSelectionForm({
                   {/* Selection Indicator */}
                   <div className="ml-4">
                     {selectedProduct === product && (
-                      <CheckCircle className="h-6 w-6 text-blue-600" />
+                      <CheckCircle className="h-6 w-6 text-[#86EFAC]" />
                     )}
                   </div>
                 </div>
@@ -192,14 +219,14 @@ export default function ProductSelectionForm({
 
         {/* Selected Product Details */}
         {selectedProduct && (
-          <div className="px-6 py-4 bg-green-50 border-t border-green-200">
-            <h3 className="font-medium text-green-900 mb-2">Selected Product:</h3>
-            <div className="text-sm text-green-800">
+          <div className="px-6 py-4 bg-green-500/10 border-t border-green-500/20">
+            <h3 className="font-medium text-green-400 mb-2">Selected Product:</h3>
+            <div className="text-sm text-green-400">
               <span className="font-mono">{selectedProduct.sku}</span> - {selectedProduct.productName}
-              {selectedProduct.source === 'SweedReport' && (
+              {selectedProduct.source === 'SweedReport' && selectedProduct.shipToLocation && (
                 <span className="ml-2">(Ship To: {selectedProduct.shipToLocation})</span>
               )}
-              {selectedProduct.source === 'MainInventory' && (
+              {selectedProduct.source === 'MainInventory' && selectedProduct.location && (
                 <span className="ml-2">(Location: {selectedProduct.location})</span>
               )}
             </div>
@@ -207,16 +234,16 @@ export default function ProductSelectionForm({
         )}
 
         {/* Footer */}
-        <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
-          <div className="text-sm text-gray-600">
+        <div className="px-6 py-4 bg-[#15161B] border-t border-[#39414E] flex items-center justify-between">
+          <div className="text-sm text-[#9FA3AC]">
             Found {products.length} product{products.length !== 1 ? 's' : ''} with barcode{' '}
-            <span className="font-mono">{barcode}</span>
+            <span className="font-mono text-[#FAFCFB]">{barcode}</span>
           </div>
           
           <div className="flex items-center space-x-3">
             <button
               onClick={handleCancel}
-              className="btn btn-secondary"
+              className="bg-[#181B22] text-[#FAFCFB] border border-[#39414E] hover:bg-[#39414E] px-4 py-2 rounded-lg transition-colors"
             >
               Cancel
             </button>
@@ -224,7 +251,7 @@ export default function ProductSelectionForm({
             <button
               onClick={handleConfirmSelection}
               disabled={!selectedProduct}
-              className="btn btn-success"
+              className="bg-[#86EFAC] text-[#00001C] hover:opacity-90 disabled:opacity-50 px-4 py-2 rounded-lg transition-opacity"
             >
               Select This Product
             </button>

@@ -7,7 +7,6 @@ import {
   Upload, 
   Scan, 
   Tag, 
-  FileText, 
   LogOut, 
   Menu, 
   X,
@@ -26,10 +25,9 @@ export default function Header({ title, inventoryStats, sessionStats }) {
   const navigationItems = [
     { path: '/dashboard', label: 'Dashboard', icon: Home },
     { path: '/import', label: 'Import Main', icon: Upload },
-    { path: '/import-sweed', label: 'Import Sweed', icon: Upload },
+    { path: '/sweed-import', label: 'Import Sweed', icon: Upload },
     { path: '/scanning', label: 'Scanning', icon: Scan },
-    { path: '/labels', label: 'Labels', icon: Tag },
-    { path: '/reports', label: 'Reports', icon: FileText }
+    { path: '/labels', label: 'Labels', icon: Tag }
   ];
 
   const handleLogout = () => {
@@ -40,35 +38,47 @@ export default function Header({ title, inventoryStats, sessionStats }) {
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
+    // Close user menu if it's open
+    if (isUserMenuOpen) {
+      setIsUserMenuOpen(false);
+    }
   };
 
   const toggleUserMenu = () => {
     setIsUserMenuOpen(!isUserMenuOpen);
+    // Close mobile menu if it's open
+    if (isMobileMenuOpen) {
+      setIsMobileMenuOpen(false);
+    }
   };
 
   const closeMobileMenu = () => {
     setIsMobileMenuOpen(false);
   };
 
+  const closeUserMenu = () => {
+    setIsUserMenuOpen(false);
+  };
+
   return (
-    <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
-      <div className="container-cannabis">
+    <header className="bg-[#181B22] shadow-sm border-b border-[#39414E] sticky top-0 z-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo and Title */}
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-2">
-              <div className="h-8 w-8 bg-green-500 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">CI</span>
+              <div className="h-8 w-8 bg-[#86EFAC] rounded-lg flex items-center justify-center">
+                <span className="text-[#00001C] font-bold text-sm">CI</span>
               </div>
               <div className="hidden sm:block">
-                <h1 className="text-lg font-semibold text-gray-900">{APP_NAME}</h1>
-                <p className="text-xs text-gray-500">V{APP_VERSION} - Fixed Dimensions</p>
+                <h1 className="text-lg font-semibold text-[#FAFCFB]">{APP_NAME}</h1>
+                <p className="text-xs text-[#9FA3AC]">V{APP_VERSION}</p>
               </div>
             </div>
             
             {/* Current Page Title */}
-            <div className="hidden md:block border-l border-gray-300 pl-4">
-              <h2 className="text-lg font-medium text-gray-700">{title}</h2>
+            <div className="hidden md:block border-l border-[#39414E] pl-4">
+              <h2 className="text-lg font-medium text-[#FAFCFB]">{title}</h2>
             </div>
           </div>
 
@@ -84,8 +94,8 @@ export default function Header({ title, inventoryStats, sessionStats }) {
                   to={item.path}
                   className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                     isActive
-                      ? 'bg-blue-100 text-blue-700'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                      ? 'bg-[#86EFAC] text-[#00001C]'
+                      : 'text-[#9FA3AC] hover:text-[#FAFCFB] hover:bg-[#39414E]'
                   }`}
                 >
                   <Icon className="h-4 w-4" />
@@ -98,19 +108,19 @@ export default function Header({ title, inventoryStats, sessionStats }) {
           {/* Status Info & User Menu */}
           <div className="flex items-center space-x-4">
             {/* Status Indicators (Desktop) */}
-            <div className="hidden xl:flex items-center space-x-4 text-sm text-gray-600">
+            <div className="hidden xl:flex items-center space-x-4 text-sm text-[#9FA3AC]">
               <div className="flex items-center space-x-2">
                 <div className="flex items-center space-x-1">
                   <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                  <span>{inventoryStats.mainInventoryCount}</span>
+                  <span>{inventoryStats?.mainInventoryCount || 0}</span>
                 </div>
                 <div className="flex items-center space-x-1">
                   <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                  <span>{inventoryStats.sweedDataCount}</span>
+                  <span>{inventoryStats?.sweedDataCount || 0}</span>
                 </div>
                 <div className="flex items-center space-x-1">
                   <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  <span>{sessionStats.totalItemsScanned}</span>
+                  <span>{sessionStats?.totalItemsScanned || 0}</span>
                 </div>
               </div>
             </div>
@@ -119,34 +129,37 @@ export default function Header({ title, inventoryStats, sessionStats }) {
             <div className="relative">
               <button
                 onClick={toggleUserMenu}
-                className="flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors"
+                className="flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium text-[#9FA3AC] hover:bg-[#39414E] transition-colors"
               >
                 <User className="h-4 w-4" />
-                <span className="hidden sm:block">{user?.username}</span>
+                <span className="hidden sm:block text-[#FAFCFB]">{user?.username}</span>
                 <ChevronDown className="h-4 w-4" />
               </button>
 
               {/* User Dropdown */}
               {isUserMenuOpen && (
-                <div className="absolute right-0 mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
-                  <div className="px-4 py-3 border-b border-gray-200">
-                    <div className="text-sm font-medium text-gray-900">{user?.username}</div>
-                    <div className="text-xs text-gray-500">Role: {user?.role}</div>
-                    <div className="text-xs text-gray-500">Session: {getSessionDuration()}</div>
+                <div className="absolute right-0 mt-2 w-64 bg-[#181B22] border border-[#39414E] rounded-lg shadow-lg z-50">
+                  <div className="px-4 py-3 border-b border-[#39414E]">
+                    <div className="text-sm font-medium text-[#FAFCFB]">{user?.username}</div>
+                    <div className="text-xs text-[#9FA3AC]">Role: {user?.role}</div>
+                    <div className="text-xs text-[#9FA3AC]">Session: {getSessionDuration?.() || 'N/A'}</div>
                   </div>
                   
-                  <div className="px-4 py-3 border-b border-gray-200">
-                    <div className="text-xs text-gray-600">
-                      <div>Main Inventory: {inventoryStats.mainInventoryCount} items</div>
-                      <div>Sweed Data: {inventoryStats.sweedDataCount} items</div>
-                      <div>Items Scanned: {sessionStats.totalItemsScanned}</div>
+                  <div className="px-4 py-3 border-b border-[#39414E]">
+                    <div className="text-xs text-[#9FA3AC]">
+                      <div>Main Inventory: {inventoryStats?.mainInventoryCount || 0} items</div>
+                      <div>Sweed Data: {inventoryStats?.sweedDataCount || 0} items</div>
+                      <div>Items Scanned: {sessionStats?.totalItemsScanned || 0}</div>
                     </div>
                   </div>
                   
                   <div className="p-2">
                     <button
-                      onClick={handleLogout}
-                      className="w-full flex items-center space-x-2 px-3 py-2 text-sm text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                      onClick={() => {
+                        closeUserMenu();
+                        handleLogout();
+                      }}
+                      className="w-full flex items-center space-x-2 px-3 py-2 text-sm text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
                     >
                       <LogOut className="h-4 w-4" />
                       <span>Sign Out</span>
@@ -159,7 +172,7 @@ export default function Header({ title, inventoryStats, sessionStats }) {
             {/* Mobile Menu Button */}
             <button
               onClick={toggleMobileMenu}
-              className="lg:hidden p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors"
+              className="lg:hidden p-2 rounded-lg text-[#9FA3AC] hover:text-[#FAFCFB] hover:bg-[#39414E] transition-colors"
             >
               {isMobileMenuOpen ? (
                 <X className="h-5 w-5" />
@@ -172,7 +185,7 @@ export default function Header({ title, inventoryStats, sessionStats }) {
 
         {/* Mobile Navigation */}
         {isMobileMenuOpen && (
-          <div className="lg:hidden border-t border-gray-200 py-4">
+          <div className="lg:hidden border-t border-[#39414E] py-4">
             <nav className="space-y-2">
               {navigationItems.map((item) => {
                 const Icon = item.icon;
@@ -185,8 +198,8 @@ export default function Header({ title, inventoryStats, sessionStats }) {
                     onClick={closeMobileMenu}
                     className={`flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                       isActive
-                        ? 'bg-blue-100 text-blue-700'
-                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                        ? 'bg-[#86EFAC] text-[#00001C]'
+                        : 'text-[#9FA3AC] hover:text-[#FAFCFB] hover:bg-[#39414E]'
                     }`}
                   >
                     <Icon className="h-5 w-5" />
@@ -197,30 +210,19 @@ export default function Header({ title, inventoryStats, sessionStats }) {
             </nav>
 
             {/* Mobile Status Info */}
-            <div className="mt-4 pt-4 border-t border-gray-200">
-              <div className="px-3 py-2 text-sm text-gray-600">
-                <div className="font-medium mb-2">Session Status:</div>
+            <div className="mt-4 pt-4 border-t border-[#39414E]">
+              <div className="px-3 py-2 text-sm text-[#9FA3AC]">
+                <div className="font-medium mb-2 text-[#FAFCFB]">Session Status:</div>
                 <div className="space-y-1 text-xs">
-                  <div>Main Inventory: {inventoryStats.mainInventoryCount} items</div>
-                  <div>Sweed Data: {inventoryStats.sweedDataCount} items</div>
-                  <div>Items Scanned: {sessionStats.totalItemsScanned}</div>
+                  <div>Main Inventory: {inventoryStats?.mainInventoryCount || 0} items</div>
+                  <div>Sweed Data: {inventoryStats?.sweedDataCount || 0} items</div>
+                  <div>Items Scanned: {sessionStats?.totalItemsScanned || 0}</div>
                 </div>
               </div>
             </div>
           </div>
         )}
       </div>
-
-      {/* Click outside to close menus */}
-      {(isMobileMenuOpen || isUserMenuOpen) && (
-        <div
-          className="fixed inset-0 z-40"
-          onClick={() => {
-            setIsMobileMenuOpen(false);
-            setIsUserMenuOpen(false);
-          }}
-        />
-      )}
     </header>
   );
 }
