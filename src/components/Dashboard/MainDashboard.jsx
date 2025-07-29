@@ -6,10 +6,17 @@ import { useSession } from '../../contexts/SessionContext.jsx';
 
 export default function MainDashboard() {
   const { user } = useAuth();
-  const { hasMainInventory, hasSweedData } = useInventory();
+  // FIXED: Use getInventoryStats() instead of boolean flags (same as Header)
+  const { getInventoryStats } = useInventory();
   const { getSessionStats } = useSession();
 
+  const inventoryStats = getInventoryStats();
   const sessionStats = getSessionStats();
+
+  // FIXED: Use actual counts instead of potentially broken boolean flags
+  const hasMainInventory = (inventoryStats?.mainInventoryCount || 0) > 0;
+  const hasSweedData = (inventoryStats?.sweedDataCount || 0) > 0;
+  const hasAnyInventory = hasMainInventory || hasSweedData;
 
   // Quick action items
   const quickActions = [
@@ -17,19 +24,22 @@ export default function MainDashboard() {
       title: 'Import Main Inventory',
       path: '/import',
       available: true,
-      status: hasMainInventory ? 'Imported' : 'Required'
+      status: hasMainInventory ? `${inventoryStats.mainInventoryCount} Items` : 'Required'
     },
     {
       title: 'Import Sweed Report',
       path: '/sweed-import',
       available: true,
-      status: hasSweedData ? 'Imported' : 'Optional'
+      status: hasSweedData ? `${inventoryStats.sweedDataCount} Items` : 'Optional'
     },
     {
       title: 'Start Scanning',
       path: '/scanning',
-      available: hasMainInventory || hasSweedData,
-      status: sessionStats.totalItemsScanned > 0 ? `${sessionStats.totalItemsScanned} Scanned` : 'Ready'
+      // FIXED: Use the computed hasAnyInventory instead of broken boolean flags
+      available: hasAnyInventory,
+      status: sessionStats.totalItemsScanned > 0 
+        ? `${sessionStats.totalItemsScanned} Scanned` 
+        : hasAnyInventory ? 'Ready' : 'Import Data First'
     },
     {
       title: 'Generate Labels',
@@ -54,6 +64,13 @@ export default function MainDashboard() {
             <h1 className="text-3xl font-bold text-[#FAFCFB]">
               Cannabis Inventory Management System
             </h1>
+            
+            {/* ADDED: Debug info to verify data is loading */}
+            <div className="mt-4 text-sm text-[#9FA3AC]">
+              Main: {inventoryStats?.mainInventoryCount || 0} | 
+              Sweed: {inventoryStats?.sweedDataCount || 0} | 
+              Scanned: {sessionStats?.totalItemsScanned || 0}
+            </div>
           </div>
         </div>
 
@@ -82,10 +99,14 @@ export default function MainDashboard() {
                   <div className="flex justify-center mb-6">
                     <div 
                       className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${
-                        action.status === 'Imported' || action.status === 'Ready' || action.status.includes('Scanned') 
+                        action.status === 'Ready' || 
+                        action.status.includes('Items') || 
+                        action.status.includes('Scanned') 
                           ? 'bg-green-500/20 text-green-400 border-green-500/30'
                           : action.status === 'Required'
                           ? 'bg-red-500/20 text-red-400 border-red-500/30'
+                          : action.status === 'Import Data First' || action.status === 'Scan Items First'
+                          ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30'
                           : 'bg-gray-500/20 text-gray-400 border-gray-500/30'
                       }`}
                     >
