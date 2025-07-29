@@ -327,7 +327,7 @@ export class PDFGenerator {
   }
 
   /**
-   * Draw right side information with LARGER RECTANGULAR BOXES
+   * Draw right side information with moderately larger side-by-side boxes
    * @param {jsPDF} pdf - PDF document
    * @param {Object} labelData - Label data
    * @param {number} x - X position
@@ -358,36 +358,36 @@ export class PDFGenerator {
     const packagedWidth = pdf.getTextWidth(packagedText);
     pdf.text(packagedText, rightAlignX + 90 - packagedWidth, currentY + 7);
 
-    // LARGER RECTANGULAR BOXES - 2x size with increased font
-    const boxWidth = 80;          // 2x larger (was 40pt)
-    const boxHeight = 20;         // 2x larger + rectangular (was 12pt)
-    const boxGap = 4;             // Slightly larger gap (was 2pt)
+    // MODERATELY LARGER BOXES - 1.5x size increase (side by side)
+    const boxWidth = 60;          // 1.5x larger (was 40pt, now 60pt)
+    const boxHeight = 18;         // 1.5x larger (was 12pt, now 18pt)
+    const boxGap = 3;             // Slightly larger gap (was 2pt, now 3pt)
     
-    // Position for both boxes - stacked vertically due to larger size
-    const boxStartX = rightAlignX + 90 - boxWidth; // Right-aligned
-    const box1Y = y + 30;         // Case Qty box (positioned higher)
-    const box2Y = box1Y + boxHeight + boxGap; // Box X/X below it
+    // Position for both boxes side by side
+    const box1X = rightAlignX + 90 - (boxWidth * 2) - boxGap; // Left box (Case Qty)
+    const box2X = rightAlignX + 90 - boxWidth; // Right box (Box X/X)
+    const boxY = y + 42;          // Positioned lower to accommodate larger size
 
-    // Case Qty Box - LARGER & RECTANGULAR
+    // Case Qty Box - MODERATELY LARGER
     pdf.setDrawColor(0, 0, 0);
     pdf.setLineWidth(0.5);
-    pdf.rect(boxStartX, box1Y, boxWidth, boxHeight);
+    pdf.rect(box1X, boxY, boxWidth, boxHeight);
     
     pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(9);           // Increased from 5pt to 9pt
+    pdf.setFontSize(8);           // Increased from 5pt to 8pt
     const caseQtyValue = labelData.caseQuantity || '___';
     const caseQtyText = `Case Qty: ${caseQtyValue}`;
     const caseQtyWidth = pdf.getTextWidth(caseQtyText);
-    pdf.text(caseQtyText, boxStartX + (boxWidth - caseQtyWidth) / 2, box1Y + (boxHeight / 2) + 3);
+    pdf.text(caseQtyText, box1X + (boxWidth - caseQtyWidth) / 2, boxY + (boxHeight / 2) + 3);
 
-    // Box Number Box - LARGER & RECTANGULAR
-    pdf.rect(boxStartX, box2Y, boxWidth, boxHeight);
+    // Box Number Box - MODERATELY LARGER  
+    pdf.rect(box2X, boxY, boxWidth, boxHeight);
     
     pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(9);           // Increased from 5pt to 9pt
+    pdf.setFontSize(8);           // Increased from 5pt to 8pt
     const boxText = `Box ${boxNumber}/${totalBoxes}`;
     const boxTextWidth = pdf.getTextWidth(boxText);
-    pdf.text(boxText, boxStartX + (boxWidth - boxTextWidth) / 2, box2Y + (boxHeight / 2) + 3);
+    pdf.text(boxText, box2X + (boxWidth - boxTextWidth) / 2, boxY + (boxHeight / 2) + 3);
   }
 
   /**
@@ -459,10 +459,11 @@ export class PDFGenerator {
       totalLabelsPerSheet: specs.LABELS_PER_SHEET,
       boxUpdates: {
         oldSize: { width: 40, height: 12 },
-        newSize: { width: 80, height: 20 },
+        newSize: { width: 60, height: 18 },
+        increase: "1.5x larger (50% increase)",
         oldFont: "5pt",
-        newFont: "9pt",
-        layout: "Stacked vertically, larger rectangular boxes"
+        newFont: "8pt",
+        layout: "Side by side (not stacked)"
       }
     };
   }
