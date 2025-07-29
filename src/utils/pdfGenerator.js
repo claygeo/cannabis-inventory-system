@@ -97,7 +97,8 @@ export class PDFGenerator {
   }
 
   /**
-   * Calculate label position with PERFECT SYMMETRY - Equal left/right margins
+   * Calculate label position to EXACTLY match Uline S-5627 template
+   * Equal top/bottom margins AND equal left/right margins
    * @param {number} labelIndex - Index of label (0-based)
    * @returns {Object} - Position coordinates in points
    */
@@ -115,15 +116,15 @@ export class PDFGenerator {
     const labelWidth = 288; // 4 inches exact
     const labelHeight = 108; // 1.5 inches exact
     
-    // PERFECT SYMMETRICAL MARGINS - Equal left/right spacing
-    const topMargin = 54;       // ~0.75" - Moved UP from physical testing
-    const bottomMargin = 90;    // ~1.25" - Compensating bottom margin  
+    // PERFECT ULINE TEMPLATE MATCH - Equal top/bottom AND left/right margins
+    const topMargin = 72;       // 1" - EQUAL top margin to match Uline template
+    const bottomMargin = 72;    // 1" - EQUAL bottom margin to match Uline template  
     const leftMargin = 12;      // ~0.167" - EQUAL left margin for symmetry
     const rightMargin = 12;     // ~0.167" - EQUAL right margin for symmetry
     const columnGap = 12;       // ~0.167" - Perfect middle gap
     
-    // Perfect Symmetry Verification: 12 + 288 + 12 + 288 + 12 = 612pt ✅
-    // Height verification: 54 + (6 × 108) + 90 = 792pt ✅
+    // Perfect Template Match Verification: 12 + 288 + 12 + 288 + 12 = 612pt ✅
+    // Height verification: 72 + (6 × 108) + 72 = 792pt ✅ PERFECT EQUAL MARGINS
     
     // Calculate X position (columns) - perfectly centered
     let xPos = leftMargin;
@@ -132,7 +133,7 @@ export class PDFGenerator {
       xPos = leftMargin + labelWidth + columnGap;
     }
     
-    // Calculate Y position - moved up from previous position
+    // Calculate Y position - equal top/bottom spacing
     const yPos = topMargin + (row * labelHeight);
     
     return {
@@ -457,20 +458,19 @@ export class PDFGenerator {
       labelPositions: positions,
       totalLabelsPerSheet: specs.LABELS_PER_SHEET,
       spacingInfo: {
-        topMargin: 54,           // ~0.75" - MOVED UP from physical testing ⬆️
-        bottomMargin: 90,        // ~1.25" - Compensating bottom margin
-        leftMargin: 12,          // ~0.167" - EQUAL margin for symmetry ⬅️➡️
-        rightMargin: 12,         // ~0.167" - EQUAL margin for symmetry ⬅️➡️
+        topMargin: 72,           // 1" - EQUAL top margin ⬆️⬇️
+        bottomMargin: 72,        // 1" - EQUAL bottom margin ⬆️⬇️
+        leftMargin: 12,          // ~0.167" - EQUAL left margin ⬅️➡️
+        rightMargin: 12,         // ~0.167" - EQUAL right margin ⬅️➡️
         columnGap: 12,           // ~0.167" - Perfect middle gap
         rowGap: 0,               // NO ROW GAPS - adjacent labels ✅
-        symmetry: {
-          leftToLabel: "12pt",
-          middleGap: "12pt", 
-          labelToRight: "12pt",
-          perfectBalance: true
+        perfectTemplate: {
+          topBottomEqual: "72pt each - MATCHES Uline template",
+          leftRightEqual: "12pt each - Perfect symmetry", 
+          middleGap: "12pt - Clean center division"
         },
-        widthCalculation: "12 + 288 + 12 + 288 + 12 = 612pt ✅ PERFECT SYMMETRY",
-        heightCalculation: "54 + (6×108) + 90 = 792pt ✅"
+        widthCalculation: "12 + 288 + 12 + 288 + 12 = 612pt ✅ PERFECT",
+        heightCalculation: "72 + (6×108) + 72 = 792pt ✅ PERFECT EQUAL MARGINS"
       }
     };
   }
