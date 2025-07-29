@@ -6,7 +6,6 @@ import storage from './storage.js';
 
 /**
  * PDF Generation utilities for Uline S-5627 label sheets
- * SPECIFICATIONS EXTRACTED FROM ACTUAL ULINE TEMPLATE IMAGE ANALYSIS
  */
 export class PDFGenerator {
   /**
@@ -98,8 +97,7 @@ export class PDFGenerator {
   }
 
   /**
-   * Calculate label position using EXACT specifications from Uline template image analysis
-   * These dimensions were extracted by analyzing the visual proportions of the actual template
+   * Calculate label position using EXACT specifications from image analysis
    * @param {number} labelIndex - Index of label (0-based)
    * @returns {Object} - Position coordinates in points
    */
@@ -118,12 +116,11 @@ export class PDFGenerator {
     const labelHeight = 108; // 1.5 inches exact
     
     // EXTRACTED FROM ULINE TEMPLATE IMAGE ANALYSIS - PIXEL PERFECT
-    // These values were derived by analyzing the visual proportions of the actual Uline template
-    const topMargin = 72;       // 1.000" - Equal top margin (matches image)
-    const bottomMargin = 72;    // 1.000" - Equal bottom margin (matches image)  
-    const leftMargin = 15;      // 0.208" - Side margin (from image analysis)
-    const rightMargin = 15;     // 0.208" - Side margin (from image analysis)
-    const columnGap = 6;        // 0.083" - Small middle gap (visible in image)
+    const topMargin = 72;       // 1.000" - Equal top margin
+    const bottomMargin = 72;    // 1.000" - Equal bottom margin  
+    const leftMargin = 15;      // 0.208" - Side margin
+    const rightMargin = 15;     // 0.208" - Side margin
+    const columnGap = 6;        // 0.083" - Small middle gap
     
     // PERFECT TEMPLATE MATCH VERIFICATION:
     // Width: 15 + 288 + 6 + 288 + 15 = 612pt ✅ EXACT
@@ -330,7 +327,7 @@ export class PDFGenerator {
   }
 
   /**
-   * Draw right side information (fixed Case Qty formatting)
+   * Draw right side information with LARGER RECTANGULAR BOXES
    * @param {jsPDF} pdf - PDF document
    * @param {Object} labelData - Label data
    * @param {number} x - X position
@@ -361,36 +358,36 @@ export class PDFGenerator {
     const packagedWidth = pdf.getTextWidth(packagedText);
     pdf.text(packagedText, rightAlignX + 90 - packagedWidth, currentY + 7);
 
-    // Side by side text boxes in bottom right corner
-    const boxWidth = 40;
-    const boxHeight = 12;
-    const boxGap = 2;
+    // LARGER RECTANGULAR BOXES - 2x size with increased font
+    const boxWidth = 80;          // 2x larger (was 40pt)
+    const boxHeight = 20;         // 2x larger + rectangular (was 12pt)
+    const boxGap = 4;             // Slightly larger gap (was 2pt)
     
-    // Position for both boxes
-    const box1X = rightAlignX + 90 - (boxWidth * 2) - boxGap; // Left box (Case Qty)
-    const box2X = rightAlignX + 90 - boxWidth; // Right box (Box X/X)
-    const boxY = y + 48;
+    // Position for both boxes - stacked vertically due to larger size
+    const boxStartX = rightAlignX + 90 - boxWidth; // Right-aligned
+    const box1Y = y + 30;         // Case Qty box (positioned higher)
+    const box2Y = box1Y + boxHeight + boxGap; // Box X/X below it
 
-    // Case Qty Box - Format like "Case Qty: 24"
+    // Case Qty Box - LARGER & RECTANGULAR
     pdf.setDrawColor(0, 0, 0);
     pdf.setLineWidth(0.5);
-    pdf.rect(box1X, boxY, boxWidth, boxHeight);
+    pdf.rect(boxStartX, box1Y, boxWidth, boxHeight);
     
     pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(5);
+    pdf.setFontSize(9);           // Increased from 5pt to 9pt
     const caseQtyValue = labelData.caseQuantity || '___';
     const caseQtyText = `Case Qty: ${caseQtyValue}`;
     const caseQtyWidth = pdf.getTextWidth(caseQtyText);
-    pdf.text(caseQtyText, box1X + (boxWidth - caseQtyWidth) / 2, boxY + 8);
+    pdf.text(caseQtyText, boxStartX + (boxWidth - caseQtyWidth) / 2, box1Y + (boxHeight / 2) + 3);
 
-    // Box Number Box - Format like "Box 1/3"
-    pdf.rect(box2X, boxY, boxWidth, boxHeight);
+    // Box Number Box - LARGER & RECTANGULAR
+    pdf.rect(boxStartX, box2Y, boxWidth, boxHeight);
     
     pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(5);
+    pdf.setFontSize(9);           // Increased from 5pt to 9pt
     const boxText = `Box ${boxNumber}/${totalBoxes}`;
     const boxTextWidth = pdf.getTextWidth(boxText);
-    pdf.text(boxText, box2X + (boxWidth - boxTextWidth) / 2, boxY + 8);
+    pdf.text(boxText, boxStartX + (boxWidth - boxTextWidth) / 2, box2Y + (boxHeight / 2) + 3);
   }
 
   /**
@@ -460,19 +457,12 @@ export class PDFGenerator {
       labelSpecs: specs,
       labelPositions: positions,
       totalLabelsPerSheet: specs.LABELS_PER_SHEET,
-      imageAnalysisSpecs: {
-        source: "Extracted from actual Uline S-5627 template image",
-        topMargin: 72,           // 1.000" - From image analysis ✅
-        bottomMargin: 72,        // 1.000" - From image analysis ✅
-        leftMargin: 15,          // 0.208" - From image analysis ✅
-        rightMargin: 15,         // 0.208" - From image analysis ✅
-        columnGap: 6,            // 0.083" - Small gap visible in image ✅
-        rowGap: 0,               // NO ROW GAPS - adjacent labels ✅
-        verification: {
-          widthCalc: "15 + 288 + 6 + 288 + 15 = 612pt ✅ PERFECT",
-          heightCalc: "72 + (6×108) + 72 = 792pt ✅ PERFECT",
-          extractionMethod: "Visual proportion analysis + mathematical constraints"
-        }
+      boxUpdates: {
+        oldSize: { width: 40, height: 12 },
+        newSize: { width: 80, height: 20 },
+        oldFont: "5pt",
+        newFont: "9pt",
+        layout: "Stacked vertically, larger rectangular boxes"
       }
     };
   }
