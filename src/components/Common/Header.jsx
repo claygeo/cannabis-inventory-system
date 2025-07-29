@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext.jsx';
-import { APP_NAME, APP_VERSION } from '../../constants.js';
 import { 
   Home, 
   Upload, 
   Scan, 
   Tag, 
+  BarChart3,
   LogOut, 
   Menu, 
   X,
@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-export default function Header({ title, inventoryStats, sessionStats }) {
+export default function Header({ inventoryStats, sessionStats }) {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout, getSessionDuration } = useAuth();
@@ -27,7 +27,8 @@ export default function Header({ title, inventoryStats, sessionStats }) {
     { path: '/import', label: 'Import Main', icon: Upload },
     { path: '/sweed-import', label: 'Import Sweed', icon: Upload },
     { path: '/scanning', label: 'Scanning', icon: Scan },
-    { path: '/labels', label: 'Labels', icon: Tag }
+    { path: '/labels', label: 'Labels', icon: Tag },
+    { path: '/reports', label: 'Reports', icon: BarChart3 }
   ];
 
   const handleLogout = () => {
@@ -38,7 +39,6 @@ export default function Header({ title, inventoryStats, sessionStats }) {
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
-    // Close user menu if it's open
     if (isUserMenuOpen) {
       setIsUserMenuOpen(false);
     }
@@ -46,7 +46,6 @@ export default function Header({ title, inventoryStats, sessionStats }) {
 
   const toggleUserMenu = () => {
     setIsUserMenuOpen(!isUserMenuOpen);
-    // Close mobile menu if it's open
     if (isMobileMenuOpen) {
       setIsMobileMenuOpen(false);
     }
@@ -64,26 +63,8 @@ export default function Header({ title, inventoryStats, sessionStats }) {
     <header className="bg-[#181B22] shadow-sm border-b border-[#39414E] sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          {/* Logo and Title */}
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2">
-              <div className="h-8 w-8 bg-[#86EFAC] rounded-lg flex items-center justify-center">
-                <span className="text-[#00001C] font-bold text-sm">CI</span>
-              </div>
-              <div className="hidden sm:block">
-                <h1 className="text-lg font-semibold text-[#FAFCFB]">{APP_NAME}</h1>
-                <p className="text-xs text-[#9FA3AC]">V{APP_VERSION}</p>
-              </div>
-            </div>
-            
-            {/* Current Page Title */}
-            <div className="hidden md:block border-l border-[#39414E] pl-4">
-              <h2 className="text-lg font-medium text-[#FAFCFB]">{title}</h2>
-            </div>
-          </div>
-
-          {/* Desktop Navigation */}
-          <nav className="hidden lg:flex items-center space-x-1">
+          {/* Desktop Navigation - Full Width */}
+          <nav className="hidden lg:flex items-center space-x-1 flex-1">
             {navigationItems.map((item) => {
               const Icon = item.icon;
               const isActive = location.pathname === item.path;
@@ -92,7 +73,7 @@ export default function Header({ title, inventoryStats, sessionStats }) {
                 <Link
                   key={item.path}
                   to={item.path}
-                  className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                     isActive
                       ? 'bg-[#86EFAC] text-[#00001C]'
                       : 'text-[#9FA3AC] hover:text-[#FAFCFB] hover:bg-[#39414E]'

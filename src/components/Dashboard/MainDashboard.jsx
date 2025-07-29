@@ -6,14 +6,12 @@ import { useSession } from '../../contexts/SessionContext.jsx';
 
 export default function MainDashboard() {
   const { user } = useAuth();
-  // FIXED: Use getInventoryStats() instead of boolean flags (same as Header)
   const { getInventoryStats } = useInventory();
   const { getSessionStats } = useSession();
 
   const inventoryStats = getInventoryStats();
   const sessionStats = getSessionStats();
 
-  // FIXED: Use actual counts instead of potentially broken boolean flags
   const hasMainInventory = (inventoryStats?.mainInventoryCount || 0) > 0;
   const hasSweedData = (inventoryStats?.sweedDataCount || 0) > 0;
   const hasAnyInventory = hasMainInventory || hasSweedData;
@@ -23,35 +21,27 @@ export default function MainDashboard() {
     {
       title: 'Import Main Inventory',
       path: '/import',
-      available: true,
-      status: hasMainInventory ? `${inventoryStats.mainInventoryCount} Items` : 'Required'
+      available: true
     },
     {
       title: 'Import Sweed Report',
       path: '/sweed-import',
-      available: true,
-      status: hasSweedData ? `${inventoryStats.sweedDataCount} Items` : 'Optional'
+      available: true
     },
     {
       title: 'Start Scanning',
       path: '/scanning',
-      // FIXED: Use the computed hasAnyInventory instead of broken boolean flags
-      available: hasAnyInventory,
-      status: sessionStats.totalItemsScanned > 0 
-        ? `${sessionStats.totalItemsScanned} Scanned` 
-        : hasAnyInventory ? 'Ready' : 'Import Data First'
+      available: hasAnyInventory
     },
     {
       title: 'Generate Labels',
       path: '/labels',
-      available: sessionStats.totalItemsScanned > 0,
-      status: sessionStats.totalItemsScanned > 0 ? 'Ready' : 'Scan Items First'
+      available: sessionStats.totalItemsScanned > 0
     },
     {
       title: 'View Reports',
       path: '/reports',
-      available: true,
-      status: 'Available'
+      available: true
     }
   ];
 
@@ -64,13 +54,6 @@ export default function MainDashboard() {
             <h1 className="text-3xl font-bold text-[#FAFCFB]">
               Cannabis Inventory Management System
             </h1>
-            
-            {/* ADDED: Debug info to verify data is loading */}
-            <div className="mt-4 text-sm text-[#9FA3AC]">
-              Main: {inventoryStats?.mainInventoryCount || 0} | 
-              Sweed: {inventoryStats?.sweedDataCount || 0} | 
-              Scanned: {sessionStats?.totalItemsScanned || 0}
-            </div>
           </div>
         </div>
 
@@ -88,37 +71,16 @@ export default function MainDashboard() {
                 }`}
               >
                 <div 
-                  className={`bg-[#86EFAC] rounded-2xl p-8 h-full transition-all duration-300 ${
-                    !isDisabled ? 'group-hover:shadow-2xl' : ''
+                  className={`bg-[#181B22] border border-[#39414E] rounded-2xl p-8 h-full transition-all duration-300 ${
+                    !isDisabled ? 'group-hover:shadow-2xl group-hover:border-[#86EFAC]' : ''
                   }`}
                   style={{
                     boxShadow: !isDisabled ? '0 10px 25px rgba(134, 239, 172, 0.1)' : 'none'
                   }}
                 >
-                  {/* Status Badge */}
-                  <div className="flex justify-center mb-6">
-                    <div 
-                      className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${
-                        action.status === 'Ready' || 
-                        action.status.includes('Items') || 
-                        action.status.includes('Scanned') 
-                          ? 'bg-green-500/20 text-green-400 border-green-500/30'
-                          : action.status === 'Required'
-                          ? 'bg-red-500/20 text-red-400 border-red-500/30'
-                          : action.status === 'Import Data First' || action.status === 'Scan Items First'
-                          ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30'
-                          : 'bg-gray-500/20 text-gray-400 border-gray-500/30'
-                      }`}
-                    >
-                      {action.status}
-                    </div>
-                  </div>
-
                   {/* Content */}
                   <div className="text-center">
-                    <h3 
-                      className="text-xl font-bold mb-4 transition-all duration-300 text-[#00001C]"
-                    >
+                    <h3 className="text-xl font-bold mb-4 transition-all duration-300 text-[#FAFCFB] group-hover:text-[#86EFAC]">
                       {action.title}
                     </h3>
                   </div>
@@ -127,13 +89,10 @@ export default function MainDashboard() {
                   {!isDisabled && (
                     <div className={`mt-6 flex justify-center transition-transform duration-300 group-hover:translate-x-1`}>
                       <div 
-                        className="w-8 h-8 rounded-full flex items-center justify-center"
-                        style={{ 
-                          backgroundColor: 'rgba(0, 0, 28, 0.1)'
-                        }}
+                        className="w-8 h-8 rounded-full flex items-center justify-center bg-[#86EFAC] group-hover:bg-[#FAFCFB] transition-colors duration-300"
                       >
                         <svg 
-                          className="w-4 h-4 text-[#00001C]"
+                          className="w-4 h-4 text-[#15161B] transition-colors duration-300"
                           fill="none" 
                           stroke="currentColor" 
                           viewBox="0 0 24 24"

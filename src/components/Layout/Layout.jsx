@@ -15,9 +15,9 @@ export default function Layout() {
   const inventoryStats = getInventoryStats();
   const sessionStats = getSessionStats();
 
-  // COMPREHENSIVE TOAST OVERLAY FIX
+  // Fix the toast overlay issue
   useEffect(() => {
-    // Clear any existing toasts immediately on mount
+    // Clear any stuck toasts immediately
     toast.dismiss();
     
     const aggressiveOverlayCleanup = () => {
@@ -152,26 +152,6 @@ export default function Layout() {
     toast.dismiss();
   }, [location.pathname]);
 
-  // Get page title based on current route
-  const getPageTitle = () => {
-    switch (location.pathname) {
-      case '/dashboard':
-        return 'Dashboard';
-      case '/import':
-        return 'Import Main Inventory';
-      case '/import-sweed':
-        return 'Import Sweed Report';
-      case '/scanning':
-        return 'Barcode Scanning';
-      case '/labels':
-        return 'Label Generation';
-      case '/reports':
-        return 'Reports';
-      default:
-        return 'Cannabis Inventory System';
-    }
-  };
-
   return (
     <div className="min-h-screen bg-[#15161B]">
       {/* 
@@ -237,10 +217,8 @@ export default function Layout() {
         gutter={8}
       />
       
-      {/* Header */}
+      {/* Header - REMOVED title prop since we cleaned up the header */}
       <Header 
-        title={getPageTitle()}
-        user={user}
         inventoryStats={inventoryStats}
         sessionStats={sessionStats}
       />
