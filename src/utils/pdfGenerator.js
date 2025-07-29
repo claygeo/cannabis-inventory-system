@@ -97,7 +97,8 @@ export class PDFGenerator {
   }
 
   /**
-   * Calculate label position with PERFECT margins including right side
+   * Calculate label position based on PHYSICAL TESTING with actual Uline S-5627 sheets
+   * Adjustments: Left column shifted left, all labels moved up
    * @param {number} labelIndex - Index of label (0-based)
    * @returns {Object} - Position coordinates in points
    */
@@ -115,23 +116,24 @@ export class PDFGenerator {
     const labelWidth = 288; // 4 inches exact
     const labelHeight = 108; // 1.5 inches exact
     
-    // FINAL PERFECT MARGINS - with right side margin
-    const topMargin = 72;       // 1" - Perfect (confirmed by user)
-    const bottomMargin = 72;    // 1" - Perfect (confirmed by user)  
-    const leftMargin = 15;      // ~0.21" - Slightly reduced
-    const rightMargin = 9;      // ~0.125" - Small right margin
-    const columnGap = 12;       // ~0.167" - Reduced from 18pt to create right space
+    // PHYSICALLY TESTED MARGINS - Based on actual Uline sheet testing
+    const topMargin = 54;       // ~0.75" - Moved UP from 72pt based on physical test
+    const bottomMargin = 90;    // ~1.25" - Compensating bottom margin  
+    const leftMargin = 9;       // ~0.125" - Shifted LEFT from 15pt based on physical test
+    const rightMargin = 15;     // ~0.21" - Increased right margin to compensate
+    const columnGap = 12;       // ~0.167" - Keep middle gap same
     
-    // Verification: 15 + 288 + 12 + 288 + 9 = 612pt ✓ PERFECT
+    // Verification: 9 + 288 + 12 + 288 + 15 = 612pt ✓ PERFECT
+    // Height verification: 54 + (6 × 108) + 90 = 792pt ✓ PERFECT
     
-    // Calculate X position (columns)
+    // Calculate X position (columns) - left column shifted left
     let xPos = leftMargin;
     if (col === 1) {
-      // Right column: left margin + left label + reduced gap
+      // Right column: left margin + left label + gap
       xPos = leftMargin + labelWidth + columnGap;
     }
     
-    // Calculate Y position - NO row gaps, labels are adjacent (PERFECT - confirmed by user)
+    // Calculate Y position - moved up from previous position
     const yPos = topMargin + (row * labelHeight);
     
     return {
@@ -456,15 +458,19 @@ export class PDFGenerator {
       labelPositions: positions,
       totalLabelsPerSheet: specs.LABELS_PER_SHEET,
       spacingInfo: {
-        topMargin: 72,         // 1" - PERFECT ✅
-        bottomMargin: 72,      // 1" - PERFECT ✅
-        leftMargin: 15,        // ~0.21" - Slightly reduced 
-        rightMargin: 9,        // ~0.125" - NEW small right margin ✅
-        columnGap: 12,         // ~0.167" - Reduced to create right space
-        rowGap: 0,             // NO ROW GAPS - PERFECT ✅
-        availableHeight: 648,   // 792 - 72 - 72
-        totalLabelHeight: 648,  // 6 × 108 - PERFECT FIT ✅
-        widthCalculation: "15 + 288 + 12 + 288 + 9 = 612pt ✅"
+        topMargin: 54,           // ~0.75" - MOVED UP from physical testing ⬆️
+        bottomMargin: 90,        // ~1.25" - Compensating bottom margin
+        leftMargin: 9,           // ~0.125" - SHIFTED LEFT from physical testing ⬅️
+        rightMargin: 15,         // ~0.21" - Increased to compensate
+        columnGap: 12,           // ~0.167" - Keep same
+        rowGap: 0,               // NO ROW GAPS - adjacent labels ✅
+        physicalTestChanges: {
+          leftColumnShift: "6pt left (15→9)",
+          upwardShift: "18pt up (72→54)",
+          rightMarginAdded: "6pt more right space (9→15)"
+        },
+        widthCalculation: "9 + 288 + 12 + 288 + 15 = 612pt ✅",
+        heightCalculation: "54 + (6×108) + 90 = 792pt ✅"
       }
     };
   }
