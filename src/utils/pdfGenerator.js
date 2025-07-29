@@ -97,10 +97,7 @@ export class PDFGenerator {
   }
 
   /**
-   * Calculate label position EXACTLY like Uline S-5627 physical sheet
-   * - NO gaps between rows (labels are adjacent)
-   * - Only vertical gap down the middle between columns
-   * - Even top and bottom margins
+   * Calculate label position with PERFECT margins including right side
    * @param {number} labelIndex - Index of label (0-based)
    * @returns {Object} - Position coordinates in points
    */
@@ -118,25 +115,23 @@ export class PDFGenerator {
     const labelWidth = 288; // 4 inches exact
     const labelHeight = 108; // 1.5 inches exact
     
-    // CORRECTED MARGINS - Based on your image feedback
-    const topMargin = 72;     // 1" - Even top margin
-    const bottomMargin = 72;  // 1" - Even bottom margin  
-    const leftMargin = 18;    // 0.25" - Left margin
-    const rightMargin = 18;   // 0.25" - Right margin
-    const columnGap = 18;     // 0.25" - ONLY gap (vertical down the middle)
+    // FINAL PERFECT MARGINS - with right side margin
+    const topMargin = 72;       // 1" - Perfect (confirmed by user)
+    const bottomMargin = 72;    // 1" - Perfect (confirmed by user)  
+    const leftMargin = 15;      // ~0.21" - Slightly reduced
+    const rightMargin = 9;      // ~0.125" - Small right margin
+    const columnGap = 12;       // ~0.167" - Reduced from 18pt to create right space
     
-    // Verify calculations:
-    // 6 labels × 108pt = 648pt
-    // Available height: 792 - 72 - 72 = 648pt ✓ PERFECT FIT
+    // Verification: 15 + 288 + 12 + 288 + 9 = 612pt ✓ PERFECT
     
-    // Calculate X position (columns) - with proper right spacing
+    // Calculate X position (columns)
     let xPos = leftMargin;
     if (col === 1) {
-      // Right column: account for left margin + left label + gap
+      // Right column: left margin + left label + reduced gap
       xPos = leftMargin + labelWidth + columnGap;
     }
     
-    // Calculate Y position - NO row gaps, labels are adjacent
+    // Calculate Y position - NO row gaps, labels are adjacent (PERFECT - confirmed by user)
     const yPos = topMargin + (row * labelHeight);
     
     return {
@@ -461,15 +456,15 @@ export class PDFGenerator {
       labelPositions: positions,
       totalLabelsPerSheet: specs.LABELS_PER_SHEET,
       spacingInfo: {
-        topMargin: 72,       // 1"
-        bottomMargin: 72,    // 1"
-        leftMargin: 18,      // 0.25"
-        rightMargin: 18,     // 0.25"
-        columnGap: 18,       // 0.25" - ONLY gap (vertical)
-        rowGap: 0,           // NO ROW GAPS - adjacent labels
-        availableHeight: 648, // 792 - 72 - 72
-        totalLabelHeight: 648, // 6 × 108 - PERFECT FIT
-        verification: "Labels fit exactly with no extra space"
+        topMargin: 72,         // 1" - PERFECT ✅
+        bottomMargin: 72,      // 1" - PERFECT ✅
+        leftMargin: 15,        // ~0.21" - Slightly reduced 
+        rightMargin: 9,        // ~0.125" - NEW small right margin ✅
+        columnGap: 12,         // ~0.167" - Reduced to create right space
+        rowGap: 0,             // NO ROW GAPS - PERFECT ✅
+        availableHeight: 648,   // 792 - 72 - 72
+        totalLabelHeight: 648,  // 6 × 108 - PERFECT FIT ✅
+        widthCalculation: "15 + 288 + 12 + 288 + 9 = 612pt ✅"
       }
     };
   }
