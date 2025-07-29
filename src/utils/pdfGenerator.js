@@ -1,519 +1,301 @@
 import jsPDF from 'jspdf';
 import { BarcodeGenerator } from './barcodeGenerator.js';
 import { LabelFormatter } from './labelFormatter.js';
-import { EVENT_TYPES } from '../constants.js';
-import storage from './storage.js';
 
 /**
- * PDF Generation utilities for Uline S-5627 label sheets
+ * PDF Generator for Uline S-5627 Label Sheets
+ * Exact dimensions: 4" × 1.5" labels, 2 columns × 6 rows = 12 labels per sheet
  */
 export class PDFGenerator {
+  // Uline S-5627 specifications (in points - 1 inch = 72 points)
+  static SHEET_SPECS = {
+    PAGE_WIDTH: 612,      // 8.5" × 72pt
+    PAGE_HEIGHT: 792,     // 11" × 72pt
+    LABEL_WIDTH: 288,     // 4" × 72pt  
+    LABEL_HEIGHT: 108,    // 1.5" × 72pt
+    COLUMNS: 2,
+    ROWS: 6,
+    LABELS_PER_SHEET: 12,
+    
+    // Calculated positioning (matching your sheet image exactly)
+    LEFT_MARGIN: 18,      // Left edge margin
+    TOP_MARGIN: 72,       // Top edge margin (centered vertically)
+    COLUMN_GAP: 18,       // Gap between the two columns
+    ROW_GAP: 0           // NO gaps between rows - labels touch
+  };
+
   /**
-   * Generate PDF with labels positioned for Uline S-5627 sheets
+   * Generate PDF with labels positioned exactly for Uline S-5627 sheets
    * @param {Array} labelDataArray - Array of label data objects
-   * @param {Object} options - Generation options
    * @returns {Promise<Blob>} - PDF blob
    */
-  static async generateLabels(labelDataArray, options = {}) {
-    const {
-      format = 'letter', // 8.5" x 11"
-      orientation = 'portrait',
-      margins = { top: 0.5, right: 0.3, bottom: 0.5, left: 0.3 }, // inches
-      debug = false
-    } = options;
-
-    // Create new PDF document
+  static async generateLabels(labelDataArray) {
+    console.log('🏷️ Starting PDF generation for', labelDataArray.length, 'items');
+    
     const pdf = new jsPDF({
-      orientation,
+      orientation: 'portrait',
       unit: 'pt',
-      format: format === 'letter' ? [612, 792] : format // 8.5" x 11" in points
+      format: [this.SHEET_SPECS.PAGE_WIDTH, this.SHEET_SPECS.PAGE_HEIGHT]
     });
 
-    let currentLabelIndex = 0;
     let currentPage = 1;
-    const specs = LabelFormatter.getLabelSpecs();
+    let labelPosition = 0;
+
+    // Process each label data item
+    for (let i = 0; i < labelDataArray.length; i++) {
+      const labelData = labelDataArray[i];
+      const labelQuantity = parseInt(labelData.enhancedData?.labelQuantity || 1);
+
+      console.log(`📄 Processing item ${i + 1}: ${labelData.sku} (${labelQuantity} labels)`);
+
+      // Generate the specified number of labels for this item
+      for (let labelNum = 0; labelNum < labelQuantity; labelNum++) {
+        // Start new page if we've filled the current one
+        if (labelPosition >= this.SHEET_SPECS.LABELS_PER_SHEET) {
+          pdf.addPage();
+          currentPage++;
+          labelPosition = 0;
+          console.log(`📄 Started page ${currentPage}`);
+        }
+
+        // Calculate exact position for this label
+        const position = this.calculateLabelPosition(labelPosition);
+        
+        console.log(`🏷️ Placing label ${labelNum + 1}/${labelQuantity} for ${labelData.sku} at position ${labelPosition} (${position.x}, ${position.y})`);
+
+        // Draw the label at calculated position
+        await this.drawLabel(pdf, labelData, position, labelNum + 1, labelQuantity);
+
+        labelPosition++;
+      }
+    }
+
+    console.log('✅ PDF generation complete');
+    return pdf.output('blob');
+  }
+
+  /**
+   * Calculate exact label position on sheet (matching Uline S-5627 layout)
+   * @param {number} labelIndex - Label index (0-11)
+   * @returns {Object} - Position coordinates
+   */
+  static calculateLabelPosition(labelIndex) {
+    const specs = this.SHEET_SPECS;
+    
+    // Determine column (0 or 1) and row (0-5)
+    const column = labelIndex % 2;
+    const row = Math.floor(labelIndex / 2);
+    
+    // Calculate exact x position
+    let x = specs.LEFT_MARGIN; // Start with left margin
+    if (column === 1) {
+      // Second column: left margin + first label width + column gap
+      x = specs.LEFT_MARGIN + specs.LABEL_WIDTH + specs.COLUMN_GAP;
+    }
+    
+    // Calculate exact y position (labels touch vertically - no row gap)
+    const y = specs.TOP_MARGIN + (row * specs.LABEL_HEIGHT);
+    
+    console.log(`📐 Position calculation: labelIndex=${labelIndex}, column=${column}, row=${row}, x=${x}, y=${y}`);
+    
+    return {
+      x: x,
+      y: y,
+      width: specs.LABEL_WIDTH,
+      height: specs.LABEL_HEIGHT,
+      column: column,
+      row: row
+    };
+  }
+
+  /**
+   * Draw individual label with all content
+   * @param {jsPDF} pdf - PDF document
+   * @param {Object} labelData - Label data
+   * @param {Object} position - Label position
+   * @param {number} labelNumber - Current label number
+   * @param {number} totalLabels - Total labels for this item
+   */
+  static async drawLabel(pdf, labelData, position, labelNumber, totalLabels) {
+    const { x, y, width, height } = position;
+    
+    // DEBUG: Draw label border (remove for production)
+    pdf.setDrawColor(200, 200, 200);
+    pdf.setLineWidth(0.5);
+    pdf.rect(x, y, width, height);
 
     try {
-      // Process each label data item
-      for (const labelData of labelDataArray) {
-        const formattedData = LabelFormatter.formatLabelData(
-          labelData,
-          labelData.enhancedData || {},
-          labelData.user || 'Unknown'
-        );
+      // 1. HEADER SECTION (Company info)
+      const headerHeight = 16;
+      pdf.setFontSize(8);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setTextColor(0, 0, 0);
+      
+      const headerText = 'CANNABIS INVENTORY SYSTEM';
+      const headerX = x + (width / 2);
+      const headerY = y + 10;
+      
+      pdf.text(headerText, headerX, headerY, { align: 'center' });
 
-        // Generate the number of labels specified
-        for (let labelCopy = 0; labelCopy < formattedData.labelQuantity; labelCopy++) {
-          // Check if we need a new page
-          if (currentLabelIndex > 0 && currentLabelIndex % specs.LABELS_PER_SHEET === 0) {
-            pdf.addPage();
-            currentPage++;
-          }
+      // 2. PRODUCT NAME SECTION
+      const productStartY = y + headerHeight + 8;
+      const productHeight = 24;
+      
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(11);
+      
+      const productName = labelData.productName || 'Product Name';
+      const productLines = pdf.splitTextToSize(productName, width - 16);
+      
+      let currentProductY = productStartY;
+      productLines.slice(0, 2).forEach(line => {
+        pdf.text(line, x + 8, currentProductY, { align: 'left' });
+        currentProductY += 10;
+      });
 
-          // Calculate position for this label
-          const position = this.calculateUlineLabelPosition(currentLabelIndex % specs.LABELS_PER_SHEET);
+      // 3. BARCODE SECTION (centered)
+      const barcodeStartY = productStartY + productHeight + 4;
+      const barcodeHeight = 28;
+      
+      if (labelData.barcode || labelData.sku) {
+        try {
+          const barcodeValue = labelData.barcode || labelData.sku;
+          const barcodeDataURL = BarcodeGenerator.generateDataURL(barcodeValue, {
+            width: 1.5,
+            height: 25,
+            displayValue: false,
+            margin: 0
+          });
 
-          // Calculate which box number this label represents
-          const boxNumber = Math.floor(labelCopy / Math.max(1, Math.floor(formattedData.labelQuantity / formattedData.boxCount))) + 1;
-
-          // Draw the label
-          await this.drawLabel(pdf, formattedData, position, boxNumber, formattedData.boxCount, debug);
-
-          currentLabelIndex++;
+          const barcodeWidth = 200;
+          const barcodeX = x + (width - barcodeWidth) / 2;
+          
+          pdf.addImage(barcodeDataURL, 'PNG', barcodeX, barcodeStartY, barcodeWidth, barcodeHeight);
+        } catch (error) {
+          console.error('Barcode generation failed:', error);
+          // Fallback to text
+          pdf.setFontSize(10);
+          pdf.setFont('helvetica', 'normal');
+          pdf.text(labelData.barcode || labelData.sku || '', x + (width / 2), barcodeStartY + 14, { align: 'center' });
         }
       }
 
-      // Add metadata
-      pdf.setDocumentProperties({
-        title: `Cannabis Inventory Labels - ${new Date().toISOString().slice(0, 10)}`,
-        subject: 'Uline S-5627 Format Labels',
-        author: 'Cannabis Inventory Management System',
-        creator: 'Cannabis Inventory Management System v5.3.1',
-        keywords: 'cannabis, inventory, labels, uline, s-5627'
-      });
-
-      // Log generation event
-      storage.addSessionEvent(
-        EVENT_TYPES.LABEL_GENERATED,
-        `Generated ${currentLabelIndex} labels across ${currentPage} pages`,
-        `Items: ${labelDataArray.length}, Format: Uline S-5627`
-      );
-
-      // Return PDF as blob
-      return pdf.output('blob');
-
-    } catch (error) {
-      console.error('PDF generation error:', error);
+      // 4. PRODUCT DETAILS SECTION
+      const detailsStartY = barcodeStartY + barcodeHeight + 6;
       
-      // Log error
-      storage.addSessionEvent(
-        EVENT_TYPES.ERROR_OCCURRED,
-        `PDF generation failed: ${error.message}`,
-        `Items attempted: ${labelDataArray.length}`
-      );
-
-      throw new Error(`PDF generation failed: ${error.message}`);
-    }
-  }
-
-  /**
-   * Calculate label position with PRECISE Uline S-5627 physical alignment
-   * @param {number} labelIndex - Index of label (0-based)
-   * @returns {Object} - Position coordinates in points
-   */
-  static calculateUlineLabelPosition(labelIndex) {
-    const labelsPerRow = 2;
-    const labelsPerCol = 6;
-    const row = Math.floor(labelIndex / labelsPerRow);
-    const col = labelIndex % labelsPerRow;
-    
-    // Standard 8.5" x 11" page (612 x 792 points)
-    const pageWidth = 612;
-    const pageHeight = 792;
-    
-    // Label dimensions (exact Uline specifications)
-    const labelWidth = 288; // 4 inches exact
-    const labelHeight = 108; // 1.5 inches exact
-    
-    // CORRECTED MARGINS FOR PERFECT ULINE S-5627 ALIGNMENT
-    // These values are based on actual Uline S-5627 template measurements
-    const topMargin = 45;     // 0.625" - Precise top margin for header alignment
-    const bottomMargin = 45;  // 0.625" - Even bottom margin for footer alignment  
-    const leftMargin = 18;    // 0.25" - Left margin
-    const rightMargin = 18;   // 0.25" - Right margin (maintains symmetry)
-    const columnGap = 18;     // 0.25" - Gap between columns
-    
-    // Calculate available space and distribute evenly
-    const availableHeight = pageHeight - topMargin - bottomMargin; // 702pt
-    const totalLabelHeight = labelsPerCol * labelHeight; // 6 × 108 = 648pt
-    const remainingVerticalSpace = availableHeight - totalLabelHeight; // 54pt
-    const rowGap = remainingVerticalSpace / (labelsPerCol - 1); // ~10.8pt between rows
-    
-    // Calculate X position (columns)
-    let xPos = leftMargin;
-    if (col === 1) {
-      xPos = leftMargin + labelWidth + columnGap;
-    }
-    
-    // Calculate Y position with even distribution
-    const yPos = topMargin + (row * (labelHeight + rowGap));
-    
-    return {
-      x: xPos,
-      y: yPos,
-      width: labelWidth,
-      height: labelHeight
-    };
-  }
-
-  /**
-   * Draw a single label on the PDF with updated layout
-   * @param {jsPDF} pdf - PDF document
-   * @param {Object} labelData - Formatted label data
-   * @param {Object} position - Label position and dimensions
-   * @param {number} boxNumber - Current box number
-   * @param {number} totalBoxes - Total number of boxes
-   * @param {boolean} debug - Show debug borders
-   */
-  static async drawLabel(pdf, labelData, position, boxNumber = 1, totalBoxes = 1, debug = false) {
-    const { x, y, width, height } = position;
-
-    // Draw Uline-style border (solid black)
-    pdf.setDrawColor(0, 0, 0);
-    pdf.setLineWidth(1);
-    pdf.rect(x, y, width, height);
-
-    // Draw debug border if enabled (red inside the black border)
-    if (debug) {
-      pdf.setDrawColor(255, 0, 0);
-      pdf.setLineWidth(0.5);
-      pdf.rect(x + 1, y + 1, width - 2, height - 2);
-    }
-
-    // Calculate areas within the label
-    const padding = 4; // 4pt padding
-    const contentX = x + padding;
-    const contentY = y + padding;
-    const contentWidth = width - (padding * 2);
-    const contentHeight = height - (padding * 2);
-
-    try {
-      // 1. Product Name (Top section - largest possible font)
-      await this.drawProductName(pdf, labelData.productName, contentX, contentY, contentWidth, 24);
-
-      // 2. Hyphenated Barcode Display (under product name)
-      this.drawBarcodeDisplay(pdf, labelData.barcodeDisplay, contentX, contentY + 28, contentWidth);
-
-      // 3. Scannable Barcode (Left side - ABSOLUTELY NO TEXT)
-      await this.drawBarcode(pdf, labelData.barcode, contentX, contentY + 42, 105, 42);
-
-      // 4. Right Side Information (moved to far right)
-      this.drawRightSideInfo(pdf, labelData, contentX + 110, contentY + 42, contentWidth - 110, boxNumber, totalBoxes);
-
-      // 5. Audit Trail (Bottom left with EST time)
-      this.drawAuditTrail(pdf, labelData, contentX, y + height - padding - 8);
-
-    } catch (error) {
-      console.error('Error drawing label components:', error);
-      // Draw error message instead
-      pdf.setFontSize(8);
-      pdf.setTextColor(255, 0, 0);
-      pdf.text('Label Error', contentX + 5, contentY + 20);
-    }
-  }
-
-  /**
-   * Draw product name with optimal font sizing
-   * @param {jsPDF} pdf - PDF document
-   * @param {string} productName - Product name
-   * @param {number} x - X position
-   * @param {number} y - Y position
-   * @param {number} width - Available width
-   * @param {number} height - Available height
-   */
-  static async drawProductName(pdf, productName, x, y, width, height) {
-    if (!productName) return;
-
-    // Calculate optimal font size
-    const fontSize = LabelFormatter.autoFitFontSize(productName, width, height, 18);
-    
-    pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(fontSize);
-    pdf.setTextColor(0, 0, 0);
-
-    // Handle text wrapping
-    const lines = pdf.splitTextToSize(productName, width);
-    const lineHeight = fontSize * 1.1;
-    
-    // Center the text block vertically within available height
-    const totalTextHeight = lines.length * lineHeight;
-    const startY = y + Math.max(0, (height - totalTextHeight) / 2) + fontSize * 0.8;
-
-    // Draw each line centered
-    lines.forEach((line, index) => {
-      const lineY = startY + (index * lineHeight);
-      const textWidth = pdf.getTextWidth(line);
-      const centerX = x + (width - textWidth) / 2;
-      pdf.text(line, centerX, lineY);
-    });
-  }
-
-  /**
-   * Draw hyphenated barcode display
-   * @param {jsPDF} pdf - PDF document
-   * @param {string} barcodeDisplay - Formatted barcode for display
-   * @param {number} x - X position
-   * @param {number} y - Y position
-   * @param {number} width - Available width
-   */
-  static drawBarcodeDisplay(pdf, barcodeDisplay, x, y, width) {
-    if (!barcodeDisplay) return;
-
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(8);
-    pdf.setTextColor(102, 102, 102); // Gray color
-
-    const textWidth = pdf.getTextWidth(barcodeDisplay);
-    const centerX = x + (width - textWidth) / 2;
-    pdf.text(barcodeDisplay, centerX, y + 8);
-  }
-
-  /**
-   * Draw scannable barcode using canvas method (NO TEXT EVER)
-   * @param {jsPDF} pdf - PDF document
-   * @param {string} barcodeValue - Barcode value
-   * @param {number} x - X position
-   * @param {number} y - Y position
-   * @param {number} width - Barcode width
-   * @param {number} height - Barcode height
-   */
-  static async drawBarcode(pdf, barcodeValue, x, y, width, height) {
-    if (!barcodeValue) return;
-
-    try {
-      // Clean the barcode value (remove hyphens for scanning)
-      const cleanBarcodeValue = barcodeValue.replace(/[^A-Za-z0-9]/g, '');
+      pdf.setFontSize(7);
+      pdf.setFont('helvetica', 'normal');
       
-      // Validate barcode
-      const validation = BarcodeGenerator.validateCode39(cleanBarcodeValue);
-      if (!validation.isValid) {
-        console.warn('Invalid barcode:', validation.error);
-        this.drawBarcodeError(pdf, x, y, width, height);
-        return;
+      // Left column details
+      let leftDetailsY = detailsStartY;
+      const leftColumnX = x + 8;
+      
+      if (labelData.sku) {
+        pdf.text(`SKU: ${labelData.sku}`, leftColumnX, leftDetailsY);
+        leftDetailsY += 8;
+      }
+      
+      if (labelData.brand) {
+        pdf.text(`Brand: ${labelData.brand}`, leftColumnX, leftDetailsY);
+        leftDetailsY += 8;
       }
 
-      // Create a temporary canvas to generate barcode without any text
-      const canvas = document.createElement('canvas');
-      canvas.width = width * 2; // Higher resolution
-      canvas.height = height * 2;
+      // Right column details  
+      let rightDetailsY = detailsStartY;
+      const rightColumnX = x + (width / 2) + 8;
       
-      // Use JsBarcode directly on canvas with NO text
-      const JsBarcode = (await import('jsbarcode')).default;
+      if (labelData.enhancedData?.harvestDate) {
+        pdf.text(`Harvest: ${labelData.enhancedData.harvestDate}`, rightColumnX, rightDetailsY);
+        rightDetailsY += 8;
+      }
       
-      JsBarcode(canvas, validation.cleanValue, {
-        format: 'CODE39',
-        width: 3,
-        height: height * 2,
-        displayValue: false,  // NO TEXT
-        margin: 0,           // NO MARGINS
-        background: '#ffffff',
-        lineColor: '#000000'
-      });
+      if (labelData.enhancedData?.packagedDate) {
+        pdf.text(`Packaged: ${labelData.enhancedData.packagedDate}`, rightColumnX, rightDetailsY);
+        rightDetailsY += 8;
+      }
 
-      // Convert canvas to data URL and add to PDF
-      const barcodeDataURL = canvas.toDataURL('image/png');
-      pdf.addImage(barcodeDataURL, 'PNG', x, y, width, height);
+      // 5. FOOTER SECTION
+      const footerY = y + height - 8;
+      
+      pdf.setFontSize(6);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setTextColor(100, 100, 100);
+      
+      // Left side: Label count
+      if (totalLabels > 1) {
+        pdf.text(`${labelNumber}/${totalLabels}`, x + 8, footerY);
+      }
+      
+      // Right side: Generation info
+      const timestamp = new Date().toLocaleDateString();
+      const footerRight = `${timestamp} | ${labelData.user || 'System'}`;
+      pdf.text(footerRight, x + width - 8, footerY, { align: 'right' });
 
     } catch (error) {
-      console.error('Barcode generation error:', error);
-      this.drawBarcodeError(pdf, x, y, width, height);
+      console.error('Error drawing label:', error);
+      
+      // Fallback: Just draw basic info
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setTextColor(0, 0, 0);
+      pdf.text('Label Generation Error', x + (width / 2), y + (height / 2), { align: 'center' });
+      pdf.text(labelData.sku || 'Unknown SKU', x + (width / 2), y + (height / 2) + 12, { align: 'center' });
     }
   }
 
   /**
-   * Draw barcode error placeholder
-   * @param {jsPDF} pdf - PDF document
-   * @param {number} x - X position
-   * @param {number} y - Y position
-   * @param {number} width - Width
-   * @param {number} height - Height
-   */
-  static drawBarcodeError(pdf, x, y, width, height) {
-    pdf.setDrawColor(255, 0, 0);
-    pdf.setLineWidth(1);
-    pdf.rect(x, y, width, height);
-    
-    pdf.setFontSize(6);
-    pdf.setTextColor(255, 0, 0);
-    pdf.text('Barcode Error', x + 2, y + height / 2);
-  }
-
-  /**
-   * Draw right side information (fixed Case Qty formatting)
-   * @param {jsPDF} pdf - PDF document
-   * @param {Object} labelData - Label data
-   * @param {number} x - X position
-   * @param {number} y - Y position
-   * @param {number} width - Available width
-   * @param {number} boxNumber - Current box number
-   * @param {number} totalBoxes - Total boxes
-   */
-  static drawRightSideInfo(pdf, labelData, x, y, width, boxNumber, totalBoxes) {
-    // Position everything to the far right
-    const rightAlignX = x + width - 90; // 90pt from right edge
-    let currentY = y;
-
-    // Harvest Date - Bold and right-aligned
-    pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(7);
-    pdf.setTextColor(0, 0, 0);
-    const harvestText = `Harvest: ${labelData.harvestDate || 'MM/DD/YYYY'}`;
-    const harvestWidth = pdf.getTextWidth(harvestText);
-    pdf.text(harvestText, rightAlignX + 90 - harvestWidth, currentY + 7);
-
-    currentY += 12;
-
-    // Packaged Date - Normal weight and right-aligned
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(7);
-    const packagedText = `Packaged: ${labelData.packagedDate || 'MM/DD/YYYY'}`;
-    const packagedWidth = pdf.getTextWidth(packagedText);
-    pdf.text(packagedText, rightAlignX + 90 - packagedWidth, currentY + 7);
-
-    // Side by side text boxes in bottom right corner
-    const boxWidth = 40;
-    const boxHeight = 12;
-    const boxGap = 2;
-    
-    // Position for both boxes
-    const box1X = rightAlignX + 90 - (boxWidth * 2) - boxGap; // Left box (Case Qty)
-    const box2X = rightAlignX + 90 - boxWidth; // Right box (Box X/X)
-    const boxY = y + 48;
-
-    // Case Qty Box - Format like "Case Qty: 24"
-    pdf.setDrawColor(0, 0, 0);
-    pdf.setLineWidth(0.5);
-    pdf.rect(box1X, boxY, boxWidth, boxHeight);
-    
-    pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(5);
-    const caseQtyValue = labelData.caseQuantity || '___';
-    const caseQtyText = `Case Qty: ${caseQtyValue}`;
-    const caseQtyWidth = pdf.getTextWidth(caseQtyText);
-    pdf.text(caseQtyText, box1X + (boxWidth - caseQtyWidth) / 2, boxY + 8);
-
-    // Box Number Box - Format like "Box 1/3"
-    pdf.rect(box2X, boxY, boxWidth, boxHeight);
-    
-    pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(5);
-    const boxText = `Box ${boxNumber}/${totalBoxes}`;
-    const boxTextWidth = pdf.getTextWidth(boxText);
-    pdf.text(boxText, box2X + (boxWidth - boxTextWidth) / 2, boxY + 8);
-  }
-
-  /**
-   * Draw audit trail with EST timezone
-   * @param {jsPDF} pdf - PDF document
-   * @param {Object} labelData - Label data with timestamp
-   * @param {number} x - X position
-   * @param {number} y - Y position
-   */
-  static drawAuditTrail(pdf, labelData, x, y) {
-    // Create EST timestamp
-    const now = new Date();
-    const estOffset = -5; // EST is UTC-5 (adjust for EDT if needed)
-    const estTime = new Date(now.getTime() + (estOffset * 60 * 60 * 1000));
-    
-    const month = (estTime.getMonth() + 1).toString().padStart(2, '0');
-    const day = estTime.getDate().toString().padStart(2, '0');
-    const year = estTime.getFullYear().toString().slice(-2);
-    const hours = estTime.getHours().toString().padStart(2, '0');
-    const minutes = estTime.getMinutes().toString().padStart(2, '0');
-    
-    const auditString = `${month}/${day}/${year} ${hours}:${minutes} EST (${labelData.username || 'Unknown'})`;
-    
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(5);
-    pdf.setTextColor(102, 102, 102);
-    pdf.text(auditString, x, y);
-  }
-
-  /**
-   * Generate test PDF for verification
-   * @returns {Promise<Blob>} - Test PDF blob
-   */
-  static async generateTestPDF() {
-    const testData = [{
-      sku: 'TEST-123',
-      barcode: 'TEST123456',
-      productName: 'Test Cannabis Product for Label Verification and Layout Testing',
-      brand: 'Test Brand',
-      enhancedData: {
-        labelQuantity: 2,
-        caseQuantity: '24',
-        boxCount: '3',
-        harvestDate: '01/15/2024',
-        packagedDate: '02/20/2024'
-      },
-      user: 'TestUser'
-    }];
-
-    return this.generateLabels(testData, { debug: true });
-  }
-
-  /**
-   * Calculate PDF dimensions and positions for debugging
-   * @returns {Object} - Debug information
-   */
-  static getDebugInfo() {
-    const specs = LabelFormatter.getLabelSpecs();
-    const positions = [];
-
-    for (let i = 0; i < specs.LABELS_PER_SHEET; i++) {
-      positions.push(this.calculateUlineLabelPosition(i));
-    }
-
-    return {
-      pageSize: { width: 612, height: 792 }, // 8.5" x 11" in points
-      labelSpecs: specs,
-      labelPositions: positions,
-      totalLabelsPerSheet: specs.LABELS_PER_SHEET,
-      spacingInfo: {
-        topMargin: 45,     // 0.625"
-        bottomMargin: 45,  // 0.625"
-        leftMargin: 18,    // 0.25"
-        rightMargin: 18,   // 0.25"
-        columnGap: 18,     // 0.25"
-        rowGap: 10.8,      // ~0.15" (calculated)
-        availableHeight: 702, // 792 - 45 - 45
-        totalLabelHeight: 648, // 6 × 108
-        distributedSpace: 54   // For even spacing
-      }
-    };
-  }
-
-  /**
-   * Validate PDF generation requirements
-   * @param {Array} labelDataArray - Label data to validate
+   * Validate label data before generation
+   * @param {Array} labelDataArray - Array of label data
    * @returns {Object} - Validation result
    */
   static validateGenerationData(labelDataArray) {
     const errors = [];
     const warnings = [];
+    let totalLabels = 0;
 
     if (!Array.isArray(labelDataArray) || labelDataArray.length === 0) {
       errors.push('No label data provided');
-      return { isValid: false, errors, warnings };
+      return { isValid: false, errors, warnings, totalLabels: 0, estimatedPages: 0 };
     }
 
-    let totalLabels = 0;
-
-    labelDataArray.forEach((item, index) => {
-      const validation = LabelFormatter.validateLabelData(item, item.enhancedData);
-      
-      if (!validation.isValid) {
-        errors.push(`Item ${index + 1}: ${validation.errors.join(', ')}`);
+    labelDataArray.forEach((labelData, index) => {
+      if (!labelData.sku && !labelData.barcode) {
+        errors.push(`Item ${index + 1}: Missing SKU and barcode`);
       }
 
-      if (validation.warnings.length > 0) {
-        warnings.push(`Item ${index + 1}: ${validation.warnings.join(', ')}`);
+      if (!labelData.productName) {
+        warnings.push(`Item ${index + 1}: Missing product name`);
       }
 
-      const qty = parseInt(item.enhancedData?.labelQuantity || '1');
-      totalLabels += qty;
+      const quantity = parseInt(labelData.enhancedData?.labelQuantity || 1);
+      if (quantity < 1 || quantity > 50) {
+        errors.push(`Item ${index + 1}: Invalid label quantity (${quantity})`);
+      } else {
+        totalLabels += quantity;
+      }
     });
 
-    if (totalLabels > 500) {
-      warnings.push(`Large number of labels (${totalLabels}) may take significant time to generate`);
-    }
+    const estimatedPages = Math.ceil(totalLabels / this.SHEET_SPECS.LABELS_PER_SHEET);
 
     return {
       isValid: errors.length === 0,
       errors,
       warnings,
       totalLabels,
-      estimatedPages: LabelFormatter.calculatePagesNeeded(totalLabels)
+      estimatedPages
+    };
+  }
+
+  /**
+   * Get label specifications
+   * @returns {Object} - Label specifications
+   */
+  static getLabelSpecs() {
+    return {
+      ...this.SHEET_SPECS,
+      format: 'Uline S-5627',
+      dimensions: '4" × 1.5"',
+      layout: '2 columns × 6 rows'
     };
   }
 }
