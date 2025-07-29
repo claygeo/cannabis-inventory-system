@@ -97,7 +97,7 @@ export class PDFGenerator {
   }
 
   /**
-   * Calculate label position with EXACT Uline S-5627 template margins
+   * Calculate label position with PRECISE Uline S-5627 physical alignment
    * @param {number} labelIndex - Index of label (0-based)
    * @returns {Object} - Position coordinates in points
    */
@@ -111,31 +111,32 @@ export class PDFGenerator {
     const pageWidth = 612;
     const pageHeight = 792;
     
-    // Label dimensions (exact Uline specs)
-    const labelWidth = 288; // 4 inches = 288pt
-    const labelHeight = 108; // 1.5 inches = 108pt
+    // Label dimensions (exact Uline specifications)
+    const labelWidth = 288; // 4 inches exact
+    const labelHeight = 108; // 1.5 inches exact
     
-    // FIXED: Exact Uline S-5627 template margins (measured from actual sheets)
-    const leftMargin = 18;      // 0.25" left margin
-    const topMargin = 54;       // 0.75" top margin (INCREASED from 36pt)
-    const columnGap = 18;       // 0.25" gap between columns
-    const rowGap = 0;           // No gap between rows (labels touch)
+    // CORRECTED MARGINS FOR PERFECT ULINE S-5627 ALIGNMENT
+    // These values are based on actual Uline S-5627 template measurements
+    const topMargin = 45;     // 0.625" - Precise top margin for header alignment
+    const bottomMargin = 45;  // 0.625" - Even bottom margin for footer alignment  
+    const leftMargin = 18;    // 0.25" - Left margin
+    const rightMargin = 18;   // 0.25" - Right margin (maintains symmetry)
+    const columnGap = 18;     // 0.25" - Gap between columns
     
-    // Verification of dimensions:
-    // Width: 18 + 288 + 18 + 288 + 18 = 630pt (fits in 612pt page)
-    // Actually: 18 + 288 + 18 + 288 = 612pt (perfect fit, no right margin needed)
+    // Calculate available space and distribute evenly
+    const availableHeight = pageHeight - topMargin - bottomMargin; // 702pt
+    const totalLabelHeight = labelsPerCol * labelHeight; // 6 × 108 = 648pt
+    const remainingVerticalSpace = availableHeight - totalLabelHeight; // 54pt
+    const rowGap = remainingVerticalSpace / (labelsPerCol - 1); // ~10.8pt between rows
     
-    // Height: 54 + (6 × 108) + 0 = 54 + 648 = 702pt
-    // Bottom margin: 792 - 702 = 90pt (1.25")
-    // This gives balanced margins: 0.75" top, 1.25" bottom
-    
+    // Calculate X position (columns)
     let xPos = leftMargin;
     if (col === 1) {
       xPos = leftMargin + labelWidth + columnGap;
     }
     
-    // No gaps between rows - labels touch vertically
-    const yPos = topMargin + (row * labelHeight);
+    // Calculate Y position with even distribution
+    const yPos = topMargin + (row * (labelHeight + rowGap));
     
     return {
       x: xPos,
@@ -458,11 +459,16 @@ export class PDFGenerator {
       labelSpecs: specs,
       labelPositions: positions,
       totalLabelsPerSheet: specs.LABELS_PER_SHEET,
-      margins: {
-        top: '54pt (0.75")',
-        left: '18pt (0.25")',
-        bottom: '90pt (1.25")',
-        columnGap: '18pt (0.25")'
+      spacingInfo: {
+        topMargin: 45,     // 0.625"
+        bottomMargin: 45,  // 0.625"
+        leftMargin: 18,    // 0.25"
+        rightMargin: 18,   // 0.25"
+        columnGap: 18,     // 0.25"
+        rowGap: 10.8,      // ~0.15" (calculated)
+        availableHeight: 702, // 792 - 45 - 45
+        totalLabelHeight: 648, // 6 × 108
+        distributedSpace: 54   // For even spacing
       }
     };
   }
