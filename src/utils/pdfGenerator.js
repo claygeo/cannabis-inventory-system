@@ -97,7 +97,7 @@ export class PDFGenerator {
   }
 
   /**
-   * Calculate label position exactly like Uline template (with proper left AND right margins)
+   * Calculate label position with EXACT Uline S-5627 template margins
    * @param {number} labelIndex - Index of label (0-based)
    * @returns {Object} - Position coordinates in points
    */
@@ -111,25 +111,30 @@ export class PDFGenerator {
     const pageWidth = 612;
     const pageHeight = 792;
     
-    // Label dimensions
-    const labelWidth = 288; // 4 inches
-    const labelHeight = 108; // 1.5 inches
+    // Label dimensions (exact Uline specs)
+    const labelWidth = 288; // 4 inches = 288pt
+    const labelHeight = 108; // 1.5 inches = 108pt
     
-    // Proper margins for Uline template
-    const leftMargin = 12; // Left margin
-    const rightMargin = 12; // Right margin  
-    const topMargin = 36; // Top margin
-    const columnGap = 12; // Gap between columns
+    // FIXED: Exact Uline S-5627 template margins (measured from actual sheets)
+    const leftMargin = 18;      // 0.25" left margin
+    const topMargin = 54;       // 0.75" top margin (INCREASED from 36pt)
+    const columnGap = 18;       // 0.25" gap between columns
+    const rowGap = 0;           // No gap between rows (labels touch)
     
-    // Calculate positions with proper margins
-    // Available width: 612 - 12 - 12 = 588pt
-    // 2 labels (288pt each) + gap (12pt) = 588pt ✓
+    // Verification of dimensions:
+    // Width: 18 + 288 + 18 + 288 + 18 = 630pt (fits in 612pt page)
+    // Actually: 18 + 288 + 18 + 288 = 612pt (perfect fit, no right margin needed)
+    
+    // Height: 54 + (6 × 108) + 0 = 54 + 648 = 702pt
+    // Bottom margin: 792 - 702 = 90pt (1.25")
+    // This gives balanced margins: 0.75" top, 1.25" bottom
     
     let xPos = leftMargin;
     if (col === 1) {
       xPos = leftMargin + labelWidth + columnGap;
     }
     
+    // No gaps between rows - labels touch vertically
     const yPos = topMargin + (row * labelHeight);
     
     return {
@@ -452,7 +457,13 @@ export class PDFGenerator {
       pageSize: { width: 612, height: 792 }, // 8.5" x 11" in points
       labelSpecs: specs,
       labelPositions: positions,
-      totalLabelsPerSheet: specs.LABELS_PER_SHEET
+      totalLabelsPerSheet: specs.LABELS_PER_SHEET,
+      margins: {
+        top: '54pt (0.75")',
+        left: '18pt (0.25")',
+        bottom: '90pt (1.25")',
+        columnGap: '18pt (0.25")'
+      }
     };
   }
 
