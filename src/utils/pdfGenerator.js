@@ -19,7 +19,8 @@ export class PDFGenerator {
       format = 'letter', // 8.5" x 11"
       orientation = 'portrait',
       margins = { top: 0.5, right: 0.3, bottom: 0.5, left: 0.3 }, // inches
-      debug = false
+      debug = false,
+      currentUser = 'Unknown' // Current user generating the labels
     } = options;
 
     // Create new PDF document
@@ -56,8 +57,8 @@ export class PDFGenerator {
           // Calculate which box number this label represents
           const boxNumber = Math.floor(labelCopy / Math.max(1, Math.floor(formattedData.labelQuantity / formattedData.boxCount))) + 1;
 
-          // Draw the label
-          await this.drawLabel(pdf, formattedData, position, boxNumber, formattedData.boxCount, debug);
+          // Draw the label with current user info
+          await this.drawLabel(pdf, formattedData, position, boxNumber, formattedData.boxCount, debug, currentUser);
 
           currentLabelIndex++;
         }
@@ -152,8 +153,9 @@ export class PDFGenerator {
    * @param {number} boxNumber - Current box number
    * @param {number} totalBoxes - Total number of boxes
    * @param {boolean} debug - Show debug borders
+   * @param {string} currentUser - Current user generating the labels
    */
-  static async drawLabel(pdf, labelData, position, boxNumber = 1, totalBoxes = 1, debug = false) {
+  static async drawLabel(pdf, labelData, position, boxNumber = 1, totalBoxes = 1, debug = false, currentUser = 'Unknown') {
     const { x, y, width, height } = position;
 
     // Draw Uline-style border (solid black)
@@ -188,8 +190,8 @@ export class PDFGenerator {
       // 4. Right Side Information (moved to far right)
       this.drawRightSideInfo(pdf, labelData, contentX + 110, contentY + 42, contentWidth - 110, boxNumber, totalBoxes);
 
-      // 5. Audit Trail (Bottom left with EST time)
-      this.drawAuditTrail(pdf, labelData, contentX, y + height - padding - 8);
+      // 5. Audit Trail (Bottom left with EST time) - Pass current user
+      this.drawAuditTrail(pdf, currentUser, contentX, y + height - padding - 8);
 
     } catch (error) {
       console.error('Error drawing label components:', error);
@@ -391,14 +393,14 @@ export class PDFGenerator {
   }
 
   /**
-   * Draw audit trail with EST timezone
+   * Draw audit trail with CURRENT USER and 12-hour time format in EST
    * @param {jsPDF} pdf - PDF document
-   * @param {Object} labelData - Label data with timestamp
+   * @param {string} currentUser - Current user generating the labels
    * @param {number} x - X position
    * @param {number} y - Y position
    */
-  static drawAuditTrail(pdf, labelData, x, y) {
-    // Create EST timestamp
+  static drawAuditTrail(pdf, currentUser, x, y) {
+    // Create EST timestamp - CURRENT TIME when labels are generated
     const now = new Date();
     const estOffset = -5; // EST is UTC-5 (adjust for EDT if needed)
     const estTime = new Date(now.getTime() + (estOffset * 60 * 60 * 1000));
@@ -406,10 +408,18 @@ export class PDFGenerator {
     const month = (estTime.getMonth() + 1).toString().padStart(2, '0');
     const day = estTime.getDate().toString().padStart(2, '0');
     const year = estTime.getFullYear().toString().slice(-2);
-    const hours = estTime.getHours().toString().padStart(2, '0');
+    
+    // Convert to 12-hour format
+    let hours = estTime.getHours();
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    hours = hours ? hours : 12; // 0 should be 12
+    const hoursStr = hours.toString();
+    
     const minutes = estTime.getMinutes().toString().padStart(2, '0');
     
-    const auditString = `${month}/${day}/${year} ${hours}:${minutes} EST (${labelData.username || 'Unknown'})`;
+    // Format: MM/DD/YY H:MM AM/PM EST (Username)
+    const auditString = `${month}/${day}/${year} ${hoursStr}:${minutes} ${ampm} EST (${currentUser})`;
     
     pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(5);
@@ -437,7 +447,7 @@ export class PDFGenerator {
       user: 'TestUser'
     }];
 
-    return this.generateLabels(testData, { debug: true });
+    return this.generateLabels(testData, { debug: true, currentUser: 'TestUser' });
   }
 
   /**
@@ -457,13 +467,12 @@ export class PDFGenerator {
       labelSpecs: specs,
       labelPositions: positions,
       totalLabelsPerSheet: specs.LABELS_PER_SHEET,
-      boxUpdates: {
-        oldSize: { width: 40, height: 12 },
-        newSize: { width: 60, height: 18 },
-        increase: "1.5x larger (50% increase)",
-        oldFont: "5pt",
-        newFont: "8pt",
-        layout: "Side by side (not stacked)"
+      auditTrailUpdates: {
+        timeFormat: "12-hour format with AM/PM",
+        timezone: "EST",
+        userSource: "Current user generating labels (not scanned item user)",
+        timeSource: "Current time when labels are generated",
+        exampleFormat: "07/29/25 3:45 PM EST (JohnDoe)"
       }
     };
   }
