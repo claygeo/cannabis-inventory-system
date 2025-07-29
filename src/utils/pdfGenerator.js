@@ -97,8 +97,7 @@ export class PDFGenerator {
   }
 
   /**
-   * Calculate label position based on PHYSICAL TESTING with actual Uline S-5627 sheets
-   * Adjustments: Left column shifted left, all labels moved up
+   * Calculate label position with PERFECT SYMMETRY - Equal left/right margins
    * @param {number} labelIndex - Index of label (0-based)
    * @returns {Object} - Position coordinates in points
    */
@@ -116,17 +115,17 @@ export class PDFGenerator {
     const labelWidth = 288; // 4 inches exact
     const labelHeight = 108; // 1.5 inches exact
     
-    // PHYSICALLY TESTED MARGINS - Based on actual Uline sheet testing
-    const topMargin = 54;       // ~0.75" - Moved UP from 72pt based on physical test
+    // PERFECT SYMMETRICAL MARGINS - Equal left/right spacing
+    const topMargin = 54;       // ~0.75" - Moved UP from physical testing
     const bottomMargin = 90;    // ~1.25" - Compensating bottom margin  
-    const leftMargin = 9;       // ~0.125" - Shifted LEFT from 15pt based on physical test
-    const rightMargin = 15;     // ~0.21" - Increased right margin to compensate
-    const columnGap = 12;       // ~0.167" - Keep middle gap same
+    const leftMargin = 12;      // ~0.167" - EQUAL left margin for symmetry
+    const rightMargin = 12;     // ~0.167" - EQUAL right margin for symmetry
+    const columnGap = 12;       // ~0.167" - Perfect middle gap
     
-    // Verification: 9 + 288 + 12 + 288 + 15 = 612pt ✓ PERFECT
-    // Height verification: 54 + (6 × 108) + 90 = 792pt ✓ PERFECT
+    // Perfect Symmetry Verification: 12 + 288 + 12 + 288 + 12 = 612pt ✅
+    // Height verification: 54 + (6 × 108) + 90 = 792pt ✅
     
-    // Calculate X position (columns) - left column shifted left
+    // Calculate X position (columns) - perfectly centered
     let xPos = leftMargin;
     if (col === 1) {
       // Right column: left margin + left label + gap
@@ -460,16 +459,17 @@ export class PDFGenerator {
       spacingInfo: {
         topMargin: 54,           // ~0.75" - MOVED UP from physical testing ⬆️
         bottomMargin: 90,        // ~1.25" - Compensating bottom margin
-        leftMargin: 9,           // ~0.125" - SHIFTED LEFT from physical testing ⬅️
-        rightMargin: 15,         // ~0.21" - Increased to compensate
-        columnGap: 12,           // ~0.167" - Keep same
+        leftMargin: 12,          // ~0.167" - EQUAL margin for symmetry ⬅️➡️
+        rightMargin: 12,         // ~0.167" - EQUAL margin for symmetry ⬅️➡️
+        columnGap: 12,           // ~0.167" - Perfect middle gap
         rowGap: 0,               // NO ROW GAPS - adjacent labels ✅
-        physicalTestChanges: {
-          leftColumnShift: "6pt left (15→9)",
-          upwardShift: "18pt up (72→54)",
-          rightMarginAdded: "6pt more right space (9→15)"
+        symmetry: {
+          leftToLabel: "12pt",
+          middleGap: "12pt", 
+          labelToRight: "12pt",
+          perfectBalance: true
         },
-        widthCalculation: "9 + 288 + 12 + 288 + 15 = 612pt ✅",
+        widthCalculation: "12 + 288 + 12 + 288 + 12 = 612pt ✅ PERFECT SYMMETRY",
         heightCalculation: "54 + (6×108) + 90 = 792pt ✅"
       }
     };
