@@ -39,7 +39,8 @@ function App() {
                       <Route index element={<Navigate to="/dashboard" replace />} />
                       <Route path="dashboard" element={<MainDashboard />} />
                       <Route path="import" element={<ImportForm />} />
-                      <Route path="import-sweed" element={<SweedImportForm />} />
+                      {/* FIXED: Changed from "import-sweed" to "sweed-import" to match navigation links */}
+                      <Route path="sweed-import" element={<SweedImportForm />} />
                       <Route path="scanning" element={<ScanningForm />} />
                       <Route path="labels" element={<LabelGenerationForm />} />
                       <Route path="reports" element={<ReportsForm />} />
