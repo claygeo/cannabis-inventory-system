@@ -1,87 +1,46 @@
-// 🚨 NUCLEAR DEBUG VERSION - ADD THIS LOGGING TO TRACK EVERYTHING 🚨
-console.log('🚨🚨🚨 DATAPROCESSOR.JS FILE LOADED 🚨🚨🚨', new Date().toISOString());
-console.log('🚨 File path: src/utils/dataProcessor.js');
-console.log('🚨 Loading imports...');
-
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
 import { MAIN_INVENTORY_COLUMNS, SWEED_COLUMNS, DATA_SOURCES, FILE_STRUCTURE } from '../constants.js';
-
-console.log('🚨 Imports loaded successfully');
-console.log('🚨 About to create DataProcessor class...');
 
 /**
  * Data processing utilities for CSV/Excel imports and data manipulation
  */
 export class DataProcessor {
-  static {
-    console.log('🚨🚨🚨 DATAPROCESSOR CLASS INITIALIZED 🚨🚨🚨');
-    console.log('🚨 Class creation timestamp:', new Date().toISOString());
-    console.log('🚨 Papa:', typeof Papa);
-    console.log('🚨 XLSX:', typeof XLSX);
-    console.log('🚨 Constants loaded:', {
-      MAIN_INVENTORY_COLUMNS: typeof MAIN_INVENTORY_COLUMNS,
-      SWEED_COLUMNS: typeof SWEED_COLUMNS,
-      DATA_SOURCES: typeof DATA_SOURCES,
-      FILE_STRUCTURE: typeof FILE_STRUCTURE
-    });
-  }
-
   /**
    * Detect file type based on file extension and content
    * @param {File} file - File to analyze
    * @returns {string} - File type ('excel' or 'csv')
    */
   static detectFileType(file) {
-    console.log('🚨🚨🚨 DETECTFILETYPE CALLED 🚨🚨🚨');
-    console.log('🚨 Method entry timestamp:', new Date().toISOString());
-    console.log('🚨 Received file object:', file);
     console.log('🔍 Detecting file type for:', file.name);
-    console.log('📁 File details:', {
-      name: file.name,
-      type: file.type,
-      size: file.size
-    });
     
     const fileName = file.name.toLowerCase();
-    console.log('🔤 Lowercase filename:', fileName);
     
     // Check for Excel extensions
-    const isXlsx = fileName.endsWith('.xlsx');
-    const isXls = fileName.endsWith('.xls');
-    const isCsv = fileName.endsWith('.csv');
-    
-    console.log('📋 Extension checks:', { isXlsx, isXls, isCsv });
-    
-    if (isXlsx || isXls) {
-      console.log('✅ Detected Excel file - RETURNING "excel"');
-      console.log('🚨 detectFileType RETURN VALUE: "excel"');
+    if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
+      console.log('✅ Detected Excel file');
       return 'excel';
     }
-    if (isCsv) {
-      console.log('✅ Detected CSV file - RETURNING "csv"');
-      console.log('🚨 detectFileType RETURN VALUE: "csv"');
+    
+    if (fileName.endsWith('.csv')) {
+      console.log('✅ Detected CSV file');
       return 'csv';
     }
     
     // Also check MIME type as backup
     if (file.type) {
-      console.log('🔍 Checking MIME type:', file.type);
       if (file.type.includes('spreadsheet') || file.type.includes('excel')) {
-        console.log('✅ Detected Excel via MIME type - RETURNING "excel"');
-        console.log('🚨 detectFileType RETURN VALUE: "excel"');
+        console.log('✅ Detected Excel via MIME type');
         return 'excel';
       }
       if (file.type.includes('csv')) {
-        console.log('✅ Detected CSV via MIME type - RETURNING "csv"');
-        console.log('🚨 detectFileType RETURN VALUE: "csv"');
+        console.log('✅ Detected CSV via MIME type');
         return 'csv';
       }
     }
     
     // Default to CSV for unknown extensions
-    console.log('⚠️ Unknown file type, defaulting to CSV - RETURNING "csv"');
-    console.log('🚨 detectFileType RETURN VALUE: "csv"');
+    console.log('⚠️ Unknown file type, defaulting to CSV');
     return 'csv';
   }
 
@@ -92,21 +51,17 @@ export class DataProcessor {
    * @returns {Promise<Object>} - Parsed data with metadata
    */
   static async parseExcel(file, onProgress = null) {
-    console.log('🚨🚨🚨 PARSEEXCEL CALLED 🚨🚨🚨');
     console.log('📊 Starting Excel parsing for:', file.name);
-    console.log('🚨 parseExcel entry timestamp:', new Date().toISOString());
     
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       
       reader.onload = (e) => {
         try {
-          console.log('🚨 FileReader onload triggered');
           if (onProgress) onProgress(50, 100);
           
           const data = new Uint8Array(e.target.result);
           console.log('📁 File data loaded, size:', data.length, 'bytes');
-          console.log('🔍 First 10 bytes:', Array.from(data.slice(0, 10)));
           
           const workbook = XLSX.read(data, {
             type: 'array',
@@ -114,8 +69,7 @@ export class DataProcessor {
             cellStyles: false
           });
           
-          console.log('📋 Workbook loaded successfully');
-          console.log('📄 Available sheets:', workbook.SheetNames);
+          console.log('📋 Workbook loaded, sheets:', workbook.SheetNames);
           
           if (onProgress) onProgress(75, 100);
           
@@ -124,35 +78,22 @@ export class DataProcessor {
           const worksheet = workbook.Sheets[sheetName];
           
           console.log('📄 Processing sheet:', sheetName);
-          console.log('📏 Sheet range:', worksheet['!ref']);
           
           // Convert to array format (similar to Papa Parse output)
           const jsonData = XLSX.utils.sheet_to_json(worksheet, {
             header: 1,  // Return array of arrays
             raw: false, // Format values as strings
-            blankrows: true // INCLUDE blank rows for debugging
+            blankrows: false // Skip blank rows
           });
           
           console.log('🔢 Raw Excel data rows:', jsonData.length);
-          console.log('🔍 First 10 rows from Excel:');
-          for (let i = 0; i < Math.min(10, jsonData.length); i++) {
-            console.log(`Row ${i + 1}:`, jsonData[i]);
-          }
           
-          // Filter out completely empty rows (but log what we're filtering)
-          const filteredData = jsonData.filter((row, index) => {
-            const hasContent = row && row.some(cell => cell !== null && cell !== undefined && cell !== '');
-            if (!hasContent) {
-              console.log(`🗑️ Filtering out empty row ${index + 1}:`, row);
-            }
-            return hasContent;
+          // Filter out completely empty rows
+          const filteredData = jsonData.filter(row => {
+            return row && row.some(cell => cell !== null && cell !== undefined && cell !== '');
           });
           
           console.log('✅ Filtered data rows:', filteredData.length);
-          console.log('🔍 First 5 filtered rows:');
-          for (let i = 0; i < Math.min(5, filteredData.length); i++) {
-            console.log(`Filtered Row ${i + 1}:`, filteredData[i]);
-          }
           
           if (onProgress) onProgress(100, 100);
           
@@ -174,24 +115,21 @@ export class DataProcessor {
             rowCount: result.rowCount,
             columnCount: result.columnCount
           });
-          console.log('🚨 parseExcel RESOLVING with result');
           
           resolve(result);
           
         } catch (error) {
           console.error('❌ Excel parsing failed:', error);
-          console.log('🚨 parseExcel REJECTING with error:', error.message);
           reject(new Error(`Excel parsing failed: ${error.message}`));
         }
       };
       
       reader.onerror = () => {
         console.error('❌ Failed to read Excel file');
-        console.log('🚨 FileReader error event triggered');
         reject(new Error('Failed to read Excel file'));
       };
       
-      console.log('🚨 Starting FileReader.readAsArrayBuffer');
+      console.log('🚀 Starting FileReader.readAsArrayBuffer');
       if (onProgress) onProgress(25, 100);
       reader.readAsArrayBuffer(file);
     });
@@ -204,22 +142,18 @@ export class DataProcessor {
    * @returns {Promise<Object>} - Parsed data with metadata
    */
   static async parseCSV(file, onProgress = null) {
-    console.log('🚨🚨🚨 PARSECSV CALLED 🚨🚨🚨');
     console.log('📄 Starting CSV parsing for:', file.name);
-    console.log('🚨 parseCSV entry timestamp:', new Date().toISOString());
     
     return new Promise((resolve, reject) => {
-      console.log('🚨 Starting Papa.parse');
       Papa.parse(file, {
         header: false,
-        skipEmptyLines: 'greedy', // Skip empty lines more aggressively
+        skipEmptyLines: 'greedy',
         dynamicTyping: true,
         delimitersToGuess: [',', '\t', '|', ';'],
         step: onProgress ? (results, parser) => {
           onProgress(parser.streamer._input.length, file.size);
         } : undefined,
         complete: (results) => {
-          console.log('🚨 Papa.parse complete callback triggered');
           if (results.errors.length > 0) {
             console.warn('⚠️ CSV parsing warnings:', results.errors);
           }
@@ -227,12 +161,8 @@ export class DataProcessor {
           console.log('🔢 Raw CSV data rows:', results.data.length);
           
           // Filter out completely empty rows
-          const filteredData = results.data.filter((row, index) => {
-            const hasContent = row && row.some(cell => cell !== null && cell !== undefined && cell !== '');
-            if (!hasContent) {
-              console.log(`🗑️ Filtering out empty CSV row ${index + 1}:`, row);
-            }
-            return hasContent;
+          const filteredData = results.data.filter(row => {
+            return row && row.some(cell => cell !== null && cell !== undefined && cell !== '');
           });
           
           console.log('✅ Filtered CSV data rows:', filteredData.length);
@@ -249,13 +179,11 @@ export class DataProcessor {
             rowCount: data.rowCount,
             columnCount: data.columnCount
           });
-          console.log('🚨 parseCSV RESOLVING with result');
           
           resolve(data);
         },
         error: (error) => {
           console.error('❌ CSV parsing failed:', error);
-          console.log('🚨 Papa.parse error callback triggered:', error.message);
           reject(new Error(`CSV parsing failed: ${error.message}`));
         }
       });
@@ -269,25 +197,16 @@ export class DataProcessor {
    * @returns {Promise<Object>} - Parsed data with metadata
    */
   static async parseFile(file, onProgress = null) {
-    console.log('🚨🚨🚨 PARSEFILE CALLED - ENTRY POINT 🚨🚨🚨');
-    console.log('🚨 parseFile entry timestamp:', new Date().toISOString());
-    console.log('📁 File received in parseFile:', file.name);
-    console.log('🔍 About to call detectFileType...');
+    console.log('🚀 Starting file parsing for:', file.name);
     
     const fileType = this.detectFileType(file);
-    
-    console.log('🎯 detectFileType returned:', fileType);
-    console.log('🚨 DECISION POINT - fileType =', fileType);
-    console.log('🚨 About to choose parser based on fileType...');
+    console.log('🎯 File type detected:', fileType);
     
     if (fileType === 'excel') {
-      console.log('✅ CHOOSING EXCEL PARSER - Calling parseExcel');
-      console.log('🚨 ROUTE: parseFile -> parseExcel');
+      console.log('📊 Using Excel parser');
       return this.parseExcel(file, onProgress);
     } else {
-      console.log('❌ CHOOSING CSV PARSER - Calling parseCSV');
-      console.log('🚨 ROUTE: parseFile -> parseCSV');
-      console.log('🚨 WHY CSV? fileType =', fileType);
+      console.log('📄 Using CSV parser');
       return this.parseCSV(file, onProgress);
     }
   }
@@ -298,15 +217,12 @@ export class DataProcessor {
    * @returns {Object} - Validation result
    */
   static validateMainInventoryStructure(data) {
-    console.log('🚨🚨🚨 VALIDATE MAIN INVENTORY STRUCTURE CALLED 🚨🚨🚨');
     console.log('🔍 Validating Main Inventory structure...');
     console.log('📊 Data length:', data.length);
     
     const errors = [];
     const warnings = [];
     const config = FILE_STRUCTURE.MAIN_INVENTORY;
-    
-    console.log('⚙️ Using config:', config);
 
     if (data.length < config.MIN_ROWS) {
       const error = `File must have at least ${config.MIN_ROWS} rows (export info + headers + data), got ${data.length} rows`;
@@ -331,7 +247,6 @@ export class DataProcessor {
     console.log('🔍 Looking for headers in first 5 rows...');
     for (let i = 0; i < Math.min(5, data.length); i++) {
       const row = data[i];
-      console.log(`Row ${i + 1}:`, row);
       
       if (row && expectedHeaders.some(header => 
         row.some(cell => cell && String(cell).toLowerCase().includes(header.toLowerCase()))
@@ -363,7 +278,6 @@ export class DataProcessor {
     };
     
     console.log('✅ Validation result:', result);
-    console.log('🚨 validateMainInventoryStructure RETURNING:', result);
     return result;
   }
 
@@ -373,13 +287,12 @@ export class DataProcessor {
    * @returns {Object} - Processed data with statistics
    */
   static processMainInventoryData(rawData) {
-    console.log('🚨🚨🚨 PROCESS MAIN INVENTORY DATA CALLED 🚨🚨🚨');
+    console.log('🏭 Processing Main Inventory data, total rows:', rawData.length);
+    
     const processedData = [];
     const duplicates = [];
     const errors = [];
     const seenKeys = new Set();
-
-    console.log('🏭 Processing Main Inventory data, total rows:', rawData.length);
 
     // Use the configured structure
     const config = FILE_STRUCTURE.MAIN_INVENTORY;
@@ -413,12 +326,6 @@ export class DataProcessor {
       const detectedValid = Object.values(detectedMapping).filter(index => index >= 0).length;
       const originalValid = Object.values(MAIN_INVENTORY_COLUMNS).filter(index => index < headerRow.length).length;
       
-      console.log('🔍 Column mapping comparison:', {
-        detectedValid,
-        originalValid,
-        detectedMapping: detectedMapping
-      });
-      
       if (detectedValid > originalValid) {
         console.log('✅ Using detected column mapping');
         columnMapping = detectedMapping;
@@ -435,12 +342,7 @@ export class DataProcessor {
       
       // Skip completely empty rows
       if (!row || !row.some(cell => cell !== null && cell !== undefined && cell !== '')) {
-        console.log(`⏭️ Skipping empty row ${i + 1}`);
         continue;
-      }
-      
-      if (i < dataStartIndex + 3) {
-        console.log(`📊 Processing row ${i + 1}:`, row);
       }
       
       try {
@@ -539,13 +441,12 @@ export class DataProcessor {
    * @returns {Object} - Processed data with statistics
    */
   static processSweedData(rawData) {
-    console.log('🚨🚨🚨 PROCESS SWEED DATA CALLED 🚨🚨🚨');
+    console.log('🚛 Processing Sweed data, total rows:', rawData.length);
+    
     const processedData = [];
     const duplicates = [];
     const errors = [];
     const seenKeys = new Set();
-
-    console.log('🚛 Processing Sweed data, total rows:', rawData.length);
 
     // Use the configured structure for Sweed files
     const config = FILE_STRUCTURE.SWEED_REPORT;
@@ -687,7 +588,6 @@ export class DataProcessor {
    * @returns {number} - Header row index (-1 if not found)
    */
   static detectHeaderRow(rawData, expectedHeaders) {
-    console.log('🚨 detectHeaderRow called');
     for (let i = 0; i < Math.min(15, rawData.length); i++) {
       const row = rawData[i];
       if (!row || !Array.isArray(row)) continue;
@@ -714,7 +614,6 @@ export class DataProcessor {
    * @returns {Object} - Detected column mappings
    */
   static detectColumnMapping(headerRow, expectedMappings) {
-    console.log('🚨 detectColumnMapping called');
     const detectedMapping = {};
     
     // Common header variations
@@ -761,7 +660,6 @@ export class DataProcessor {
    * @returns {Array} - Array of matching products
    */
   static findProductsByBarcode(barcode, inventoryData, sweedData) {
-    console.log('🚨 findProductsByBarcode called');
     const matches = [];
     
     // Search main inventory
@@ -798,7 +696,6 @@ export class DataProcessor {
    * @returns {Array} - Detailed information about scanned items
    */
   static getScannedItemsDetails(scannedItems, scannedSweedItems, inventoryData, sweedData) {
-    console.log('🚨 getScannedItemsDetails called');
     const details = [];
 
     // Process main inventory scanned items
@@ -844,7 +741,6 @@ export class DataProcessor {
    * @returns {Array} - Pick ticket data
    */
   static generatePickTicketData(scannedItemsDetails) {
-    console.log('🚨 generatePickTicketData called');
     return scannedItemsDetails.map((item, index) => ({
       pickNumber: index + 1,
       source: item.displaySource,
@@ -895,7 +791,8 @@ export class DataProcessor {
    * @returns {Object} - Validation result
    */
   static validateSweedStructure(data) {
-    console.log('🚨 validateSweedStructure called');
+    console.log('🔍 Validating Sweed structure...');
+    
     const errors = [];
     const warnings = [];
     const config = FILE_STRUCTURE.SWEED_REPORT;
@@ -950,7 +847,6 @@ export class DataProcessor {
    * @returns {string} - CSV string
    */
   static exportToCSV(data, columns) {
-    console.log('🚨 exportToCSV called');
     const headers = columns.map(col => col.header);
     const rows = data.map(item => 
       columns.map(col => {
@@ -968,6 +864,3 @@ export class DataProcessor {
       .join('\n');
   }
 }
-
-console.log('🚨🚨🚨 DATAPROCESSOR.JS FULLY LOADED 🚨🚨🚨');
-console.log('🚨 Export complete timestamp:', new Date().toISOString());

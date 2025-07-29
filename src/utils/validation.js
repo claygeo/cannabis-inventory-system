@@ -1,9 +1,79 @@
 import { VALIDATION, DATE_FORMATS } from '../constants.js';
 
 /**
- * Validation helper utilities for label generation
+ * Validation helper utilities for label generation and file processing
  */
 export class ValidationHelper {
+  /**
+   * Validate uploaded file
+   * @param {File} file - File to validate
+   * @returns {Object} - Validation result
+   */
+  static validateFile(file) {
+    const result = { isValid: false, error: '', cleanValue: null };
+    
+    console.log('🔍 validateFile called with:', {
+      name: file?.name,
+      type: file?.type,
+      size: file?.size
+    });
+
+    if (!file) {
+      result.error = 'No file selected';
+      console.log('❌ validateFile failed: No file selected');
+      return result;
+    }
+
+    // Check file size (max 50MB)
+    const maxSize = 50 * 1024 * 1024; // 50MB
+    if (file.size > maxSize) {
+      result.error = 'File size cannot exceed 50MB';
+      console.log('❌ validateFile failed: File too large');
+      return result;
+    }
+
+    // Check file extension
+    const fileName = file.name.toLowerCase();
+    const validExtensions = ['.csv', '.xlsx', '.xls'];
+    const hasValidExtension = validExtensions.some(ext => fileName.endsWith(ext));
+    
+    if (!hasValidExtension) {
+      result.error = 'File must be a CSV (.csv) or Excel (.xlsx, .xls) file';
+      console.log('❌ validateFile failed: Invalid extension');
+      return result;
+    }
+
+    // Check MIME type if available
+    if (file.type) {
+      const validMimeTypes = [
+        'text/csv',
+        'application/csv',
+        'application/vnd.ms-excel',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      ];
+      
+      const hasValidMimeType = validMimeTypes.some(type => 
+        file.type.includes(type) || file.type.includes('spreadsheet') || file.type.includes('csv')
+      );
+      
+      if (!hasValidMimeType && file.type !== '') {
+        console.warn('⚠️ validateFile warning: MIME type not recognized but proceeding:', file.type);
+      }
+    }
+
+    // Check minimum file size (empty files are usually problematic)
+    if (file.size < 10) {
+      result.error = 'File appears to be empty or corrupted';
+      console.log('❌ validateFile failed: File too small');
+      return result;
+    }
+
+    result.isValid = true;
+    result.cleanValue = file;
+    console.log('✅ validateFile passed:', file.name);
+    return result;
+  }
+
   /**
    * Validate label quantity
    * @param {string|number} value - Label quantity value
