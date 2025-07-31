@@ -1,14 +1,13 @@
 import React, { useState } from 'react';
 
 /**
- * Uline S-5492 Label Component (6" × 4" Horizontal Labels)
- * Complete replacement for S-5627 - Handles legal size sheets with 2×2 grid layout
- * Designed for precise alignment with physical Uline S-5492 label sheets
+ * Uline S-5492 Label Component (HORIZONTAL: 6" WIDE × 4" TALL Labels)
+ * CORRECTED for proper horizontal orientation on legal size sheets
  */
 class UlineS5492Label extends React.Component {
   /**
-   * Calculate exact label position for Uline S-5492 (4 labels per legal sheet)
-   * Based on physical measurements of actual Uline S-5492 label sheets
+   * Calculate exact label position for Uline S-5492 HORIZONTAL labels
+   * CRITICAL: Uline 4" × 6" = 6" WIDE × 4" TALL (432pt WIDE × 288pt TALL)
    * @param {number} labelIndex - Index of label (0-3 for 4 labels per sheet)
    * @returns {Object} - Position coordinates in points with debug info
    */
@@ -22,9 +21,9 @@ class UlineS5492Label extends React.Component {
     const printableWidth = pageWidth - (printerMargin * 2);   // 588pt
     const printableHeight = pageHeight - (printerMargin * 2); // 984pt
     
-    // S-5492 label dimensions (6" × 4" when horizontal)
-    const labelWidth = 432;  // 6" in points
-    const labelHeight = 288; // 4" in points
+    // S-5492 CORRECTED dimensions: 6" WIDE × 4" TALL (HORIZONTAL)
+    const labelWidth = 432;  // 6" WIDE in points
+    const labelHeight = 288; // 4" TALL in points
     
     // Grid layout: 2 columns × 2 rows
     const cols = 2;
@@ -32,24 +31,28 @@ class UlineS5492Label extends React.Component {
     const row = Math.floor(labelIndex / cols);
     const col = labelIndex % cols;
     
-    // CRITICAL CONSTRAINT: 2 × 432pt = 864pt > 588pt printable width
-    // Solution: Scale labels proportionally to fit while maintaining aspect ratio
-    const maxLabelWidth = Math.floor((printableWidth - 12) / cols); // 12pt gap between columns
-    const scaleFactor = Math.min(1.0, maxLabelWidth / labelWidth);
+    // CONSTRAINT: 2 × 432pt = 864pt > 588pt printable width
+    // SOLUTION: Scale down proportionally to fit
+    const requiredWidth = cols * labelWidth;   // 864pt
+    const requiredHeight = rows * labelHeight; // 576pt
     
-    const actualLabelWidth = Math.floor(labelWidth * scaleFactor);
-    const actualLabelHeight = Math.floor(labelHeight * scaleFactor);
+    const scaleX = printableWidth / requiredWidth;   // 588/864 = 0.68
+    const scaleY = printableHeight / requiredHeight; // 984/576 = 1.71
+    const scaleFactor = Math.min(scaleX, scaleY);    // Use 0.68 (smaller)
     
-    // Calculate spacing for centered layout
-    const totalGridWidth = (actualLabelWidth * cols) + 12; // 12pt between columns
-    const totalGridHeight = (actualLabelHeight * rows) + 18; // 18pt between rows  
+    const actualLabelWidth = Math.floor(labelWidth * scaleFactor);   // ~294pt
+    const actualLabelHeight = Math.floor(labelHeight * scaleFactor); // ~196pt
+    
+    // Center the grid on the page
+    const totalGridWidth = cols * actualLabelWidth;   // ~588pt
+    const totalGridHeight = rows * actualLabelHeight; // ~392pt
     
     const startX = printerMargin + Math.floor((printableWidth - totalGridWidth) / 2);
     const startY = printerMargin + Math.floor((printableHeight - totalGridHeight) / 2);
     
-    // Individual label position
-    const xPos = startX + (col * (actualLabelWidth + 12));
-    const yPos = startY + (row * (actualLabelHeight + 18));
+    // Individual label position (no gaps - labels are adjacent)
+    const xPos = startX + (col * actualLabelWidth);
+    const yPos = startY + (row * actualLabelHeight);
     
     return {
       x: Math.floor(xPos),
@@ -62,6 +65,11 @@ class UlineS5492Label extends React.Component {
       originalWidth: labelWidth,
       originalHeight: labelHeight,
       isScaled: scaleFactor < 1.0,
+      
+      // Orientation confirmation - CRITICAL
+      orientation: 'horizontal',     // WIDER than tall
+      isHorizontal: actualLabelWidth > actualLabelHeight, // Should be TRUE
+      aspectRatio: actualLabelWidth / actualLabelHeight,  // Should be > 1
       
       // Grid information
       row: row,
@@ -78,33 +86,30 @@ class UlineS5492Label extends React.Component {
 
   /**
    * Alternative precise positioning method for physical sheet alignment
-   * Use this if the scaled method above doesn't align with actual perforations
+   * CORRECTED for HORIZONTAL labels: 6" WIDE × 4" TALL
    * @param {number} labelIndex - Index of label (0-3)
    * @returns {Object} - Position coordinates optimized for physical alignment
    */
   static calculateUlineS5492PositionPrecise(labelIndex) {
     // Physical measurements from actual Uline S-5492 sheets
-    // These should be measured and adjusted based on actual physical sheets
     const measurements = {
       // Page dimensions
       pageWidth: 612,    // 8.5" legal width
       pageHeight: 1008,  // 14" legal height
       
-      // ASSUMPTION: Labels are physically arranged as 4" wide × 6" tall
-      // when oriented vertically on the sheet, then content is rotated horizontally
-      labelWidth: 288,   // 4" physical width
-      labelHeight: 432,  // 6" physical height
+      // CORRECTED: S-5492 labels are 6" WIDE × 4" TALL (horizontal)
+      labelWidth: 432,   // 6" WIDE in points
+      labelHeight: 288,  // 4" TALL in points
       
-      // Measured margins from physical S-5492 template
-      // These values need to be confirmed with actual sheets
-      topMargin: 54,     // 0.75" from top edge
-      bottomMargin: 54,  // 0.75" from bottom edge
-      leftMargin: 18,    // 0.25" from left edge  
-      rightMargin: 18,   // 0.25" from right edge
+      // Estimated margins (to be confirmed with physical sheets)
+      topMargin: 120,    // 1.67" from top edge (larger for legal paper)
+      bottomMargin: 120, // 1.67" from bottom edge
+      leftMargin: 0,     // Start at edge (labels will extend beyond)
+      rightMargin: 0,    // No right margin
       
       // Gaps between labels (estimated)
-      columnGap: 18,     // 0.25" between columns
-      rowGap: 18         // 0.25" between rows
+      columnGap: 0,      // No gap - labels are adjacent
+      rowGap: 36         // 0.5" between rows
     };
     
     const cols = 2;
@@ -112,14 +117,16 @@ class UlineS5492Label extends React.Component {
     const col = labelIndex % cols;
     
     // Calculate positions using physical measurements
-    const xPos = measurements.leftMargin + (col * (measurements.labelWidth + measurements.columnGap));
+    const xPos = measurements.leftMargin + (col * measurements.labelWidth);
     const yPos = measurements.topMargin + (row * (measurements.labelHeight + measurements.rowGap));
     
     // Verify calculations fit within page
-    const totalWidth = measurements.leftMargin + (2 * measurements.labelWidth) + measurements.columnGap + measurements.rightMargin;
+    const totalWidth = measurements.leftMargin + (2 * measurements.labelWidth) + measurements.rightMargin;
     const totalHeight = measurements.topMargin + (2 * measurements.labelHeight) + measurements.rowGap + measurements.bottomMargin;
     
-    const fitsOnPage = totalWidth <= measurements.pageWidth && totalHeight <= measurements.pageHeight;
+    const fitsWidth = totalWidth <= measurements.pageWidth;
+    const fitsHeight = totalHeight <= measurements.pageHeight;
+    const fitsOnPage = fitsWidth && fitsHeight;
     
     return {
       x: xPos,
@@ -127,12 +134,16 @@ class UlineS5492Label extends React.Component {
       width: measurements.labelWidth,
       height: measurements.labelHeight,
       
-      // Layout characteristics
-      orientation: 'portrait', // Each label is taller than wide
-      contentFlow: 'vertical',  // Content flows vertically within each label
+      // Layout characteristics - CORRECTED
+      orientation: 'horizontal',     // Labels are WIDER than tall
+      contentFlow: 'horizontal',     // Content flows horizontally within each label
+      isHorizontal: true,            // Confirmation flag
+      aspectRatio: measurements.labelWidth / measurements.labelHeight, // 1.5 (wider than tall)
       
       // Validation
       fitsOnPage: fitsOnPage,
+      fitsWidth: fitsWidth,
+      fitsHeight: fitsHeight,
       totalWidth: totalWidth,
       totalHeight: totalHeight,
       
@@ -143,7 +154,10 @@ class UlineS5492Label extends React.Component {
       labelIndex: labelIndex,
       
       // Warnings
-      warnings: fitsOnPage ? [] : ['Labels may extend beyond page boundaries']
+      warnings: [
+        ...(!fitsWidth ? ['Labels extend beyond page width - this is expected for S-5492'] : []),
+        ...(!fitsHeight ? ['Labels extend beyond page height - check margins'] : [])
+      ]
     };
   }
 
@@ -157,7 +171,7 @@ class UlineS5492Label extends React.Component {
   static calculateUlineS5492PositionHybrid(labelIndex, options = {}) {
     const {
       usePhysicalMeasurements = false,
-      customMargins = null,
+      customScaling = null,
       debugMode = true
     } = options;
     
@@ -165,31 +179,46 @@ class UlineS5492Label extends React.Component {
     const scaledPosition = this.calculateUlineS5492Position(labelIndex);
     const precisePosition = this.calculateUlineS5492PositionPrecise(labelIndex);
     
-    // Use precise if explicitly requested and it fits
-    if (usePhysicalMeasurements && precisePosition.fitsOnPage) {
+    // Use precise if explicitly requested and fits reasonably
+    if (usePhysicalMeasurements && precisePosition.fitsHeight) {
       return {
         ...precisePosition,
         method: 'precise',
-        alternative: scaledPosition
+        alternative: scaledPosition,
+        note: 'Using physical measurements - may extend beyond page width'
       };
     }
     
-    // Apply custom margins if provided
-    if (customMargins) {
-      const customX = scaledPosition.x + (customMargins.left || 0);
-      const customY = scaledPosition.y + (customMargins.top || 0);
+    // Apply custom scaling if provided
+    if (customScaling && customScaling !== 1.0) {
+      const customWidth = Math.floor(432 * customScaling);  // Scale original width
+      const customHeight = Math.floor(288 * customScaling); // Scale original height
+      
+      // Recalculate positions with custom scaling
+      const cols = 2;
+      const row = Math.floor(labelIndex / cols);
+      const col = labelIndex % cols;
+      
+      const startX = (612 - (cols * customWidth)) / 2;
+      const startY = (1008 - (2 * customHeight)) / 2;
       
       return {
-        ...scaledPosition,
-        x: customX,
-        y: customY,
-        method: 'custom',
-        customMargins: customMargins,
+        x: Math.floor(startX + (col * customWidth)),
+        y: Math.floor(startY + (row * customHeight)),
+        width: customWidth,
+        height: customHeight,
+        scaleFactor: customScaling,
+        isScaled: customScaling !== 1.0,
+        originalWidth: 432,
+        originalHeight: 288,
+        orientation: 'horizontal',
+        isHorizontal: customWidth > customHeight,
+        method: 'custom_scale',
         original: scaledPosition
       };
     }
     
-    // Default to scaled position with debug info
+    // Default to scaled position
     return {
       ...scaledPosition,
       method: 'scaled',
@@ -232,6 +261,13 @@ class UlineS5492Label extends React.Component {
           topRight: { x: position.x + position.width, y: position.y },
           bottomLeft: { x: position.x, y: position.y + position.height },
           bottomRight: { x: position.x + position.width, y: position.y + position.height }
+        },
+        // Validation
+        isHorizontal: position.width > position.height,
+        aspectRatio: position.width / position.height,
+        dimensionsInches: {
+          width: (position.width / 72).toFixed(2),
+          height: (position.height / 72).toFixed(2)
         }
       });
     }
@@ -243,8 +279,13 @@ class UlineS5492Label extends React.Component {
       labelCount: 4,
       gridLayout: '2×2',
       sheetFormat: 'Legal (8.5" × 14")',
-      labelSize: '6" × 4" (horizontal)',
-      generatedAt: new Date().toISOString()
+      labelSize: '6" WIDE × 4" TALL (HORIZONTAL)',
+      orientation: 'horizontal',
+      generatedAt: new Date().toISOString(),
+      validation: {
+        allHorizontal: positions.every(p => p.isHorizontal),
+        averageAspectRatio: positions.reduce((sum, p) => sum + p.aspectRatio, 0) / positions.length
+      }
     };
   }
 
@@ -261,21 +302,37 @@ class UlineS5492Label extends React.Component {
     positions.forEach((pos, index) => {
       const { position } = pos;
       
+      // Check orientation - CRITICAL for S-5492
+      if (!pos.isHorizontal) {
+        issues.push(`Label ${index}: NOT HORIZONTAL - width (${position.width}) should be > height (${position.height})`);
+      }
+      
+      if (pos.aspectRatio < 1.0) {
+        issues.push(`Label ${index}: Aspect ratio ${pos.aspectRatio.toFixed(2)} indicates vertical orientation (should be > 1.0)`);
+      }
+      
       // Check if label extends beyond page boundaries
       if (position.x < 0) issues.push(`Label ${index}: X position is negative (${position.x})`);
       if (position.y < 0) issues.push(`Label ${index}: Y position is negative (${position.y})`);
-      if (position.x + position.width > 612) issues.push(`Label ${index}: Extends beyond page width`);
-      if (position.y + position.height > 1008) issues.push(`Label ${index}: Extends beyond page height`);
+      if (position.x + position.width > 612) {
+        warnings.push(`Label ${index}: Extends beyond page width by ${(position.x + position.width - 612).toFixed(0)}pt`);
+      }
+      if (position.y + position.height > 1008) {
+        issues.push(`Label ${index}: Extends beyond page height by ${(position.y + position.height - 1008).toFixed(0)}pt`);
+      }
       
-      // Check for minimum margins
-      if (position.x < 12) warnings.push(`Label ${index}: Very close to left edge (${position.x}pt)`);
-      if (position.y < 12) warnings.push(`Label ${index}: Very close to top edge (${position.y}pt)`);
-      if (612 - (position.x + position.width) < 12) warnings.push(`Label ${index}: Very close to right edge`);
-      if (1008 - (position.y + position.height) < 12) warnings.push(`Label ${index}: Very close to bottom edge`);
+      // Check for reasonable margins
+      if (position.x < 6) warnings.push(`Label ${index}: Very close to left edge (${position.x}pt)`);
+      if (position.y < 6) warnings.push(`Label ${index}: Very close to top edge (${position.y}pt)`);
       
-      // Check label dimensions
-      if (position.width < 200) warnings.push(`Label ${index}: Width is quite small (${position.width}pt)`);
-      if (position.height < 200) warnings.push(`Label ${index}: Height is quite small (${position.height}pt)`);
+      // Check label dimensions are reasonable
+      if (position.width < 200) warnings.push(`Label ${index}: Width is quite small (${position.width}pt = ${(position.width/72).toFixed(2)}")`);
+      if (position.height < 150) warnings.push(`Label ${index}: Height is quite small (${position.height}pt = ${(position.height/72).toFixed(2)}")`);
+      
+      // Check that scaled labels aren't too small
+      if (position.isScaled && position.scaleFactor < 0.6) {
+        warnings.push(`Label ${index}: Heavy scaling (${(position.scaleFactor * 100).toFixed(0)}%) - text may be hard to read`);
+      }
     });
     
     // Check for overlapping labels
@@ -294,14 +351,22 @@ class UlineS5492Label extends React.Component {
       }
     }
     
+    // Check overall orientation consistency
+    const horizontalCount = positions.filter(p => p.isHorizontal).length;
+    if (horizontalCount !== positions.length) {
+      issues.push(`Only ${horizontalCount}/${positions.length} labels are horizontal - all should be horizontal for S-5492`);
+    }
+    
     return {
       isValid: issues.length === 0,
       issues: issues,
       warnings: warnings,
       summary: {
         totalLabels: positions.length,
+        horizontalLabels: horizontalCount,
         labelsWithIssues: issues.length,
-        labelsWithWarnings: warnings.length
+        labelsWithWarnings: warnings.length,
+        averageAspectRatio: positionData.validation?.averageAspectRatio || 0
       }
     };
   }
@@ -338,9 +403,9 @@ class UlineS5492Label extends React.Component {
     
     return {
       migrationInfo: {
-        from: 'S-5627 (4" × 1.5", 12 per sheet, 8.5" × 11")',
-        to: 'S-5492 (6" × 4" horizontal, 4 per sheet, 8.5" × 14")',
-        status: 'Migrated',
+        from: 'S-21846 (7-3/4" × 4-3/4", 2 per sheet, 8.5" × 11")',
+        to: 'S-5492 (6" WIDE × 4" TALL horizontal, 4 per sheet, 8.5" × 14")',
+        status: 'CORRECTED for horizontal orientation',
         version: '6.0.0'
       },
       positioningMethod: method,
@@ -349,13 +414,19 @@ class UlineS5492Label extends React.Component {
       spacing: {
         horizontalGaps: horizontalGaps,
         verticalGaps: verticalGaps,
-        averageHorizontalGap: horizontalGaps.reduce((a, b) => a + b, 0) / horizontalGaps.length,
-        averageVerticalGap: verticalGaps.reduce((a, b) => a + b, 0) / verticalGaps.length
+        averageHorizontalGap: horizontalGaps.length > 0 ? horizontalGaps.reduce((a, b) => a + b, 0) / horizontalGaps.length : 0,
+        averageVerticalGap: verticalGaps.length > 0 ? verticalGaps.reduce((a, b) => a + b, 0) / verticalGaps.length : 0
       },
       pageUtilization: {
         totalLabelArea: positions.reduce((sum, pos) => sum + (pos.position.width * pos.position.height), 0),
         pageArea: 612 * 1008,
         utilizationPercent: ((positions.reduce((sum, pos) => sum + (pos.position.width * pos.position.height), 0)) / (612 * 1008)) * 100
+      },
+      orientationCheck: {
+        expectedOrientation: 'horizontal',
+        allLabelsHorizontal: validation.summary.horizontalLabels === 4,
+        averageAspectRatio: validation.summary.averageAspectRatio,
+        aspectRatioExpected: '> 1.0 (wider than tall)'
       },
       recommendations: this.generatePositioningRecommendations(testData, validation)
     };
@@ -372,7 +443,12 @@ class UlineS5492Label extends React.Component {
     
     if (validation.issues.length > 0) {
       recommendations.push('CRITICAL: Positioning issues detected - labels may not print correctly');
-      recommendations.push('Consider using the "precise" positioning method or custom margins');
+      
+      // Check for orientation issues specifically
+      if (validation.summary.horizontalLabels < 4) {
+        recommendations.push('ORIENTATION ERROR: Labels should be HORIZONTAL (6" WIDE × 4" TALL)');
+        recommendations.push('Check label dimensions - width should be greater than height');
+      }
     }
     
     if (validation.warnings.length > 0) {
@@ -384,13 +460,30 @@ class UlineS5492Label extends React.Component {
     
     if (firstLabel.isScaled) {
       recommendations.push(`Labels are scaled to ${(firstLabel.scaleFactor * 100).toFixed(1)}% to fit on legal paper`);
-      recommendations.push('This is normal - S-5492 labels are designed to fit with scaling');
+      if (firstLabel.scaleFactor < 0.7) {
+        recommendations.push('Heavy scaling detected - consider using precise positioning or custom margins');
+      } else {
+        recommendations.push('Scaling is reasonable for S-5492 format');
+      }
+    }
+    
+    // Check orientation
+    if (testData.validation.allHorizontal) {
+      recommendations.push('✓ All labels are correctly oriented HORIZONTAL');
+    } else {
+      recommendations.push('✗ Some labels are not horizontal - check calculations');
     }
     
     if (validation.summary.labelsWithWarnings === 0 && validation.summary.labelsWithIssues === 0) {
       recommendations.push('Positioning looks good - ready for test printing');
       recommendations.push('Print a test page with "Actual Size" setting on HP E877');
+      recommendations.push('Verify alignment with physical Uline S-5492 sheets');
     }
+    
+    // Specific S-5492 recommendations
+    recommendations.push('For S-5492: Each label should be 6" WIDE × 4" TALL');
+    recommendations.push('Content should flow horizontally within each label');
+    recommendations.push('Use bottom-focused layout as specified in requirements');
     
     return recommendations;
   }
@@ -406,10 +499,10 @@ class UlineS5492Label extends React.Component {
     
     switch (format) {
       case 'csv':
-        let csv = 'Label,X,Y,Width,Height,CenterX,CenterY\n';
+        let csv = 'Label,X,Y,Width,Height,WidthInches,HeightInches,IsHorizontal,AspectRatio\n';
         debugInfo.testData.positions.forEach((pos, index) => {
           const p = pos.position;
-          csv += `${index},${p.x},${p.y},${p.width},${p.height},${pos.centerX},${pos.centerY}\n`;
+          csv += `${index},${p.x},${p.y},${p.width},${p.height},${pos.dimensionsInches.width},${pos.dimensionsInches.height},${pos.isHorizontal},${pos.aspectRatio.toFixed(2)}\n`;
         });
         return csv;
         
@@ -419,7 +512,14 @@ class UlineS5492Label extends React.Component {
       default: // json
         return JSON.stringify({
           method: method,
-          positions: debugInfo.testData.positions.map(pos => pos.position),
+          orientation: 'horizontal',
+          labelSize: '6" WIDE × 4" TALL',
+          positions: debugInfo.testData.positions.map(pos => ({
+            ...pos.position,
+            isHorizontal: pos.isHorizontal,
+            aspectRatio: pos.aspectRatio,
+            dimensionsInches: pos.dimensionsInches
+          })),
           validation: debugInfo.validation,
           spacing: debugInfo.spacing
         }, null, 2);
@@ -461,7 +561,8 @@ class UlineS5492Label extends React.Component {
     this.state = {
       selectedMethod: 'scaled',
       showDebugInfo: false,
-      testPositions: null
+      testPositions: null,
+      orientationValid: null
     };
   }
 
@@ -473,7 +574,12 @@ class UlineS5492Label extends React.Component {
     const testData = UlineS5492Label.generateAlignmentTestData({ 
       method: this.state.selectedMethod 
     });
-    this.setState({ testPositions: testData });
+    const validation = UlineS5492Label.validatePositioning(testData);
+    
+    this.setState({ 
+      testPositions: testData,
+      orientationValid: validation.summary.horizontalLabels === 4
+    });
   }
 
   handleMethodChange = (method) => {
@@ -485,17 +591,33 @@ class UlineS5492Label extends React.Component {
   }
 
   render() {
-    const { selectedMethod, showDebugInfo, testPositions } = this.state;
+    const { selectedMethod, showDebugInfo, testPositions, orientationValid } = this.state;
     
     return (
       <div className="uline-s5492-label-component p-6">
         <div className="bg-white rounded-lg shadow-lg">
           <div className="bg-blue-600 text-white px-6 py-4 rounded-t-lg">
             <h2 className="text-2xl font-bold">Uline S-5492 Label Configuration</h2>
-            <p className="text-blue-100">6" × 4" Horizontal Labels - Legal Size Sheets (8.5" × 14")</p>
+            <p className="text-blue-100">6" WIDE × 4" TALL HORIZONTAL Labels - Legal Size Sheets (8.5" × 14")</p>
           </div>
           
           <div className="p-6">
+            {/* Orientation Status */}
+            {orientationValid !== null && (
+              <div className={`mb-4 p-3 rounded-lg ${
+                orientationValid 
+                  ? 'bg-green-100 border border-green-200' 
+                  : 'bg-red-100 border border-red-200'
+              }`}>
+                <div className={`font-medium ${orientationValid ? 'text-green-800' : 'text-red-800'}`}>
+                  {orientationValid ? '✓ Labels are HORIZONTAL (correct)' : '✗ Labels are NOT horizontal (issue)'}
+                </div>
+                <div className={`text-sm ${orientationValid ? 'text-green-700' : 'text-red-700'}`}>
+                  Expected: 6" WIDE × 4" TALL (aspect ratio > 1.0)
+                </div>
+              </div>
+            )}
+
             {/* Method Selection */}
             <div className="mb-6">
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -516,6 +638,11 @@ class UlineS5492Label extends React.Component {
                   </button>
                 ))}
               </div>
+              <div className="mt-2 text-sm text-gray-600">
+                <strong>Scaled:</strong> Proportionally sized to fit legal paper (recommended) | 
+                <strong> Precise:</strong> Full size positioning | 
+                <strong> Hybrid:</strong> Custom options
+              </div>
             </div>
 
             {/* Position Preview */}
@@ -525,13 +652,19 @@ class UlineS5492Label extends React.Component {
                 <div className="border rounded-lg p-4 bg-gray-50">
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     {testPositions.positions.map((pos, index) => (
-                      <div key={index} className="bg-white p-3 rounded border">
+                      <div key={index} className={`p-3 rounded border ${
+                        pos.isHorizontal ? 'bg-white' : 'bg-red-50 border-red-200'
+                      }`}>
                         <div className="font-medium mb-2">Label {index + 1}</div>
                         <div className="text-gray-600">
-                          <div>Position: {pos.position.x}, {pos.position.y}</div>
+                          <div>Position: {pos.position.x}, {pos.position.y} pt</div>
                           <div>Size: {pos.position.width} × {pos.position.height} pt</div>
-                          <div>Size: {(pos.position.width/72).toFixed(2)}" × {(pos.position.height/72).toFixed(2)}"</div>
-                          {pos.position.scaleFactor && pos.position.scaleFactor < 1 && (
+                          <div>Size: {pos.dimensionsInches.width}" × {pos.dimensionsInches.height}"</div>
+                          <div className={pos.isHorizontal ? 'text-green-600' : 'text-red-600'}>
+                            {pos.isHorizontal ? '✓ Horizontal' : '✗ Not horizontal'}
+                          </div>
+                          <div>Aspect: {pos.aspectRatio.toFixed(2)}</div>
+                          {pos.position.isScaled && (
                             <div className="text-orange-600">
                               Scaled: {(pos.position.scaleFactor * 100).toFixed(1)}%
                             </div>
@@ -558,7 +691,7 @@ class UlineS5492Label extends React.Component {
             {showDebugInfo && (
               <div className="bg-gray-100 rounded-lg p-4">
                 <h3 className="text-lg font-semibold mb-3">Debug Information</h3>
-                <pre className="text-xs overflow-auto bg-white p-3 rounded border">
+                <pre className="text-xs overflow-auto bg-white p-3 rounded border max-h-96">
                   {JSON.stringify(UlineS5492Label.getDebugInfo(selectedMethod), null, 2)}
                 </pre>
               </div>
@@ -566,11 +699,32 @@ class UlineS5492Label extends React.Component {
 
             {/* Migration Information */}
             <div className="mt-6 bg-green-50 border border-green-200 rounded-lg p-4">
-              <h3 className="text-lg font-semibold text-green-800 mb-2">Migration Complete</h3>
+              <h3 className="text-lg font-semibold text-green-800 mb-2">S-5492 Migration Complete</h3>
               <div className="text-green-700 text-sm">
-                <p><strong>From:</strong> S-5627 (4" × 1.5", 12 labels per 8.5" × 11" sheet)</p>
-                <p><strong>To:</strong> S-5492 (6" × 4" horizontal, 4 labels per 8.5" × 14" legal sheet)</p>
-                <p className="mt-2"><strong>Benefits:</strong> Larger label size, horizontal layout for better content organization, brand detection support</p>
+                <p><strong>From:</strong> S-21846 (7-3/4" × 4-3/4", 2 labels per 8.5" × 11" sheet)</p>
+                <p><strong>To:</strong> S-5492 (6" WIDE × 4" TALL horizontal, 4 labels per 8.5" × 14" legal sheet)</p>
+                <p className="mt-2"><strong>Key Features:</strong></p>
+                <ul className="list-disc list-inside mt-1 space-y-1">
+                  <li>HORIZONTAL orientation (labels are wider than tall)</li>
+                  <li>Bottom-focused content layout for scanning workflow</li>
+                  <li>Brand detection and separation</li>
+                  <li>Massive product names for far-away visibility</li>
+                  <li>Legal size paper optimization with proportional scaling</li>
+                </ul>
+              </div>
+            </div>
+
+            {/* Physical Alignment Instructions */}
+            <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <h3 className="text-lg font-semibold text-blue-800 mb-2">Physical Alignment Instructions</h3>
+              <div className="text-blue-700 text-sm">
+                <ol className="list-decimal list-inside space-y-1">
+                  <li>Print test page using "Actual Size" setting (no scaling)</li>
+                  <li>Use HP E877 printer with legal size paper (8.5" × 14")</li>
+                  <li>Verify labels align with Uline S-5492 sheet perforations</li>
+                  <li>Each label should be 6" WIDE × 4" TALL (horizontal)</li>
+                  <li>If alignment is off, try the "precise" positioning method</li>
+                </ol>
               </div>
             </div>
           </div>

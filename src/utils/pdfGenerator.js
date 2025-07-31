@@ -5,8 +5,8 @@ import { EVENT_TYPES } from '../constants.js';
 import storage from './storage.js';
 
 /**
- * PDF Generation utilities for Uline S-5492 label sheets (4" × 6" HORIZONTAL)
- * Complete redesign for legal size paper with 2×2 grid layout
+ * PDF Generation utilities for Uline S-5492 label sheets
+ * CORRECTED: 4" × 6" = 6" WIDE × 4" TALL HORIZONTAL labels on legal paper
  */
 export class PDFGenerator {
   /**
@@ -17,7 +17,7 @@ export class PDFGenerator {
    */
   static async generateLabels(labelDataArray, options = {}) {
     const {
-      format = 'legal', // Legal size for S-5492
+      format = 'legal',
       orientation = 'portrait',
       debug = false,
       currentUser = 'Unknown'
@@ -57,7 +57,7 @@ export class PDFGenerator {
           // Calculate which box number this label represents
           const boxNumber = Math.floor(labelCopy / Math.max(1, Math.floor(formattedData.labelQuantity / formattedData.boxCount))) + 1;
 
-          // Draw the label with S-5492 horizontal layout
+          // Draw the horizontal label
           await this.drawHorizontalLabel(pdf, formattedData, position, boxNumber, formattedData.boxCount, debug, currentUser);
 
           currentLabelIndex++;
@@ -67,17 +67,17 @@ export class PDFGenerator {
       // Add metadata
       pdf.setDocumentProperties({
         title: `Cannabis Inventory Labels - ${new Date().toISOString().slice(0, 10)}`,
-        subject: 'Uline S-5492 Format Labels (4" × 6" Horizontal)',
+        subject: 'Uline S-5492 Format Labels (6" WIDE × 4" TALL Horizontal)',
         author: 'Cannabis Inventory Management System',
         creator: 'Cannabis Inventory Management System v6.0.0',
-        keywords: 'cannabis, inventory, labels, uline, s-5492, horizontal, 4x6, legal'
+        keywords: 'cannabis, inventory, labels, uline, s-5492, horizontal, 6x4, legal'
       });
 
       // Log generation event
       storage.addSessionEvent(
         EVENT_TYPES.LABEL_GENERATED,
         `Generated ${currentLabelIndex} S-5492 labels across ${currentPage} pages`,
-        `Items: ${labelDataArray.length}, Format: Uline S-5492 (4" × 6" Horizontal)`
+        `Items: ${labelDataArray.length}, Format: Uline S-5492 (6" WIDE × 4" TALL Horizontal)`
       );
 
       return pdf.output('blob');
@@ -96,8 +96,8 @@ export class PDFGenerator {
   }
 
   /**
-   * Calculate exact label position for Uline S-5492 (4" × 6" horizontal, 4 per legal sheet)
-   * Based on physical Uline S-5492 specifications for 8.5" × 14" legal size
+   * Calculate EXACT label position for Uline S-5492 HORIZONTAL labels
+   * CRITICAL: Uline 4" × 6" = 6" WIDE × 4" TALL (432pt WIDE × 288pt TALL)
    * @param {number} labelIndex - Index of label (0-3 for 4 labels per sheet)
    * @returns {Object} - Position coordinates in points
    */
@@ -106,105 +106,147 @@ export class PDFGenerator {
     const pageWidth = 612;   // 8.5" in points  
     const pageHeight = 1008; // 14" in points
     
-    // HP E877 printer margins (0.167" = 12pt)
-    const printerMargin = 12;
-    const printableWidth = pageWidth - (printerMargin * 2);   // 588pt
-    const printableHeight = pageHeight - (printerMargin * 2); // 984pt
+    // ULINE S-5492 TRUE DIMENSIONS: 6" WIDE × 4" TALL (HORIZONTAL orientation)
+    const labelWidth = 432;  // 6" WIDE in points
+    const labelHeight = 288; // 4" TALL in points
     
-    // S-5492 label dimensions (4" × 6" oriented horizontally = 6" wide × 4" tall)
-    const labelWidth = 432;  // 6" in points (horizontal orientation)
-    const labelHeight = 288; // 4" in points
-    
-    // Grid layout: 2 columns × 2 rows
+    // Grid layout: 2 columns × 2 rows on legal size
     const cols = 2;
     const rows = 2;
     const row = Math.floor(labelIndex / cols);
     const col = labelIndex % cols;
     
-    // Calculate spacing for physical S-5492 sheet alignment
-    // Total width needed: 2 × 432pt = 864pt (exceeds 588pt printable)
-    // Solution: Scale labels to fit while maintaining aspect ratio
-    const maxLabelWidth = Math.floor(printableWidth / cols) - 6; // 6pt gap between columns
-    const actualLabelWidth = Math.min(labelWidth, maxLabelWidth);
-    const scaleFactor = actualLabelWidth / labelWidth;
-    const actualLabelHeight = Math.floor(labelHeight * scaleFactor);
+    // PROBLEM: 2 × 432pt = 864pt > 612pt page width
+    // SOLUTION: Scale proportionally to fit on legal paper
     
-    // Center the label grid on the page
-    const totalGridWidth = (actualLabelWidth * cols) + 6; // 6pt between columns
-    const totalGridHeight = (actualLabelHeight * rows) + 12; // 12pt between rows
+    // Calculate maximum space available (with margins)
+    const margins = 18; // 0.25" margins on each side
+    const availableWidth = pageWidth - (margins * 2);   // 576pt
+    const availableHeight = pageHeight - (margins * 2); // 972pt
     
-    const startX = printerMargin + (printableWidth - totalGridWidth) / 2;
-    const startY = printerMargin + (printableHeight - totalGridHeight) / 2;
+    // Calculate required space for 2×2 grid
+    const requiredWidth = cols * labelWidth;   // 864pt
+    const requiredHeight = rows * labelHeight; // 576pt
     
-    // Calculate individual label position
-    const xPos = startX + (col * (actualLabelWidth + 6));
-    const yPos = startY + (row * (actualLabelHeight + 12));
+    // Calculate scale factors
+    const scaleX = availableWidth / requiredWidth;   // 576/864 = 0.667
+    const scaleY = availableHeight / requiredHeight; // 972/576 = 1.69
+    const scaleFactor = Math.min(scaleX, scaleY);    // Use smaller scale = 0.667
+    
+    // Apply scaling
+    const actualLabelWidth = Math.floor(labelWidth * scaleFactor);   // 288pt
+    const actualLabelHeight = Math.floor(labelHeight * scaleFactor); // 192pt
+    
+    // Calculate grid positioning (centered on page)
+    const totalGridWidth = cols * actualLabelWidth;   // 576pt
+    const totalGridHeight = rows * actualLabelHeight; // 384pt
+    
+    const startX = (pageWidth - totalGridWidth) / 2;   // Center horizontally
+    const startY = (pageHeight - totalGridHeight) / 2; // Center vertically
+    
+    // Calculate individual label position (no gaps - labels are adjacent)
+    const xPos = startX + (col * actualLabelWidth);
+    const yPos = startY + (row * actualLabelHeight);
     
     return {
       x: Math.floor(xPos),
       y: Math.floor(yPos),
       width: actualLabelWidth,
       height: actualLabelHeight,
+      
+      // Scaling information
       scaleFactor: scaleFactor,
+      isScaled: scaleFactor < 1.0,
       originalWidth: labelWidth,
-      originalHeight: labelHeight
+      originalHeight: labelHeight,
+      
+      // Orientation confirmation
+      orientation: 'horizontal',
+      isHorizontal: actualLabelWidth > actualLabelHeight,
+      
+      // Grid information
+      row: row,
+      col: col,
+      labelIndex: labelIndex
     };
   }
 
   /**
-   * Alternative precise positioning method for physical sheet alignment
-   * Use this method if labels don't align with actual S-5492 perforations
+   * Alternative method: No scaling - let labels extend or use spacing
    * @param {number} labelIndex - Index of label (0-3)
-   * @returns {Object} - Position coordinates optimized for physical alignment
+   * @returns {Object} - Position coordinates without scaling
    */
-  static calculateUlineS5492PositionPrecise(labelIndex) {
-    // Physical measurements based on actual Uline S-5492 sheets
-    const measurements = {
-      pageWidth: 612,    // 8.5" legal width
-      pageHeight: 1008,  // 14" legal height
-      
-      // Physical label dimensions on S-5492 sheets
-      labelWidth: 288,   // 4" physical width
-      labelHeight: 432,  // 6" physical height (vertical orientation on sheet)
-      
-      // Measured margins from actual S-5492 template
-      topMargin: 36,     // 0.5" from top edge
-      bottomMargin: 36,  // 0.5" from bottom edge  
-      leftMargin: 18,    // 0.25" from left edge
-      rightMargin: 18,   // 0.25" from right edge
-      
-      // Gaps between labels
-      columnGap: 18,     // 0.25" between columns
-      rowGap: 12         // ~0.167" between rows
-    };
+  static calculateUlineS5492PositionNoScale(labelIndex) {
+    // Legal size sheet dimensions
+    const pageWidth = 612;   // 8.5"
+    const pageHeight = 1008; // 14"
     
+    // ULINE S-5492 TRUE DIMENSIONS: 6" WIDE × 4" TALL
+    const labelWidth = 432;  // 6" WIDE
+    const labelHeight = 288; // 4" TALL
+    
+    // Grid layout
     const cols = 2;
+    const rows = 2; 
     const row = Math.floor(labelIndex / cols);
     const col = labelIndex % cols;
     
-    // Calculate positions using physical measurements
-    const xPos = measurements.leftMargin + (col * (measurements.labelWidth + measurements.columnGap));
-    const yPos = measurements.topMargin + (row * (measurements.labelHeight + measurements.rowGap));
+    // Physical spacing approach - smaller margins to fit
+    const topMargin = 72;    // 1" from top
+    const leftMargin = 0;    // No left margin (will extend beyond)
+    const columnGap = 0;     // No gap between columns
+    const rowGap = 36;       // 0.5" between rows
+    
+    // Calculate positions
+    const xPos = leftMargin + (col * labelWidth);
+    const yPos = topMargin + (row * (labelHeight + rowGap));
+    
+    // Check boundaries
+    const rightEdge = xPos + labelWidth;
+    const bottomEdge = yPos + labelHeight;
+    const extendsRight = rightEdge > pageWidth;
+    const extendsBottom = bottomEdge > pageHeight;
     
     return {
-      x: xPos,
-      y: yPos,
-      width: measurements.labelWidth,
-      height: measurements.labelHeight,
-      layout: 'vertical', // Content flows vertically in tall labels
-      orientation: 'portrait' // Each label is taller than wide
+      x: Math.floor(xPos),
+      y: Math.floor(yPos),
+      width: labelWidth,
+      height: labelHeight,
+      
+      // No scaling
+      scaleFactor: 1.0,
+      isScaled: false,
+      originalWidth: labelWidth,
+      originalHeight: labelHeight,
+      
+      // Orientation
+      orientation: 'horizontal',
+      isHorizontal: labelWidth > labelHeight,
+      
+      // Grid information
+      row: row,
+      col: col,
+      labelIndex: labelIndex,
+      
+      // Boundary warnings
+      extendsRight: extendsRight,
+      extendsBottom: extendsBottom,
+      warnings: [
+        ...(extendsRight ? ['Label extends beyond right page boundary'] : []),
+        ...(extendsBottom ? ['Label extends beyond bottom page boundary'] : [])
+      ]
     };
   }
 
   /**
-   * Draw horizontal 4×6 label with bottom-focused layout and brand separation
+   * Draw HORIZONTAL 6"×4" label with proper horizontal content layout
    * @param {jsPDF} pdf - PDF document
    * @param {Object} labelData - Formatted label data
    * @param {Object} position - Label position and dimensions
    * @param {number} boxNumber - Current box number
    * @param {number} totalBoxes - Total number of boxes
    * @param {boolean} debug - Show debug borders
-   * @param {string} currentUser - Current user generating the labels
+   * @param {string} currentUser - Current user
    */
   static async drawHorizontalLabel(pdf, labelData, position, boxNumber = 1, totalBoxes = 1, debug = false, currentUser = 'Unknown') {
     const { x, y, width, height } = position;
@@ -214,172 +256,103 @@ export class PDFGenerator {
     pdf.setLineWidth(1);
     pdf.rect(x, y, width, height);
 
-    // Debug border and info
+    // Debug info
     if (debug) {
       pdf.setDrawColor(255, 0, 0);
       pdf.setLineWidth(0.5);
       pdf.rect(x + 2, y + 2, width - 4, height - 4);
       
-      // Debug text
+      // Debug measurements
       pdf.setFontSize(8);
       pdf.setTextColor(255, 0, 0);
-      pdf.text(`${width.toFixed(0)}×${height.toFixed(0)}pt`, x + 5, y + 15);
+      pdf.text(`${(width/72).toFixed(2)}" WIDE × ${(height/72).toFixed(2)}" TALL`, x + 5, y + 12);
+      pdf.text(`${width}×${height}pt (HORIZONTAL)`, x + 5, y + 22);
+      pdf.text(`Label ${position.labelIndex + 1}`, x + 5, y + 32);
+      
+      if (position.isScaled) {
+        pdf.text(`Scaled: ${(position.scaleFactor * 100).toFixed(1)}%`, x + 5, y + 42);
+      }
     }
 
-    const padding = 8;
+    const padding = 6;
     const contentX = x + padding;
     const contentY = y + padding;
     const contentWidth = width - (padding * 2);
     const contentHeight = height - (padding * 2);
 
     try {
-      // Determine layout based on label dimensions
-      if (width > height) {
-        // Horizontal layout (wider than tall)
-        await this.drawHorizontalContentLayout(pdf, labelData, contentX, contentY, contentWidth, contentHeight, boxNumber, totalBoxes, currentUser);
-      } else {
-        // Vertical layout (taller than wide) 
-        await this.drawVerticalContentLayout(pdf, labelData, contentX, contentY, contentWidth, contentHeight, boxNumber, totalBoxes, currentUser);
-      }
+      // HORIZONTAL LAYOUT (bottom to top as requested):
+      
+      // 1. Audit trail (absolute bottom)
+      const auditY = y + height - 6;
+      this.drawAuditTrail(pdf, currentUser, contentX, auditY);
+      
+      // 2. Bottom section: Barcode, text box, dates, case info
+      const bottomSectionHeight = Math.min(60, contentHeight * 0.4);
+      const bottomSectionY = y + height - bottomSectionHeight - 12;
+      await this.drawBottomHorizontalSection(pdf, labelData, contentX, bottomSectionY, contentWidth, bottomSectionHeight, boxNumber, totalBoxes);
+      
+      // 3. Top section: MASSIVE Product Name with Brand
+      const productNameHeight = contentHeight - bottomSectionHeight - 18;
+      const brandInfo = this.extractBrandFromProductName(labelData.productName);
+      await this.drawMassiveProductNameHorizontal(pdf, brandInfo, contentX, contentY, contentWidth, productNameHeight);
 
     } catch (error) {
-      console.error('Error drawing label components:', error);
-      pdf.setFontSize(10);
+      console.error('Error drawing horizontal label:', error);
+      pdf.setFontSize(8);
       pdf.setTextColor(255, 0, 0);
-      pdf.text('Label Error', contentX + 5, contentY + 20);
+      pdf.text('Label Error', contentX + 5, contentY + 15);
     }
   }
 
   /**
-   * Draw content in horizontal layout (for wide labels)
+   * Draw bottom horizontal section with all info laid out horizontally
    * @param {jsPDF} pdf - PDF document
    * @param {Object} labelData - Label data
-   * @param {number} x - Content X position
-   * @param {number} y - Content Y position
-   * @param {number} width - Content width
-   * @param {number} height - Content height
+   * @param {number} x - X position
+   * @param {number} y - Y position
+   * @param {number} width - Available width
+   * @param {number} height - Available height
    * @param {number} boxNumber - Box number
    * @param {number} totalBoxes - Total boxes
-   * @param {string} currentUser - Current user
    */
-  static async drawHorizontalContentLayout(pdf, labelData, x, y, width, height, boxNumber, totalBoxes, currentUser) {
-    // 1. MASSIVE Product Name with Brand Separation (Top 60% of height)
-    const productNameHeight = Math.floor(height * 0.6);
-    const brandInfo = this.extractBrandFromProductName(labelData.productName);
-    await this.drawMassiveProductNameWithBrand(pdf, brandInfo, x, y, width, productNameHeight);
-
-    // 2. Bottom section layout (bottom 40% of height)
-    const bottomSectionY = y + productNameHeight + 5;
-    const bottomSectionHeight = height - productNameHeight - 5;
+  static async drawBottomHorizontalSection(pdf, labelData, x, y, width, height, boxNumber, totalBoxes) {
+    // Divide horizontal space into 4 sections
+    const sectionWidth = width / 4;
+    let currentX = x;
     
-    // 3. Audit Trail (absolute bottom)
-    this.drawAuditTrail(pdf, currentUser, x, y + height - 5);
-
-    // 4. Bottom row with larger elements (above audit trail)
-    await this.drawBottomRowElements(pdf, labelData, x, bottomSectionY, width, bottomSectionHeight - 15, boxNumber, totalBoxes);
+    // Section 1: Barcode (far left)
+    await this.drawBarcodeSection(pdf, labelData, currentX, y, sectionWidth, height);
+    currentX += sectionWidth;
+    
+    // Section 2: Text box for manual writing
+    this.drawManualWritingBox(pdf, currentX, y + height - 35, sectionWidth - 5, 30);
+    currentX += sectionWidth;
+    
+    // Section 3: Dates
+    this.drawDatesSection(pdf, labelData, currentX, y, sectionWidth, height);
+    currentX += sectionWidth;
+    
+    // Section 4: Case/Box info (far right)
+    this.drawCaseBoxSection(pdf, labelData, currentX, y, sectionWidth, height, boxNumber, totalBoxes);
   }
 
   /**
-   * Draw content in vertical layout (for tall labels)
-   * @param {jsPDF} pdf - PDF document  
-   * @param {Object} labelData - Label data
-   * @param {number} x - Content X position
-   * @param {number} y - Content Y position
-   * @param {number} width - Content width
-   * @param {number} height - Content height
-   * @param {number} boxNumber - Box number
-   * @param {number} totalBoxes - Total boxes
-   * @param {string} currentUser - Current user
-   */
-  static async drawVerticalContentLayout(pdf, labelData, x, y, width, height, boxNumber, totalBoxes, currentUser) {
-    let currentY = y;
-    
-    // 1. Product Name (top section - 40% of height)
-    const productNameHeight = Math.floor(height * 0.4);
-    const brandInfo = this.extractBrandFromProductName(labelData.productName);
-    await this.drawMassiveProductNameWithBrand(pdf, brandInfo, x, currentY, width, productNameHeight);
-    currentY += productNameHeight + 10;
-    
-    // 2. Barcode section (middle)
-    const barcodeHeight = 60;
-    await this.drawBarcodeSection(pdf, labelData, x, currentY, width, barcodeHeight);
-    currentY += barcodeHeight + 10;
-    
-    // 3. Information section
-    const infoHeight = 80;
-    this.drawVerticalInfoSection(pdf, labelData, x, currentY, width, infoHeight, boxNumber, totalBoxes);
-    currentY += infoHeight + 10;
-    
-    // 4. Audit trail (bottom)
-    this.drawAuditTrail(pdf, currentUser, x, y + height - 5);
-  }
-
-  /**
-   * Extract brand from product name for separate display
-   * @param {string} productName - Full product name
-   * @returns {Object} - Brand and remaining product name
-   */
-  static extractBrandFromProductName(productName) {
-    if (!productName) return { brand: '', productName: 'Product Name' };
-
-    // Common cannabis brands (expanded list)
-    const brands = [
-      'Curaleaf', 'Grassroots', 'Reef', 'B-Noble', 'Cresco', 'Rythm', 'GTI',
-      'Verano', 'Aeriz', 'Revolution', 'Cookies', 'Jeeter', 'Raw Garden',
-      'Stiiizy', 'Select', 'Heavy Hitters', 'Papa & Barkley', 'Kiva',
-      'Wyld', 'Wana', 'Plus Products', 'Legion of Bloom', 'AbsoluteXtracts',
-      'Matter', 'Pharmacann', 'Green Thumb', 'Columbia Care', 'Trulieve',
-      'MedMen', 'Harvest', 'Acreage', 'Canopy Growth', 'Tilray', 'Aphria',
-      'Aurora', 'Hexo', 'Cronos', 'OrganiGram', 'Village Farms', 'TerrAscend'
-    ];
-
-    const trimmed = productName.trim();
-    
-    // Check if product name starts with any known brand
-    for (const brand of brands) {
-      const regex = new RegExp(`^${brand}\\s+`, 'i');
-      if (regex.test(trimmed)) {
-        const remaining = trimmed.replace(regex, '').trim();
-        return {
-          brand: brand,
-          productName: remaining || trimmed
-        };
-      }
-    }
-
-    // Check for common patterns like "Brand Name - Product" or "Brand: Product"
-    const dashMatch = trimmed.match(/^([A-Za-z\s&'-]+?)\s*[-–:]\s*(.+)$/);
-    if (dashMatch && dashMatch[1].length <= 25) {
-      return {
-        brand: dashMatch[1].trim(),
-        productName: dashMatch[2].trim()
-      };
-    }
-
-    // No brand detected
-    return {
-      brand: '',
-      productName: trimmed
-    };
-  }
-
-  /**
-   * Draw massive product name with brand separation
+   * Draw massive product name optimized for horizontal 6×4 labels
    * @param {jsPDF} pdf - PDF document
-   * @param {Object} brandInfo - Brand and product name info
+   * @param {Object} brandInfo - Brand and product info
    * @param {number} x - X position
    * @param {number} y - Y position
    * @param {number} width - Available width
    * @param {number} height - Available height
    */
-  static async drawMassiveProductNameWithBrand(pdf, brandInfo, x, y, width, height) {
+  static async drawMassiveProductNameHorizontal(pdf, brandInfo, x, y, width, height) {
     let currentY = y;
     const lineSpacing = 1.1;
 
-    // Draw brand name if present (larger, bold)
+    // Draw brand name if present (top line)
     if (brandInfo.brand) {
-      const maxBrandFontSize = Math.min(36, height * 0.3); // Max 30% of available height
-      const brandFontSize = LabelFormatter.autoFitFontSize(brandInfo.brand, width, maxBrandFontSize, maxBrandFontSize);
+      const brandFontSize = Math.min(24, LabelFormatter.autoFitFontSize(brandInfo.brand, width, 30, 24));
       
       pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(brandFontSize);
@@ -393,14 +366,12 @@ export class PDFGenerator {
         currentY += brandFontSize * lineSpacing;
       });
       
-      currentY += 8; // Gap between brand and product name
+      currentY += 6; // Gap between brand and product
     }
 
-    // Draw product name (maximum possible size)
-    const remainingHeight = Math.max(20, height - (currentY - y));
-    const maxProductFontSize = brandInfo.brand ? 
-      Math.min(32, remainingHeight * 0.4) : 
-      Math.min(40, remainingHeight * 0.3);
+    // Draw product name (MASSIVE - use remaining space)
+    const remainingHeight = Math.max(15, height - (currentY - y));
+    const maxProductFontSize = brandInfo.brand ? 28 : 36; // Larger if no brand
     
     const productFontSize = LabelFormatter.autoFitFontSize(
       brandInfo.productName, 
@@ -423,38 +394,7 @@ export class PDFGenerator {
   }
 
   /**
-   * Draw bottom row elements for horizontal layout
-   * @param {jsPDF} pdf - PDF document
-   * @param {Object} labelData - Label data
-   * @param {number} x - X position
-   * @param {number} y - Y position  
-   * @param {number} width - Available width
-   * @param {number} height - Available height
-   * @param {number} boxNumber - Current box number
-   * @param {number} totalBoxes - Total boxes
-   */
-  static async drawBottomRowElements(pdf, labelData, x, y, width, height, boxNumber, totalBoxes) {
-    // Calculate section widths for horizontal layout
-    const barcodeWidth = Math.min(120, width * 0.3);
-    const textBoxWidth = Math.min(100, width * 0.25);
-    const rightInfoWidth = width - barcodeWidth - textBoxWidth - 20; // 20pt gaps
-    
-    let currentX = x;
-    
-    // 1. Barcode section (left)
-    await this.drawBarcodeSection(pdf, labelData, currentX, y, barcodeWidth, height);
-    currentX += barcodeWidth + 10;
-    
-    // 2. Text box (middle)  
-    this.drawManualWritingBox(pdf, currentX, y + height - 40, textBoxWidth, 35);
-    currentX += textBoxWidth + 10;
-    
-    // 3. Right info section (dates and boxes) - LARGER FONTS
-    this.drawLargerRightInfo(pdf, labelData, currentX, y, rightInfoWidth, height, boxNumber, totalBoxes);
-  }
-
-  /**
-   * Draw barcode section with display text
+   * Draw barcode section
    * @param {jsPDF} pdf - PDF document
    * @param {Object} labelData - Label data
    * @param {number} x - X position
@@ -463,10 +403,9 @@ export class PDFGenerator {
    * @param {number} height - Section height
    */
   static async drawBarcodeSection(pdf, labelData, x, y, width, height) {
-    const barcodeHeight = Math.min(40, height * 0.6);
-    const displayHeight = 15;
+    const barcodeHeight = Math.min(35, height * 0.7);
     
-    // Barcode display text (spaced format)
+    // Barcode display text
     const spacedBarcodeDisplay = this.formatBarcodeWithSpaces(labelData.barcodeDisplay);
     
     pdf.setFont('helvetica', 'normal');
@@ -474,124 +413,129 @@ export class PDFGenerator {
     pdf.setTextColor(102, 102, 102);
     const displayWidth = pdf.getTextWidth(spacedBarcodeDisplay);
     const displayCenterX = x + Math.max(0, (width - displayWidth) / 2);
-    pdf.text(spacedBarcodeDisplay, displayCenterX, y + displayHeight);
+    pdf.text(spacedBarcodeDisplay, displayCenterX, y + 10);
     
     // Draw barcode
     await this.drawEnhancedBarcode(
       pdf, 
       labelData.barcode, 
       x, 
-      y + displayHeight + 5, 
-      width, 
+      y + 14, 
+      width - 2, 
       barcodeHeight
     );
   }
 
   /**
-   * Draw vertical info section for tall labels
+   * Draw dates section
    * @param {jsPDF} pdf - PDF document
    * @param {Object} labelData - Label data
    * @param {number} x - X position
    * @param {number} y - Y position
-   * @param {number} width - Available width
-   * @param {number} height - Available height
+   * @param {number} width - Section width
+   * @param {number} height - Section height
+   */
+  static drawDatesSection(pdf, labelData, x, y, width, height) {
+    let currentY = y + 12;
+    
+    // Harvest Date (LARGER as requested)
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(10);
+    pdf.setTextColor(0, 0, 0);
+    const harvestText = `Harvest: ${labelData.harvestDate || 'MM/DD/YY'}`;
+    pdf.text(harvestText, x, currentY);
+    currentY += 14;
+    
+    // Packaged Date (LARGER as requested)
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(10);
+    const packagedText = `Packaged: ${labelData.packagedDate || 'MM/DD/YY'}`;
+    pdf.text(packagedText, x, currentY);
+  }
+
+  /**
+   * Draw case/box section
+   * @param {jsPDF} pdf - PDF document
+   * @param {Object} labelData - Label data
+   * @param {number} x - X position
+   * @param {number} y - Y position
+   * @param {number} width - Section width
+   * @param {number} height - Section height
    * @param {number} boxNumber - Box number
    * @param {number} totalBoxes - Total boxes
    */
-  static drawVerticalInfoSection(pdf, labelData, x, y, width, height, boxNumber, totalBoxes) {
-    let currentY = y;
-    const fontSize = 11;
-    const lineHeight = fontSize * 1.3;
+  static drawCaseBoxSection(pdf, labelData, x, y, width, height, boxNumber, totalBoxes) {
+    const boxWidth = Math.min(width - 5, 70);
+    const boxHeight = 14;
+    let currentY = y + 8;
     
-    // Harvest Date
-    pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(fontSize);
-    pdf.setTextColor(0, 0, 0);
-    pdf.text(`Harvest: ${labelData.harvestDate || 'MM/DD/YYYY'}`, x, currentY + fontSize);
-    currentY += lineHeight;
-    
-    // Packaged Date
-    pdf.setFont('helvetica', 'normal');  
-    pdf.text(`Packaged: ${labelData.packagedDate || 'MM/DD/YYYY'}`, x, currentY + fontSize);
-    currentY += lineHeight;
-    
-    // Case Qty and Box info
-    const boxWidth = Math.min(80, width * 0.8);
-    const boxHeight = 16;
-    
-    // Case Qty Box
+    // Case Qty Box (LARGER as requested)
     pdf.setDrawColor(0, 0, 0);
     pdf.setLineWidth(1);
     pdf.rect(x, currentY, boxWidth, boxHeight);
     
     pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(10);
+    pdf.setFontSize(9);
     const caseQtyValue = labelData.caseQuantity || '___';
     const caseQtyText = `Case: ${caseQtyValue}`;
-    pdf.text(caseQtyText, x + 4, currentY + boxHeight - 4);
+    const caseQtyWidth = pdf.getTextWidth(caseQtyText);
+    pdf.text(caseQtyText, x + (boxWidth - caseQtyWidth) / 2, currentY + 10);
+    
     currentY += boxHeight + 4;
     
-    // Box Number Box
+    // Box Number Box (LARGER as requested)
     pdf.rect(x, currentY, boxWidth, boxHeight);
+    
     const boxText = `Box ${boxNumber}/${totalBoxes}`;
-    pdf.text(boxText, x + 4, currentY + boxHeight - 4);
+    const boxTextWidth = pdf.getTextWidth(boxText);
+    pdf.text(boxText, x + (boxWidth - boxTextWidth) / 2, currentY + 10);
   }
 
   /**
-   * Draw larger right side information for horizontal layout
-   * @param {jsPDF} pdf - PDF document
-   * @param {Object} labelData - Label data
-   * @param {number} x - X position
-   * @param {number} y - Y position
-   * @param {number} width - Available width
-   * @param {number} height - Available height
-   * @param {number} boxNumber - Current box number
-   * @param {number} totalBoxes - Total boxes
+   * Extract brand from product name
+   * @param {string} productName - Full product name
+   * @returns {Object} - Brand and remaining product name
    */
-  static drawLargerRightInfo(pdf, labelData, x, y, width, height, boxNumber, totalBoxes) {
-    let currentY = y;
+  static extractBrandFromProductName(productName) {
+    if (!productName) return { brand: '', productName: 'Product Name' };
+
+    const brands = [
+      'Curaleaf', 'Grassroots', 'Reef', 'B-Noble', 'Cresco', 'Rythm', 'GTI',
+      'Verano', 'Aeriz', 'Revolution', 'Cookies', 'Jeeter', 'Raw Garden',
+      'Stiiizy', 'Select', 'Heavy Hitters', 'Papa & Barkley', 'Kiva',
+      'Wyld', 'Wana', 'Plus Products', 'Legion of Bloom', 'AbsoluteXtracts',
+      'Matter', 'Pharmacann', 'Green Thumb', 'Columbia Care', 'Trulieve'
+    ];
+
+    const trimmed = productName.trim();
     
-    // Harvest Date (LARGER)
-    pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(12);
-    pdf.setTextColor(0, 0, 0);
-    const harvestText = `Harvest: ${labelData.harvestDate || 'MM/DD/YYYY'}`;
-    pdf.text(harvestText, x, currentY + 12);
-    currentY += 16;
-    
-    // Packaged Date (LARGER)
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(12);
-    const packagedText = `Packaged: ${labelData.packagedDate || 'MM/DD/YYYY'}`;
-    pdf.text(packagedText, x, currentY + 12);
-    currentY += 18;
-    
-    // Case Qty and Box info (LARGER BOXES and TEXT)
-    const boxWidth = Math.min(70, width * 0.9);
-    const boxHeight = 16;
-    const boxGap = 6;
-    
-    // Case Qty Box
-    pdf.setDrawColor(0, 0, 0);
-    pdf.setLineWidth(1);
-    pdf.rect(x, currentY, boxWidth, boxHeight);
-    
-    pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(10);
-    const caseQtyValue = labelData.caseQuantity || '___';
-    const caseQtyText = `Case: ${caseQtyValue}`;
-    pdf.text(caseQtyText, x + 4, currentY + boxHeight - 4);
-    currentY += boxHeight + boxGap;
-    
-    // Box Number Box
-    pdf.rect(x, currentY, boxWidth, boxHeight);
-    const boxText = `Box ${boxNumber}/${totalBoxes}`;
-    pdf.text(boxText, x + 4, currentY + boxHeight - 4);
+    // Check if product name starts with any known brand
+    for (const brand of brands) {
+      const regex = new RegExp(`^${brand}\\s+`, 'i');
+      if (regex.test(trimmed)) {
+        const remaining = trimmed.replace(regex, '').trim();
+        return {
+          brand: brand,
+          productName: remaining || trimmed
+        };
+      }
+    }
+
+    // Check for common patterns
+    const dashMatch = trimmed.match(/^([A-Za-z\s&'-]+?)\s*[-–:]\s*(.+)$/);
+    if (dashMatch && dashMatch[1].length <= 25) {
+      return {
+        brand: dashMatch[1].trim(),
+        productName: dashMatch[2].trim()
+      };
+    }
+
+    return { brand: '', productName: trimmed };
   }
 
   /**
-   * Format barcode display with spaces instead of hyphens
-   * @param {string} barcodeDisplay - Hyphenated barcode display
+   * Format barcode display with spaces
+   * @param {string} barcodeDisplay - Barcode display
    * @returns {string} - Spaced barcode display
    */
   static formatBarcodeWithSpaces(barcodeDisplay) {
@@ -629,7 +573,7 @@ export class PDFGenerator {
       
       JsBarcode(canvas, validation.cleanValue, {
         format: 'CODE39',
-        width: Math.max(2, Math.floor(width / 100)), // Responsive bar width
+        width: Math.max(2, Math.floor(width / 60)),
         height: height * 2,
         displayValue: false,
         margin: 0,
@@ -641,13 +585,13 @@ export class PDFGenerator {
       pdf.addImage(barcodeDataURL, 'PNG', x, y, width, height);
 
     } catch (error) {
-      console.error('Enhanced barcode generation error:', error);
+      console.error('Barcode generation error:', error);
       this.drawBarcodeError(pdf, x, y, width, height);
     }
   }
 
   /**
-   * Draw text box for manual writing
+   * Draw manual writing text box
    * @param {jsPDF} pdf - PDF document
    * @param {number} x - X position
    * @param {number} y - Y position
@@ -660,7 +604,7 @@ export class PDFGenerator {
     pdf.setLineWidth(1);
     pdf.rect(x, y, width, height);
 
-    // Add grid lines
+    // Add light grid lines
     pdf.setDrawColor(220, 220, 220);
     pdf.setLineWidth(0.5);
     
@@ -672,7 +616,7 @@ export class PDFGenerator {
   }
 
   /**
-   * Draw audit trail
+   * Draw audit trail at bottom
    * @param {jsPDF} pdf - PDF document
    * @param {string} currentUser - Current user
    * @param {number} x - X position
@@ -680,25 +624,22 @@ export class PDFGenerator {
    */
   static drawAuditTrail(pdf, currentUser, x, y) {
     const now = new Date();
-    const estOffset = -5;
-    const estTime = new Date(now.getTime() + (estOffset * 60 * 60 * 1000));
+    const month = (now.getMonth() + 1).toString().padStart(2, '0');
+    const day = now.getDate().toString().padStart(2, '0');
+    const year = now.getFullYear().toString().slice(-2);
     
-    const month = (estTime.getMonth() + 1).toString().padStart(2, '0');
-    const day = estTime.getDate().toString().padStart(2, '0');
-    const year = estTime.getFullYear().toString().slice(-2);
-    
-    let hours = estTime.getHours();
+    let hours = now.getHours();
     const ampm = hours >= 12 ? 'PM' : 'AM';
     hours = hours % 12;
     hours = hours ? hours : 12;
     const hoursStr = hours.toString();
     
-    const minutes = estTime.getMinutes().toString().padStart(2, '0');
+    const minutes = now.getMinutes().toString().padStart(2, '0');
     
     const auditString = `${month}/${day}/${year} ${hoursStr}:${minutes} ${ampm} EST (${currentUser})`;
     
     pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(7);
+    pdf.setFontSize(6);
     pdf.setTextColor(102, 102, 102);
     pdf.text(auditString, x, y);
   }
@@ -717,21 +658,21 @@ export class PDFGenerator {
   }
 
   /**
-   * Generate test PDF for S-5492 verification and alignment checking
+   * Generate test PDF for S-5492 verification
    * @returns {Promise<Blob>} - Test PDF blob
    */
   static async generateTestPDF() {
     const testData = [{
       sku: 'TEST-S5492-001',
       barcode: 'TEST123456',
-      productName: 'Curaleaf Pink Champagne Premium Cannabis Capsules [10mg THC] 30-Count Bottle',
+      productName: 'Curaleaf Pink Champagne Premium Cannabis Capsules [10mg THC] 30-Count Bottle Test Product',
       brand: 'Test Brand',
       enhancedData: {
         labelQuantity: 4,
         caseQuantity: '48',
         boxCount: '2',
-        harvestDate: '01/15/2025',
-        packagedDate: '02/20/2025'
+        harvestDate: '01/15/25',
+        packagedDate: '02/20/25'
       },
       user: 'TestUser'
     }];
@@ -740,66 +681,65 @@ export class PDFGenerator {
   }
 
   /**
-   * Generate alignment test PDF with measurement guides
-   * @returns {Promise<Blob>} - Alignment test PDF
+   * Generate measurement test PDF showing exact dimensions
+   * @returns {Promise<Blob>} - Test PDF with measurements
    */
-  static async generateAlignmentTestPDF() {
+  static async generateMeasurementTestPDF() {
     const pdf = new jsPDF({
       orientation: 'portrait',
-      unit: 'pt', 
+      unit: 'pt',
       format: [612, 1008] // Legal size
     });
 
     // Draw page outline
     pdf.setDrawColor(0, 0, 255);
     pdf.setLineWidth(1);
-    pdf.rect(12, 12, 588, 984); // Printable area
-
-    // Draw measurement guides
-    pdf.setDrawColor(128, 128, 128);
-    pdf.setLineWidth(0.5);
-    
-    // Horizontal guides every inch
-    for (let i = 72; i < 1008; i += 72) {
-      pdf.line(0, i, 612, i);
-      pdf.setFontSize(8);
-      pdf.setTextColor(128, 128, 128);
-      pdf.text(`${Math.round(i/72)}"`, 5, i - 2);
-    }
-    
-    // Vertical guides every inch
-    for (let i = 72; i < 612; i += 72) {
-      pdf.line(i, 0, i, 1008);
-      pdf.text(`${Math.round(i/72)}"`, i + 2, 15);
-    }
-
-    // Draw all 4 label positions
-    for (let i = 0; i < 4; i++) {
-      const pos = this.calculateUlineS5492Position(i);
-      
-      // Label outline
-      pdf.setDrawColor(255, 0, 0);
-      pdf.setLineWidth(2);
-      pdf.rect(pos.x, pos.y, pos.width, pos.height);
-      
-      // Label info
-      pdf.setFontSize(12);
-      pdf.setTextColor(255, 0, 0);
-      pdf.text(`Label ${i + 1}`, pos.x + 10, pos.y + 20);
-      pdf.text(`${pos.width.toFixed(0)} × ${pos.height.toFixed(0)} pt`, pos.x + 10, pos.y + 35);
-      pdf.text(`${(pos.width/72).toFixed(2)}" × ${(pos.height/72).toFixed(2)}"`, pos.x + 10, pos.y + 50);
-    }
+    pdf.rect(0, 0, 612, 1008);
 
     // Title
     pdf.setFontSize(16);
     pdf.setTextColor(0, 0, 0);
-    pdf.text('Uline S-5492 Alignment Test - Legal Size (8.5" × 14")', 50, 40);
+    pdf.text('Uline S-5492 Test - HORIZONTAL Labels (6" WIDE × 4" TALL)', 50, 30);
+
+    // Draw all 4 label positions with measurements
+    for (let i = 0; i < 4; i++) {
+      const pos = this.calculateUlineS5492Position(i);
+      
+      // Label outline in red
+      pdf.setDrawColor(255, 0, 0);
+      pdf.setLineWidth(2);
+      pdf.rect(pos.x, pos.y, pos.width, pos.height);
+      
+      // Measurements
+      pdf.setFontSize(10);
+      pdf.setTextColor(255, 0, 0);
+      pdf.text(`Label ${i + 1} (HORIZONTAL)`, pos.x + 5, pos.y + 15);
+      pdf.text(`${(pos.width/72).toFixed(2)}" WIDE × ${(pos.height/72).toFixed(2)}" TALL`, pos.x + 5, pos.y + 28);
+      pdf.text(`${pos.width} × ${pos.height} points`, pos.x + 5, pos.y + 41);
+      
+      if (pos.isScaled) {
+        pdf.text(`Scaled: ${(pos.scaleFactor * 100).toFixed(1)}%`, pos.x + 5, pos.y + 54);
+      }
+      
+      // Center cross marks
+      const centerX = pos.x + pos.width / 2;
+      const centerY = pos.y + pos.height / 2;
+      pdf.setDrawColor(0, 255, 0);
+      pdf.line(centerX - 10, centerY, centerX + 10, centerY);
+      pdf.line(centerX, centerY - 10, centerX, centerY + 10);
+    }
+
+    // Page info
+    pdf.setFontSize(12);
+    pdf.setTextColor(0, 0, 0);
+    pdf.text('Legal Size: 8.5" × 14" (612 × 1008 pt)', 50, 50);
+    pdf.text('Original Label Size: 6" WIDE × 4" TALL (432 × 288 pt)', 50, 65);
 
     return pdf.output('blob');
   }
 
   /**
-   * Validation method for label data
+   * Validation method
    * @param {Array} labelDataArray - Label data to validate
    * @returns {Object} - Validation result
    */
@@ -839,62 +779,48 @@ export class PDFGenerator {
       estimatedPages: Math.ceil(totalLabels / specs.LABELS_PER_SHEET),
       labelFormat: 'S-5492',
       pageSize: 'Legal (8.5" × 14")',
-      labelsPerPage: specs.LABELS_PER_SHEET
+      labelsPerPage: specs.LABELS_PER_SHEET,
+      labelDimensions: '6" WIDE × 4" TALL (HORIZONTAL)'
     };
   }
 
   /**
-   * Get debug information about the S-5492 migration
+   * Get debug information
    * @returns {Object} - Debug information
    */
   static getDebugInfo() {
-    const specs = LabelFormatter.getLabelSpecs();
     const positions = [];
-
-    for (let i = 0; i < specs.LABELS_PER_SHEET; i++) {
-      positions.push({
-        index: i,
-        standard: this.calculateUlineS5492Position(i),
-        precise: this.calculateUlineS5492PositionPrecise(i)
-      });
+    for (let i = 0; i < 4; i++) {
+      positions.push(this.calculateUlineS5492Position(i));
     }
 
     return {
-      migration: {
-        from: 'S-21846 (7.75" × 4.75", 2 per sheet)',
-        to: 'S-5492 (6" × 4" horizontal, 4 per sheet)',
-        pageSize: 'Legal (8.5" × 14")',
-        status: 'Complete'
+      migration: 'Complete - S-21846 → S-5492',
+      labelSpecs: {
+        dimensions: '6" WIDE × 4" TALL',
+        dimensionsPoints: '432pt WIDE × 288pt TALL',
+        orientation: 'HORIZONTAL',
+        labelsPerSheet: 4,
+        layout: '2×2 grid'
       },
-      pageSize: { width: 612, height: 1008 },
-      printableArea: { width: 588, height: 984 },
-      labelSpecs: specs,
-      positioning: {
-        methods: ['standard', 'precise'],
-        totalLabelsPerSheet: specs.LABELS_PER_SHEET,
-        positions: positions
+      pageSize: {
+        format: 'Legal',
+        dimensions: '8.5" × 14"',
+        dimensionsPoints: '612pt × 1008pt'
       },
-      features: {
-        brandDetection: 'Automatic separation of known cannabis brands',
-        massiveFonts: 'Product names up to 40pt for visibility',
-        horizontalLayout: 'Optimized for 6" wide × 4" tall labels',
-        bottomFocused: 'Important info in easily accessible bottom section',
-        legalSize: 'Full legal size sheet utilization'
-      },
-      validation: {
-        physicalAlignment: 'Designed for exact Uline S-5492 perforation alignment',
-        printerCompatibility: 'HP E877 with 0.167" margins',
-        printSettings: 'Actual Size (no scaling) recommended'
-      }
+      positions: positions,
+      features: [
+        'HORIZONTAL 6" WIDE × 4" TALL labels',
+        'Proportional scaling to fit legal paper',
+        'Bottom-focused content layout',
+        'Massive product names',
+        'Brand detection and separation'
+      ]
     };
   }
 
-  // Legacy method compatibility
+  // Legacy compatibility methods
   static calculateUlineLabelPosition(labelIndex) {
-    return this.calculateUlineS5492Position(labelIndex % 4);
-  }
-
-  static calculateUlineS21846Position(labelIndex) {
     return this.calculateUlineS5492Position(labelIndex % 4);
   }
 }
