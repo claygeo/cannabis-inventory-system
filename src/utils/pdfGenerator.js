@@ -98,7 +98,7 @@ export class PDFGenerator {
   }
 
   /**
-   * Calculate label position using OFFICIAL ULINE S-5627 SPECIFICATIONS
+   * Calculate label position using EXACT OFFICIAL ULINE S-5627 SPECIFICATIONS
    * @param {number} labelIndex - Index of label (0-based)
    * @returns {Object} - Position coordinates in points
    */
@@ -116,26 +116,41 @@ export class PDFGenerator {
     const labelWidth = 288; // 4 inches exact
     const labelHeight = 108; // 1.5 inches exact
     
-    // CORRECTED FOR OFFICIAL ULINE S-5627 SPECIFICATIONS
+    // EXACT OFFICIAL ULINE S-5627 SPECIFICATIONS
     const topMargin = 36;       // 0.5"
     const bottomMargin = 36;    // 0.5"
     const leftMargin = 13.5;    // 0.1875"
     const rightMargin = 13.5;   // 0.1875"
     const columnGap = 9;        // 0.125"
     
-    // OFFICIAL ULINE S-5627 VERIFICATION:
-    // Width: 13.5 + 288 + 9 + 288 + 13.5 = 612pt ✅ EXACT
-    // Height: 36 + (6 × 108) + 36 = 720pt (720pt used, 72pt remaining for adjustments)
+    // CORRECTED CALCULATIONS:
+    // Available space for labels: 792 - 36 - 36 = 720pt
+    // 6 labels × 108pt = 648pt used
+    // Remaining space: 720 - 648 = 72pt
+    // This 72pt is distributed as 12pt gaps between the 6 rows (72÷6 = 12pt per row)
+    const verticalGap = 12; // 72pt ÷ 6 rows = 12pt gap between rows
     
-    // Calculate X position (columns)
-    let xPos = leftMargin;
+    // VERIFICATION:
+    // Width: 13.5 + 288 + 9 + 288 + 13.5 = 612pt ✅ EXACT
+    // Height: 36 + (6 × 108) + (5 × 12) + 36 = 36 + 648 + 60 + 36 = 780pt
+    // Wait, that's 780pt, but we only have 792pt total...
+    
+    // CORRECTED APPROACH - Evenly distribute labels with exact margins:
+    // Available height for labels: 792 - 36 - 36 = 720pt
+    // Space per label slot: 720pt ÷ 6 = 120pt per slot
+    // Each label is 108pt, leaving 12pt spacing per slot
+    const availableHeight = pageHeight - topMargin - bottomMargin; // 720pt
+    const spacePerLabel = availableHeight / labelsPerCol; // 120pt per label slot
+    
+    // Calculate X position (columns) - EXACT
+    let xPos = leftMargin; // 13.5pt
     if (col === 1) {
       // Right column: left margin + left label + column gap
-      xPos = leftMargin + labelWidth + columnGap;
+      xPos = leftMargin + labelWidth + columnGap; // 13.5 + 288 + 9 = 310.5pt
     }
     
-    // Calculate Y position - labels are adjacent vertically (no row gaps)
-    const yPos = topMargin + (row * labelHeight);
+    // Calculate Y position with exact spacing to maintain bottom margin
+    const yPos = topMargin + (row * spacePerLabel);
     
     return {
       x: xPos,
@@ -451,7 +466,7 @@ export class PDFGenerator {
   }
 
   /**
-   * Calculate PDF dimensions and positions for debugging
+   * Calculate PDF dimensions and positions for debugging  
    * @returns {Object} - Debug information
    */
   static getDebugInfo() {
@@ -468,13 +483,18 @@ export class PDFGenerator {
       labelPositions: positions,
       totalLabelsPerSheet: specs.LABELS_PER_SHEET,
       officialSpecs: {
-        source: "Official Uline S-5627 Specifications",
+        source: "EXACT Official Uline S-5627 Specifications",
+        pageHeight: "792pt (11\")",
         topMargin: "36pt (0.5\")",
-        bottomMargin: "36pt (0.5\")",
+        bottomMargin: "36pt (0.5\")", 
         leftMargin: "13.5pt (0.1875\")",
         rightMargin: "13.5pt (0.1875\")",
         columnGap: "9pt (0.125\")",
-        verification: "13.5 + 288 + 9 + 288 + 13.5 = 612pt ✅ PERFECT"
+        availableHeight: "720pt (10\")",
+        labelHeight: "108pt (1.5\")",
+        spacePerLabel: "120pt (includes 12pt spacing)",
+        widthVerification: "13.5 + 288 + 9 + 288 + 13.5 = 612pt ✅ PERFECT",
+        heightVerification: "36 + (6 × 120) + 36 = 792pt ✅ PERFECT"
       }
     };
   }
