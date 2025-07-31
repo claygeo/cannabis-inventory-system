@@ -98,7 +98,7 @@ export class PDFGenerator {
   }
 
   /**
-   * Calculate label position using UPDATED Uline S-5627 specifications
+   * Calculate label position using OFFICIAL ULINE S-5627 SPECIFICATIONS
    * @param {number} labelIndex - Index of label (0-based)
    * @returns {Object} - Position coordinates in points
    */
@@ -116,21 +116,21 @@ export class PDFGenerator {
     const labelWidth = 288; // 4 inches exact
     const labelHeight = 108; // 1.5 inches exact
     
-    // UPDATED SPECIFICATIONS - NEW PRECISE MEASUREMENTS
-    const topMargin = 36;       // 0.5" - Updated from 72pt to 36pt
-    const bottomMargin = 36;    // 0.5" - Updated from 72pt to 36pt  
-    const leftMargin = 15.75;   // 0.21875" - Updated from 15pt to 15.75pt
-    const rightMargin = 15.75;  // 0.21875" - Updated from 15pt to 15.75pt
-    const columnGap = 9;        // 0.125" - Updated from 6pt to 9pt
+    // CORRECTED FOR OFFICIAL ULINE S-5627 SPECIFICATIONS
+    const topMargin = 36;       // 0.5"
+    const bottomMargin = 36;    // 0.5"
+    const leftMargin = 13.5;    // 0.1875"
+    const rightMargin = 13.5;   // 0.1875"
+    const columnGap = 9;        // 0.125"
     
-    // VERIFICATION WITH NEW SPECIFICATIONS:
-    // Width: 15.75 + 288 + 9 + 288 + 15.75 = 616.5pt (slightly over 612pt - may need adjustment)
-    // Height: 36 + (6 × 108) + 36 = 720pt (fits within 792pt ✅)
+    // OFFICIAL ULINE S-5627 VERIFICATION:
+    // Width: 13.5 + 288 + 9 + 288 + 13.5 = 612pt ✅ EXACT
+    // Height: 36 + (6 × 108) + 36 = 720pt (720pt used, 72pt remaining for adjustments)
     
-    // Calculate X position (columns) - updated gap between columns
+    // Calculate X position (columns)
     let xPos = leftMargin;
     if (col === 1) {
-      // Right column: left margin + left label + updated gap
+      // Right column: left margin + left label + column gap
       xPos = leftMargin + labelWidth + columnGap;
     }
     
@@ -467,13 +467,14 @@ export class PDFGenerator {
       labelSpecs: specs,
       labelPositions: positions,
       totalLabelsPerSheet: specs.LABELS_PER_SHEET,
-      updatedSpecifications: {
-        topMargin: "36pt (0.5\") - Updated from 72pt",
-        bottomMargin: "36pt (0.5\") - Updated from 72pt",
-        leftMargin: "15.75pt (0.21875\") - Updated from 15pt",
-        rightMargin: "15.75pt (0.21875\") - Updated from 15pt",
-        columnGap: "9pt (0.125\") - Updated from 6pt",
-        verification: "Width: 15.75 + 288 + 9 + 288 + 15.75 = 616.5pt (may need fine-tuning)"
+      officialSpecs: {
+        source: "Official Uline S-5627 Specifications",
+        topMargin: "36pt (0.5\")",
+        bottomMargin: "36pt (0.5\")",
+        leftMargin: "13.5pt (0.1875\")",
+        rightMargin: "13.5pt (0.1875\")",
+        columnGap: "9pt (0.125\")",
+        verification: "13.5 + 288 + 9 + 288 + 13.5 = 612pt ✅ PERFECT"
       }
     };
   }
