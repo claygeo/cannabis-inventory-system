@@ -1,42 +1,54 @@
-// CORRECTED S-5492 specifications - HORIZONTAL labels (6" WIDE × 4" TALL)
+// S-5492 ROTATED specifications - Labels positioned sideways on legal paper
 const LABEL_SPECS = {
-  // S-5492 Physical Specifications: Uline 4" × 6" = 6" WIDE × 4" TALL
-  WIDTH_INCHES: 6,        // 6" WIDE (horizontal orientation)
-  HEIGHT_INCHES: 4,       // 4" TALL 
-  LABELS_PER_SHEET: 4,    // 2×2 grid on legal size
-  SHEET_WIDTH: 8.5,       // Legal width
-  SHEET_HEIGHT: 14,       // Legal height
-  ORIENTATION: 'horizontal', // Labels are WIDER than tall
+  // S-5492 Physical Specifications: 4" × 6" positioned SIDEWAYS
+  WIDTH_INCHES: 6,        // 6" wide when paper is rotated 90°
+  HEIGHT_INCHES: 4,       // 4" tall when paper is rotated 90°
+  LABELS_PER_SHEET: 4,    // 2×2 grid (when rotated)
+  SHEET_WIDTH: 8.5,       // Legal width (printed orientation)
+  SHEET_HEIGHT: 14,       // Legal height (printed orientation)
+  ORIENTATION: 'rotated', // Labels positioned sideways
+  ROTATION_ANGLE: 90,     // Rotate paper 90° clockwise to read
+  WORKFLOW: 'print_rotate_peel',
+  
+  // HP E877 Printer specs
+  PRINTER_MARGIN: 0.167,  // 0.167" margins on all sides
+  PRINTABLE_WIDTH: 8.17,  // 8.5" - (2 × 0.167")
+  PRINTABLE_HEIGHT: 13.67, // 14" - (2 × 0.167")
   
   // Migration info
   REPLACES: 'S-21846',
   MIGRATION_DATE: '2025-07',
-  VERSION: '6.0.0'
+  VERSION: '6.1.0'
 };
 
-const S5492_LAYOUT = {
+const S5492_ROTATED_LAYOUT = {
   PRODUCT_NAME: {
-    MAX_FONT_SIZE: 36,      // Large for horizontal space
+    MAX_FONT_SIZE: 32,      // Large for visibility after rotation
     MIN_FONT_SIZE: 12,      // Minimum readable
-    MAX_LINES: 4,           // Maximum lines for wrapping
-    HEIGHT_PERCENTAGE: 0.6  // 60% of label height
+    MAX_LINES: 3,           // Fewer lines for rotated space
+    HEIGHT_PERCENTAGE: 0.65 // 65% of rotated label height
   },
   BRAND_NAME: {
-    MAX_FONT_SIZE: 24,      // Smaller than product name
+    MAX_FONT_SIZE: 20,      // Proportional to product name
     MIN_FONT_SIZE: 10,
-    HEIGHT_PERCENTAGE: 0.15 // 15% of label height
+    HEIGHT_PERCENTAGE: 0.15 // 15% of rotated label height
   },
   BOTTOM_SECTION: {
-    HEIGHT_PERCENTAGE: 0.4, // 40% of label height
-    BARCODE_WIDTH: 25,      // 25% of label width
-    TEXT_BOX_WIDTH: 25,     // 25% of label width
-    DATES_WIDTH: 25,        // 25% of label width
-    CASE_BOX_WIDTH: 25      // 25% of label width
+    HEIGHT_PERCENTAGE: 0.35, // 35% of rotated label height
+    BARCODE_WIDTH: 25,       // 25% of rotated label width
+    TEXT_BOX_WIDTH: 25,      // 25% of rotated label width
+    DATES_WIDTH: 25,         // 25% of rotated label width
+    CASE_BOX_WIDTH: 25       // 25% of rotated label width
   },
   AUDIT_TRAIL: {
     FONT_SIZE: 6,
     COLOR: [102, 102, 102], // Gray
     POSITION: 'bottom-left'
+  },
+  ROTATION_INFO: {
+    angle: 90,
+    direction: 'clockwise',
+    workflow: 'Print PDF → Rotate paper 90° → Read/peel labels'
   }
 };
 
@@ -83,7 +95,7 @@ const VALIDATION = {
     /^\d{4}-\d{1,2}-\d{1,2}$/        // YYYY-MM-DD
   ],
   PRODUCT_NAME: {
-    maxLength: 150,        // Reasonable for horizontal layout
+    maxLength: 120,        // Shorter for rotated space constraints
     minLength: 3
   },
   BARCODE: {
@@ -94,12 +106,12 @@ const VALIDATION = {
 };
 
 /**
- * Label formatting utilities for Uline S-5492 labels (6" WIDE × 4" TALL HORIZONTAL)
- * Enhanced with comprehensive brand detection optimized for horizontal layout
+ * Label formatting utilities for Uline S-5492 ROTATED labels
+ * Labels positioned sideways - rotate paper 90° for reading/peeling
  */
 export class LabelFormatter {
   /**
-   * Format label data for S-5492 PDF generation
+   * Format label data for S-5492 ROTATED PDF generation
    * @param {Object} item - Inventory item
    * @param {Object} enhancedData - Enhanced label data
    * @param {string} username - Username for audit trail
@@ -113,7 +125,7 @@ export class LabelFormatter {
     
     return {
       // Product information with brand detection
-      productName: this.formatProductNameForS5492(item.productName),
+      productName: this.formatProductNameForRotated(item.productName),
       originalProductName: item.productName,
       sku: item.sku || '',
       barcode: item.barcode || item.sku || this.generateFallbackBarcode(item),
@@ -122,19 +134,19 @@ export class LabelFormatter {
       // Brand separation info
       brandInfo: brandInfo,
       
-      // Enhanced data with S-5492 considerations
+      // Enhanced data with rotated layout considerations
       labelQuantity: Math.max(1, parseInt(enhancedData?.labelQuantity || '1')),
       caseQuantity: enhancedData?.caseQuantity || '',
       boxCount: Math.max(1, parseInt(enhancedData?.boxCount || '1')),
       harvestDate: this.formatDate(enhancedData?.harvestDate),
       packagedDate: this.formatDate(enhancedData?.packagedDate),
       
-      // Display formats - Enhanced for S-5492
-      barcodeDisplay: this.formatBarcodeForS5492Display(item.barcode || item.sku || ''),
+      // Display formats - Enhanced for rotated layout
+      barcodeDisplay: this.formatBarcodeForRotatedDisplay(item.barcode || item.sku || ''),
       
-      // Font size calculations for horizontal layout
-      productNameFontSize: this.calculateS5492ProductNameFontSize(brandInfo.productName),
-      brandFontSize: brandInfo.brand ? this.calculateBrandFontSize(brandInfo.brand) : null,
+      // Font size calculations for rotated layout
+      productNameFontSize: this.calculateRotatedProductNameFontSize(brandInfo.productName),
+      brandFontSize: brandInfo.brand ? this.calculateRotatedBrandFontSize(brandInfo.brand) : null,
       
       // Audit information
       username: username || 'Unknown',
@@ -145,17 +157,21 @@ export class LabelFormatter {
       source: item.source || 'Unknown',
       displaySource: item.displaySource || '[UNK]',
       
-      // Layout optimization flags
-      layoutOptimizations: this.calculateLayoutOptimizations(item.productName, brandInfo)
+      // Rotation-specific info
+      rotationInfo: {
+        angle: LABEL_SPECS.ROTATION_ANGLE,
+        workflow: LABEL_SPECS.WORKFLOW,
+        instructions: 'Print → Rotate paper 90° clockwise → Peel labels'
+      }
     };
   }
 
   /**
-   * Format product name optimized for S-5492 horizontal labels
+   * Format product name optimized for rotated labels
    * @param {string} productName - Raw product name
    * @returns {string} - Formatted product name
    */
-  static formatProductNameForS5492(productName) {
+  static formatProductNameForRotated(productName) {
     if (!productName) return 'Product Name';
     
     // Clean and normalize
@@ -163,10 +179,9 @@ export class LabelFormatter {
     formatted = formatted.replace(/\s+/g, ' '); // Collapse multiple spaces
     formatted = formatted.replace(/[""'']/g, '"'); // Normalize quotes
     
-    // For horizontal S-5492, we can accommodate longer names
+    // For rotated layout, be more conservative with length
     const maxLength = VALIDATION.PRODUCT_NAME.maxLength;
     if (formatted.length > maxLength) {
-      // Intelligent truncation - try to break at word boundaries
       const truncated = formatted.substring(0, maxLength - 3);
       const lastSpace = truncated.lastIndexOf(' ');
       if (lastSpace > maxLength * 0.8) {
@@ -180,7 +195,7 @@ export class LabelFormatter {
   }
 
   /**
-   * Enhanced brand extraction with comprehensive cannabis brand database
+   * Enhanced brand extraction
    * @param {string} productName - Full product name
    * @returns {Object} - Brand and remaining product name
    */
@@ -205,11 +220,8 @@ export class LabelFormatter {
 
     // Check for common brand patterns
     const patterns = [
-      // "Brand Name - Product" or "Brand Name – Product"
       /^([A-Za-z\s&'-]+?)\s*[-–]\s*(.+)$/,
-      // "Brand Name: Product"
       /^([A-Za-z\s&'-]+?)\s*:\s*(.+)$/,
-      // "Brand Name | Product"
       /^([A-Za-z\s&'-]+?)\s*\|\s*(.+)$/
     ];
 
@@ -219,8 +231,7 @@ export class LabelFormatter {
         const potentialBrand = match[1].trim();
         const productPart = match[2].trim();
         
-        // Only treat as brand if it's reasonably short
-        if (potentialBrand.length <= 25 && 
+        if (potentialBrand.length <= 20 && 
             potentialBrand.split(/\s+/).length <= 3 &&
             !potentialBrand.match(/\d+mg|\d+g|\d+ml|capsule|gummies|flower|concentrate/i)) {
           
@@ -234,7 +245,6 @@ export class LabelFormatter {
       }
     }
 
-    // No brand detected
     return {
       brand: '',
       productName: trimmed,
@@ -244,28 +254,25 @@ export class LabelFormatter {
   }
 
   /**
-   * Format barcode for S-5492 display (spaces for better horizontal readability)
+   * Format barcode for rotated display
    * @param {string} barcode - Raw barcode
    * @returns {string} - Spaced barcode for display
    */
-  static formatBarcodeForS5492Display(barcode) {
+  static formatBarcodeForRotatedDisplay(barcode) {
     if (!barcode) return '';
     
-    // Remove any existing formatting
     const clean = barcode.replace(/[^A-Za-z0-9]/g, '');
     
-    // For S-5492 horizontal layout, use optimal spacing
-    if (clean.length <= 6) {
+    // For rotated layout, use compact spacing
+    if (clean.length <= 8) {
       return clean.replace(/(.{2})/g, '$1 ').trim();
-    } else if (clean.length <= 12) {
-      return clean.replace(/(.{3})/g, '$1 ').trim();
     } else {
-      return clean.replace(/(.{4})/g, '$1 ').trim();
+      return clean.replace(/(.{3})/g, '$1 ').trim();
     }
   }
 
   /**
-   * Enhanced date formatting for S-5492 labels
+   * Enhanced date formatting for rotated labels (compact)
    * @param {string} dateStr - Raw date string
    * @returns {string} - Formatted date
    */
@@ -274,7 +281,7 @@ export class LabelFormatter {
     
     const cleaned = dateStr.toString().replace(/[^\d\/\-]/g, '');
     
-    // Handle various input formats and convert to MM/DD/YY (shorter for horizontal space)
+    // Convert to MM/DD/YY format (compact for rotated space)
     const formats = [
       { regex: /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/, format: (m, d, y) => `${m}/${d}/${y.slice(-2)}` },
       { regex: /^(\d{1,2})\/(\d{1,2})\/(\d{2})$/, format: '$1/$2/$3' },
@@ -294,16 +301,11 @@ export class LabelFormatter {
       }
     }
     
-    // If no standard format matches, return shortened version
-    if (cleaned.match(/\d+[\/\-]\d+[\/\-]\d+/)) {
-      return cleaned.replace(/-/g, '/').replace(/\/(\d{4})$/, '/$1'.slice(-3)); // Convert to 2-digit year
-    }
-    
-    return dateStr;
+    return cleaned.replace(/-/g, '/');
   }
 
   /**
-   * Format audit string for S-5492 labels
+   * Format audit string for rotated labels
    * @param {Date} timestamp - Timestamp
    * @param {string} username - Username
    * @returns {string} - Formatted audit string
@@ -323,265 +325,100 @@ export class LabelFormatter {
     
     const dateStr = `${month}/${day}/${year}`;
     const timeStr = `${hoursStr}:${minutes} ${ampm}`;
-    const user = (username || 'Unknown').substring(0, 15); // Reasonable length
+    const user = (username || 'Unknown').substring(0, 12); // Compact for rotated
     
     return `${dateStr} ${timeStr} EST (${user})`;
   }
 
   /**
-   * Calculate optimal font size for S-5492 product names (optimized for horizontal space)
+   * Calculate optimal font size for rotated product names
    * @param {string} text - Product name text
-   * @param {number} maxWidth - Maximum width in points (default for scaled labels)
-   * @param {number} maxHeight - Maximum height in points
+   * @param {number} maxWidth - Maximum width in rotated view
+   * @param {number} maxHeight - Maximum height in rotated view
    * @param {number} startingSize - Starting font size
    * @returns {number} - Optimal font size
    */
-  static calculateS5492ProductNameFontSize(text, maxWidth = 270, maxHeight = 80, startingSize = 36) {
+  static calculateRotatedProductNameFontSize(text, maxWidth = 380, maxHeight = 100, startingSize = 32) {
     if (!text) return startingSize;
     
     const length = text.length;
     const wordCount = text.split(' ').length;
     
-    // Start with maximum size appropriate for horizontal layout
+    // Start with size appropriate for rotated viewing
     let fontSize = startingSize;
     
-    // Adjust based on character count - optimized for horizontal space
-    if (length > 100) fontSize = Math.max(16, startingSize - 10);
-    else if (length > 80) fontSize = Math.max(20, startingSize - 8);
-    else if (length > 60) fontSize = Math.max(24, startingSize - 6);
-    else if (length > 40) fontSize = Math.max(28, startingSize - 4);
-    else if (length > 20) fontSize = Math.max(32, startingSize - 2);
+    // Adjust based on character count
+    if (length > 80) fontSize = Math.max(16, startingSize - 8);
+    else if (length > 60) fontSize = Math.max(20, startingSize - 6);
+    else if (length > 40) fontSize = Math.max(24, startingSize - 4);
+    else if (length > 20) fontSize = Math.max(28, startingSize - 2);
     
-    // Adjust based on word count (affects line wrapping)
-    if (wordCount > 10) fontSize = Math.max(fontSize - 4, 14);
-    else if (wordCount > 8) fontSize = Math.max(fontSize - 2, 16);
+    // Adjust based on word count
+    if (wordCount > 8) fontSize = Math.max(fontSize - 4, 14);
+    else if (wordCount > 6) fontSize = Math.max(fontSize - 2, 16);
     
-    // Ensure within bounds
     return Math.max(
-      Math.min(fontSize, S5492_LAYOUT.PRODUCT_NAME.MAX_FONT_SIZE),
-      S5492_LAYOUT.PRODUCT_NAME.MIN_FONT_SIZE
+      Math.min(fontSize, S5492_ROTATED_LAYOUT.PRODUCT_NAME.MAX_FONT_SIZE),
+      S5492_ROTATED_LAYOUT.PRODUCT_NAME.MIN_FONT_SIZE
     );
   }
 
   /**
-   * Calculate optimal font size for brand names in horizontal layout
+   * Calculate optimal font size for rotated brand names
    * @param {string} brandText - Brand text
-   * @param {number} maxWidth - Maximum width in points
-   * @param {number} maxHeight - Maximum height in points
+   * @param {number} maxWidth - Maximum width in rotated view
+   * @param {number} maxHeight - Maximum height in rotated view
    * @returns {number} - Optimal font size
    */
-  static calculateBrandFontSize(brandText, maxWidth = 270, maxHeight = 30) {
-    if (!brandText) return S5492_LAYOUT.BRAND_NAME.MAX_FONT_SIZE;
+  static calculateRotatedBrandFontSize(brandText, maxWidth = 380, maxHeight = 30) {
+    if (!brandText) return S5492_ROTATED_LAYOUT.BRAND_NAME.MAX_FONT_SIZE;
     
     const length = brandText.length;
-    let fontSize = S5492_LAYOUT.BRAND_NAME.MAX_FONT_SIZE; // 24pt
+    let fontSize = S5492_ROTATED_LAYOUT.BRAND_NAME.MAX_FONT_SIZE; // 20pt
     
-    // Brands are usually shorter, but consider horizontal space
-    if (length > 20) fontSize = 18;
-    else if (length > 15) fontSize = 20;
-    else if (length > 10) fontSize = 22;
+    if (length > 15) fontSize = 16;
+    else if (length > 10) fontSize = 18;
     
     return Math.max(
-      Math.min(fontSize, S5492_LAYOUT.BRAND_NAME.MAX_FONT_SIZE),
-      S5492_LAYOUT.BRAND_NAME.MIN_FONT_SIZE
+      Math.min(fontSize, S5492_ROTATED_LAYOUT.BRAND_NAME.MAX_FONT_SIZE),
+      S5492_ROTATED_LAYOUT.BRAND_NAME.MIN_FONT_SIZE
     );
   }
 
   /**
-   * Advanced text fit estimation for S-5492 horizontal layout
-   * @param {string} text - Text to measure
-   * @param {number} fontSize - Font size in points
-   * @param {number} maxWidth - Maximum width in points
-   * @param {number} maxHeight - Maximum height in points
-   * @param {string} fontWeight - Font weight ('normal' or 'bold')
-   * @returns {Object} - Detailed fit analysis
-   */
-  static estimateS5492TextFit(text, fontSize, maxWidth, maxHeight, fontWeight = 'normal') {
-    if (!text) return { fits: true, lineCount: 0 };
-    
-    // Accurate measurements for horizontal layout
-    const charWidthMultiplier = fontWeight === 'bold' ? 0.65 : 0.6;
-    const charWidth = fontSize * charWidthMultiplier;
-    const lineHeight = fontSize * 1.1; // Line spacing
-    
-    const charsPerLine = Math.floor(maxWidth / charWidth);
-    const words = text.split(' ');
-    
-    let lines = 1;
-    let currentLineLength = 0;
-    let longestLineLength = 0;
-    
-    for (const word of words) {
-      const wordLength = word.length;
-      
-      if (currentLineLength + wordLength + 1 > charsPerLine && currentLineLength > 0) {
-        lines++;
-        longestLineLength = Math.max(longestLineLength, currentLineLength);
-        currentLineLength = wordLength;
-      } else {
-        currentLineLength += wordLength + (currentLineLength > 0 ? 1 : 0);
-      }
-    }
-    
-    longestLineLength = Math.max(longestLineLength, currentLineLength);
-    const totalHeight = lines * lineHeight;
-    const actualWidth = longestLineLength * charWidth;
-    
-    return {
-      fits: totalHeight <= maxHeight && actualWidth <= maxWidth,
-      lineCount: lines,
-      estimatedHeight: totalHeight,
-      estimatedWidth: actualWidth,
-      charsPerLine,
-      longestLineLength,
-      utilizationPercent: {
-        height: Math.min(100, (totalHeight / maxHeight) * 100),
-        width: Math.min(100, (actualWidth / maxWidth) * 100)
-      },
-      canIncrease: totalHeight < maxHeight * 0.8 && actualWidth < maxWidth * 0.8
-    };
-  }
-
-  /**
-   * Auto-fit font size for S-5492 horizontal labels
+   * Auto-fit font size for rotated labels
    * @param {string} text - Text to fit
-   * @param {number} maxWidth - Maximum width in points
-   * @param {number} maxHeight - Maximum height in points
+   * @param {number} maxWidth - Maximum width in rotated view
+   * @param {number} maxHeight - Maximum height in rotated view
    * @param {number} startingSize - Starting font size
    * @param {string} fontWeight - Font weight
    * @returns {number} - Optimal font size
    */
-  static autoFitFontSize(text, maxWidth = 270, maxHeight = 80, startingSize = 36, fontWeight = 'normal') {
+  static autoFitFontSize(text, maxWidth = 380, maxHeight = 100, startingSize = 32, fontWeight = 'normal') {
     if (!text) return startingSize;
     
-    let fontSize = startingSize;
-    let bestFit = null;
-    const maxAttempts = 20;
-    let attempts = 0;
+    // Simplified fitting for rotated layout
+    const charWidthMultiplier = fontWeight === 'bold' ? 0.65 : 0.6;
+    const estimatedWidth = text.length * (startingSize * charWidthMultiplier);
     
-    // Try to find the largest font size that fits
-    while (attempts < maxAttempts) {
-      const fit = this.estimateS5492TextFit(text, fontSize, maxWidth, maxHeight, fontWeight);
-      
-      if (fit.fits) {
-        bestFit = { fontSize, fit };
-        
-        // Try to increase if we have room
-        if (fit.canIncrease && fontSize < startingSize) {
-          fontSize += 1;
-          attempts++;
-          continue;
-        } else {
-          break; // Found a good fit
-        }
-      } else {
-        // Reduce font size
-        fontSize = Math.max(fontSize - 1, S5492_LAYOUT.PRODUCT_NAME.MIN_FONT_SIZE);
-        if (fontSize <= S5492_LAYOUT.PRODUCT_NAME.MIN_FONT_SIZE) break;
-      }
-      
-      attempts++;
+    if (estimatedWidth > maxWidth) {
+      const scaleFactor = maxWidth / estimatedWidth;
+      return Math.max(
+        Math.floor(startingSize * scaleFactor),
+        S5492_ROTATED_LAYOUT.PRODUCT_NAME.MIN_FONT_SIZE
+      );
     }
     
-    return bestFit ? bestFit.fontSize : Math.max(fontSize, S5492_LAYOUT.PRODUCT_NAME.MIN_FONT_SIZE);
+    return Math.min(startingSize, S5492_ROTATED_LAYOUT.PRODUCT_NAME.MAX_FONT_SIZE);
   }
 
   /**
-   * Calculate layout optimizations for specific product
-   * @param {string} originalProductName - Original product name
-   * @param {Object} brandInfo - Brand extraction info
-   * @returns {Object} - Layout optimization flags
-   */
-  static calculateLayoutOptimizations(originalProductName, brandInfo) {
-    const totalLength = originalProductName ? originalProductName.length : 0;
-    const hasLongProductName = totalLength > 60;
-    const hasVeryLongProductName = totalLength > 100;
-    const wordCount = originalProductName ? originalProductName.split(' ').length : 0;
-    
-    return {
-      hasLongProductName,
-      hasVeryLongProductName,
-      highWordCount: wordCount > 8,
-      brandDetected: brandInfo.brandDetected,
-      recommendSmallerFont: hasVeryLongProductName || wordCount > 12,
-      recommendFewerLines: wordCount > 10,
-      textComplexity: this.assessTextComplexity(originalProductName),
-      layoutSuggestions: this.generateLayoutSuggestions(totalLength, wordCount, brandInfo.brandDetected)
-    };
-  }
-
-  /**
-   * Assess text complexity for layout optimization
-   * @param {string} text - Text to assess
-   * @returns {string} - Complexity level
-   */
-  static assessTextComplexity(text) {
-    if (!text) return 'simple';
-    
-    const length = text.length;
-    const wordCount = text.split(' ').length;
-    const hasNumbers = /\d/.test(text);
-    const hasBrackets = /[\[\]()]/.test(text);
-    const hasSpecialChars = /[&@#$%]/.test(text);
-    
-    let complexityScore = 0;
-    
-    if (length > 80) complexityScore += 2;
-    else if (length > 50) complexityScore += 1;
-    
-    if (wordCount > 10) complexityScore += 2;
-    else if (wordCount > 6) complexityScore += 1;
-    
-    if (hasNumbers) complexityScore += 1;
-    if (hasBrackets) complexityScore += 1;
-    if (hasSpecialChars) complexityScore += 1;
-    
-    if (complexityScore >= 5) return 'very_complex';
-    if (complexityScore >= 3) return 'complex';
-    if (complexityScore >= 1) return 'moderate';
-    return 'simple';
-  }
-
-  /**
-   * Generate layout suggestions based on content analysis
-   * @param {number} textLength - Text length
-   * @param {number} wordCount - Word count
-   * @param {boolean} hasBrand - Has detected brand
-   * @returns {Array} - Array of suggestions
-   */
-  static generateLayoutSuggestions(textLength, wordCount, hasBrand) {
-    const suggestions = [];
-    
-    if (textLength > 100) {
-      suggestions.push('Consider shortening product name for better horizontal layout');
-    }
-    
-    if (wordCount > 12) {
-      suggestions.push('High word count may require smaller font in horizontal layout');
-    }
-    
-    if (!hasBrand && textLength > 60) {
-      suggestions.push('Long product name without brand - will use full horizontal space');
-    }
-    
-    if (hasBrand) {
-      suggestions.push('Brand detected - will display separately above product name');
-    }
-    
-    if (textLength < 25) {
-      suggestions.push('Short product name - can use very large font for maximum visibility');
-    }
-    
-    return suggestions;
-  }
-
-  /**
-   * Comprehensive validation for S-5492 label data
+   * Validate S-5492 rotated label data
    * @param {Object} item - Inventory item
    * @param {Object} enhancedData - Enhanced data
    * @returns {Object} - Validation result
    */
-  static validateS5492LabelData(item, enhancedData) {
+  static validateS5492RotatedLabelData(item, enhancedData) {
     const errors = [];
     const warnings = [];
     
@@ -593,110 +430,49 @@ export class LabelFormatter {
     if (!item.productName) {
       warnings.push('Product name is missing - label may be hard to identify');
     } else {
-      // Product name validation
       if (item.productName.length < VALIDATION.PRODUCT_NAME.minLength) {
         warnings.push('Product name is very short');
       }
       if (item.productName.length > VALIDATION.PRODUCT_NAME.maxLength) {
-        warnings.push('Product name is long and may not display optimally on horizontal S-5492 labels');
+        warnings.push('Product name is long - may not display optimally in rotated layout');
       }
     }
     
-    // Barcode validation
-    if (item.barcode) {
-      const barcodeClean = item.barcode.replace(/[^A-Za-z0-9]/g, '');
-      if (barcodeClean.length < VALIDATION.BARCODE.minLength) {
-        warnings.push('Barcode is very short and may not scan properly');
-      }
-      if (barcodeClean.length > VALIDATION.BARCODE.maxLength) {
-        warnings.push('Barcode is very long and may not fit in horizontal layout');
-      }
-      if (!VALIDATION.BARCODE.allowedChars.test(barcodeClean)) {
-        errors.push('Barcode contains invalid characters (only letters and numbers allowed)');
-      }
-    }
-    
-    // Enhanced data validation for S-5492
+    // Enhanced data validation
     if (enhancedData?.labelQuantity) {
       const qty = parseInt(enhancedData.labelQuantity);
       if (isNaN(qty) || qty < VALIDATION.LABEL_QUANTITY.min || qty > VALIDATION.LABEL_QUANTITY.max) {
         errors.push(`Label quantity must be between ${VALIDATION.LABEL_QUANTITY.min} and ${VALIDATION.LABEL_QUANTITY.max}`);
       } else if (qty > VALIDATION.LABEL_QUANTITY.warningThreshold) {
         const pages = Math.ceil(qty / LABEL_SPECS.LABELS_PER_SHEET);
-        warnings.push(`Large label quantity (${qty}) will require ${pages} legal size sheets with S-5492 format`);
-      }
-    }
-    
-    if (enhancedData?.caseQuantity) {
-      const qty = parseInt(enhancedData.caseQuantity);
-      if (isNaN(qty) || qty < VALIDATION.CASE_QUANTITY.min || qty > VALIDATION.CASE_QUANTITY.max) {
-        errors.push(`Case quantity must be between ${VALIDATION.CASE_QUANTITY.min} and ${VALIDATION.CASE_QUANTITY.max}`);
-      }
-    }
-    
-    if (enhancedData?.boxCount) {
-      const count = parseInt(enhancedData.boxCount);
-      if (isNaN(count) || count < VALIDATION.BOX_COUNT.min || count > VALIDATION.BOX_COUNT.max) {
-        errors.push(`Box count must be between ${VALIDATION.BOX_COUNT.min} and ${VALIDATION.BOX_COUNT.max}`);
+        warnings.push(`Large label quantity (${qty}) will require ${pages} legal size sheets`);
       }
     }
     
     // Date validation
     if (enhancedData?.harvestDate && !this.isValidDate(enhancedData.harvestDate)) {
-      warnings.push('Harvest date format may not be valid (expected MM/DD/YYYY or MM/DD/YY)');
+      warnings.push('Harvest date format may not be valid');
     }
     
     if (enhancedData?.packagedDate && !this.isValidDate(enhancedData.packagedDate)) {
-      warnings.push('Packaged date format may not be valid (expected MM/DD/YYYY or MM/DD/YY)');
+      warnings.push('Packaged date format may not be valid');
     }
     
-    // S-5492 specific validations
+    // Rotation-specific warnings
     const brandInfo = this.extractBrandFromProductName(item.productName);
     if (brandInfo.brandDetected) {
-      warnings.push(`Brand "${brandInfo.brand}" detected - will be displayed separately for better horizontal layout`);
+      warnings.push(`Brand "${brandInfo.brand}" detected - will be displayed separately in rotated layout`);
     }
     
     return {
       isValid: errors.length === 0,
       errors,
       warnings,
-      labelFormat: 'S-5492',
-      orientation: 'horizontal',
-      brandInfo: brandInfo,
-      recommendations: this.generateValidationRecommendations(item, enhancedData, brandInfo)
+      labelFormat: 'S-5492 (ROTATED)',
+      orientation: 'rotated',
+      workflow: 'Print → Rotate 90° → Peel',
+      brandInfo: brandInfo
     };
-  }
-
-  /**
-   * Generate recommendations based on validation
-   * @param {Object} item - Inventory item
-   * @param {Object} enhancedData - Enhanced data
-   * @param {Object} brandInfo - Brand info
-   * @returns {Array} - Recommendations
-   */
-  static generateValidationRecommendations(item, enhancedData, brandInfo) {
-    const recommendations = [];
-    
-    if (!item.barcode && !item.sku) {
-      recommendations.push('Add a barcode or SKU for better inventory tracking');
-    }
-    
-    if (brandInfo.brandDetected) {
-      recommendations.push(`Brand "${brandInfo.brand}" will be displayed prominently in horizontal layout`);
-    }
-    
-    const textComplexity = this.assessTextComplexity(item.productName);
-    if (textComplexity === 'very_complex') {
-      recommendations.push('Consider simplifying product name for better horizontal label readability');
-    }
-    
-    const qty = parseInt(enhancedData?.labelQuantity || '1');
-    if (qty > 8) {
-      const pages = Math.ceil(qty / LABEL_SPECS.LABELS_PER_SHEET);
-      recommendations.push(`${qty} labels will require ${pages} legal size sheets (4 labels per sheet)`);
-    }
-    
-    return recommendations;
   }
 
   /**
@@ -715,59 +491,33 @@ export class LabelFormatter {
    * @returns {string} - Fallback barcode
    */
   static generateFallbackBarcode(item) {
-    // Create a simple fallback barcode from available data
     const base = item.sku || item.productName || 'UNKNOWN';
     const clean = base.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
-    const truncated = clean.substring(0, 12);
-    
-    // Add timestamp suffix to make unique
+    const truncated = clean.substring(0, 10);
     const timestamp = Date.now().toString().slice(-4);
-    
     return truncated + timestamp;
   }
 
   /**
-   * Format multiple labels for S-5492
-   * @param {Array} items - Array of inventory items
-   * @param {Object} globalEnhancedData - Global enhanced data settings
-   * @param {string} username - Username for audit
-   * @returns {Array} - Array of formatted label data
-   */
-  static formatMultipleS5492Labels(items, globalEnhancedData, username) {
-    return items.map((item, index) => {
-      try {
-        return this.formatLabelData(item, globalEnhancedData, username);
-      } catch (error) {
-        console.error(`Error formatting label ${index + 1}:`, error);
-        return {
-          ...this.formatLabelData({}, globalEnhancedData, username),
-          error: `Formatting error: ${error.message}`,
-          originalItem: item
-        };
-      }
-    });
-  }
-
-  /**
-   * Get comprehensive S-5492 label specifications
+   * Get comprehensive S-5492 rotated label specifications
    * @returns {Object} - Complete label specifications
    */
   static getLabelSpecs() {
     return {
       ...LABEL_SPECS,
       dimensionsPoints: {
-        width: LABEL_SPECS.WIDTH_INCHES * 72,  // 432pt (6" WIDE)
-        height: LABEL_SPECS.HEIGHT_INCHES * 72  // 288pt (4" TALL)
+        width: LABEL_SPECS.WIDTH_INCHES * 72,  // 432pt (6" in rotated view)
+        height: LABEL_SPECS.HEIGHT_INCHES * 72  // 288pt (4" in rotated view)
       },
       printableArea: {
-        width: (LABEL_SPECS.WIDTH_INCHES * 72) - 12, // 420pt (with margins)
-        height: (LABEL_SPECS.HEIGHT_INCHES * 72) - 12 // 276pt (with margins)
+        width: LABEL_SPECS.PRINTABLE_WIDTH * 72,   // ~588pt
+        height: LABEL_SPECS.PRINTABLE_HEIGHT * 72  // ~984pt
       },
       pageSize: {
         width: LABEL_SPECS.SHEET_WIDTH * 72,    // 612pt (8.5")
         height: LABEL_SPECS.SHEET_HEIGHT * 72   // 1008pt (14")
       },
-      layout: S5492_LAYOUT,
+      layout: S5492_ROTATED_LAYOUT,
       brandDetection: {
         enabled: true,
         brands: CANNABIS_BRANDS,
@@ -775,17 +525,27 @@ export class LabelFormatter {
         method: 'automatic'
       },
       validation: VALIDATION,
+      rotation: {
+        angle: LABEL_SPECS.ROTATION_ANGLE,
+        workflow: LABEL_SPECS.WORKFLOW,
+        instructions: [
+          'Print PDF on legal size paper (8.5" × 14")',
+          'Use HP E877 with "Actual Size" setting',
+          'Rotate paper 90° clockwise after printing',
+          'Labels are now readable and peelable',
+          'Each label: 6" wide × 4" tall (in rotated view)'
+        ]
+      },
       migration: {
         from: 'S-21846 (7.75" × 4.75", 2 per sheet)',
-        to: 'S-5492 (6" WIDE × 4" TALL horizontal, 4 per sheet)',
+        to: 'S-5492 (4" × 6" rotated, 4 per sheet)',
         improvements: [
-          'HORIZONTAL orientation (6" WIDE × 4" TALL)',
-          'Brand detection and separation for 50+ cannabis brands',
-          'Optimized font sizing for horizontal space',
-          'Bottom-focused layout for scanning workflow',
-          'Legal size sheet compatibility (8.5" × 14")',
-          'Proportional scaling to fit on legal paper',
-          'Enhanced date formatting for compact display'
+          'ROTATED positioning for larger label accommodation',
+          'Print-rotate-peel workflow',
+          'Brand detection and separation',
+          'Optimized font sizing for rotated viewing',
+          'Legal size paper full utilization',
+          'HP E877 margin compensation'
         ],
         version: LABEL_SPECS.VERSION
       }
@@ -793,7 +553,7 @@ export class LabelFormatter {
   }
 
   /**
-   * Calculate pages needed for S-5492 labels
+   * Calculate pages needed for S-5492 rotated labels
    * @param {number} totalLabels - Total number of labels
    * @returns {number} - Number of pages needed
    */
@@ -802,83 +562,17 @@ export class LabelFormatter {
   }
 
   /**
-   * Get detailed S-5492 layout recommendations for specific product
-   * @param {Object} labelData - Label data to analyze
-   * @returns {Object} - Detailed layout recommendations
-   */
-  static getS5492LayoutRecommendations(labelData) {
-    const brandInfo = this.extractBrandFromProductName(labelData.productName);
-    const textComplexity = this.assessTextComplexity(labelData.productName);
-    
-    const recommendations = {
-      brandDetection: {
-        detected: brandInfo.brandDetected,
-        brand: brandInfo.brand,
-        productName: brandInfo.productName,
-        method: brandInfo.detectionMethod,
-        confidence: brandInfo.detectionMethod === 'exact_match' ? 'high' : 
-                   brandInfo.detectionMethod === 'pattern_match' ? 'medium' : 'low'
-      },
-      productName: {
-        estimatedFontSize: this.calculateS5492ProductNameFontSize(brandInfo.productName),
-        brandFontSize: brandInfo.brand ? this.calculateBrandFontSize(brandInfo.brand) : null,
-        textComplexity: textComplexity,
-        willWrap: brandInfo.productName && brandInfo.productName.length > 50,
-        estimatedLines: brandInfo.productName ? Math.ceil(brandInfo.productName.length / 35) : 1,
-        recommendations: []
-      },
-      barcodeDisplay: {
-        format: 'spaced',
-        example: this.formatBarcodeForS5492Display(labelData.barcode),
-        length: labelData.barcode ? labelData.barcode.replace(/[^A-Za-z0-9]/g, '').length : 0
-      },
-      layout: {
-        orientation: 'horizontal',
-        format: 'S-5492',
-        physicalSize: `${LABEL_SPECS.WIDTH_INCHES}" WIDE × ${LABEL_SPECS.HEIGHT_INCHES}" TALL`,
-        labelsPerSheet: LABEL_SPECS.LABELS_PER_SHEET,
-        sheetSize: `Legal (${LABEL_SPECS.SHEET_WIDTH}" × ${LABEL_SPECS.SHEET_HEIGHT}")`,
-        contentFlow: 'horizontal sections'
-      },
-      optimizations: this.calculateLayoutOptimizations(labelData.productName, brandInfo)
-    };
-
-    // Generate specific recommendations
-    const totalText = (brandInfo.brand || '') + ' ' + (brandInfo.productName || '');
-    if (totalText.length > 80) {
-      recommendations.productName.recommendations.push('Long product name - optimized for horizontal space');
-    }
-    if (totalText.length > 120) {
-      recommendations.productName.recommendations.push('Very long product name - consider abbreviating for better horizontal display');
-    }
-    
-    if (!brandInfo.brand) {
-      recommendations.productName.recommendations.push('No brand detected - full product name will use maximum horizontal space');
-    } else {
-      recommendations.productName.recommendations.push(`Brand "${brandInfo.brand}" will be displayed above product name`);
-    }
-
-    if (textComplexity === 'very_complex') {
-      recommendations.productName.recommendations.push('Complex product name - may require smaller font in horizontal layout');
-    }
-
-    return recommendations;
-  }
-
-  // Main interface methods (used by PDFGenerator)
-  
-  /**
-   * Main validation method
+   * Main validation method (used by PDFGenerator)
    * @param {Object} item - Inventory item
    * @param {Object} enhancedData - Enhanced data
    * @returns {Object} - Validation result
    */
   static validateLabelData(item, enhancedData) {
-    return this.validateS5492LabelData(item, enhancedData);
+    return this.validateS5492RotatedLabelData(item, enhancedData);
   }
 
   /**
-   * Main pages calculation method
+   * Main pages calculation method (used by PDFGenerator)
    * @param {number} totalLabels - Total number of labels
    * @returns {number} - Number of pages needed
    */
@@ -888,4 +582,4 @@ export class LabelFormatter {
 }
 
 // Export constants for use in other modules
-export { LABEL_SPECS, S5492_LAYOUT, CANNABIS_BRANDS, VALIDATION };
+export { LABEL_SPECS, S5492_ROTATED_LAYOUT, CANNABIS_BRANDS, VALIDATION };

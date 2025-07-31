@@ -1,239 +1,148 @@
 import React, { useState } from 'react';
 
 /**
- * Uline S-5492 Label Component (HORIZONTAL: 6" WIDE × 4" TALL Labels)
- * CORRECTED for proper horizontal orientation on legal size sheets
+ * Uline S-5492 Label Component (ROTATED LAYOUT)
+ * Labels positioned sideways on legal paper - rotate paper 90° to read/peel
  */
 class UlineS5492Label extends React.Component {
   /**
-   * Calculate exact label position for Uline S-5492 HORIZONTAL labels
-   * CRITICAL: Uline 4" × 6" = 6" WIDE × 4" TALL (432pt WIDE × 288pt TALL)
+   * Calculate label position for Uline S-5492 ROTATED on legal paper
+   * Labels are positioned sideways - paper must be rotated 90° for reading/peeling
    * @param {number} labelIndex - Index of label (0-3 for 4 labels per sheet)
-   * @returns {Object} - Position coordinates in points with debug info
+   * @returns {Object} - Position coordinates in points
    */
-  static calculateUlineS5492Position(labelIndex) {
+  static calculateUlineS5492PositionRotated(labelIndex) {
     // Legal size sheet dimensions (8.5" × 14")
-    const pageWidth = 612;   // 8.5" in points
+    const pageWidth = 612;   // 8.5" in points  
     const pageHeight = 1008; // 14" in points
     
-    // HP E877 printer specifications (non-printable margins)
-    const printerMargin = 12; // 0.167" ≈ 12pt
+    // HP E877 printer margins: 0.167" on all sides
+    const printerMargin = 12; // 0.167" = 12pt
     const printableWidth = pageWidth - (printerMargin * 2);   // 588pt
     const printableHeight = pageHeight - (printerMargin * 2); // 984pt
     
-    // S-5492 CORRECTED dimensions: 6" WIDE × 4" TALL (HORIZONTAL)
-    const labelWidth = 432;  // 6" WIDE in points
-    const labelHeight = 288; // 4" TALL in points
+    // In rotated coordinate system (after rotating paper 90°):
+    // - Available width: printableHeight = 984pt (14" - margins)
+    // - Available height: printableWidth = 588pt (8.5" - margins)
+    const rotatedPageWidth = printableHeight;  // 984pt
+    const rotatedPageHeight = printableWidth;  // 588pt
     
-    // Grid layout: 2 columns × 2 rows
+    // Label dimensions in rotated view (6" wide × 4" tall)
+    const labelWidth = 432;  // 6" wide in rotated view
+    const labelHeight = 288; // 4" tall in rotated view
+    
+    // Grid layout: 2 columns × 2 rows in rotated view
     const cols = 2;
     const rows = 2;
     const row = Math.floor(labelIndex / cols);
     const col = labelIndex % cols;
     
-    // CONSTRAINT: 2 × 432pt = 864pt > 588pt printable width
-    // SOLUTION: Scale down proportionally to fit
+    // Calculate scale factor if needed
     const requiredWidth = cols * labelWidth;   // 864pt
     const requiredHeight = rows * labelHeight; // 576pt
     
-    const scaleX = printableWidth / requiredWidth;   // 588/864 = 0.68
-    const scaleY = printableHeight / requiredHeight; // 984/576 = 1.71
-    const scaleFactor = Math.min(scaleX, scaleY);    // Use 0.68 (smaller)
+    const scaleX = rotatedPageWidth / requiredWidth;   // 984/864 = 1.14
+    const scaleY = rotatedPageHeight / requiredHeight; // 588/576 = 1.02
+    const scaleFactor = Math.min(scaleX, scaleY, 1.0); // Use 1.02 but cap at 1.0
     
-    const actualLabelWidth = Math.floor(labelWidth * scaleFactor);   // ~294pt
-    const actualLabelHeight = Math.floor(labelHeight * scaleFactor); // ~196pt
+    // Labels fit without scaling!
+    const actualLabelWidth = labelWidth;
+    const actualLabelHeight = labelHeight;
     
-    // Center the grid on the page
-    const totalGridWidth = cols * actualLabelWidth;   // ~588pt
-    const totalGridHeight = rows * actualLabelHeight; // ~392pt
+    // Calculate positions in rotated coordinate system
+    const rotatedX = col * actualLabelWidth + (rotatedPageWidth - (cols * actualLabelWidth)) / 2;
+    const rotatedY = row * actualLabelHeight + (rotatedPageHeight - (rows * actualLabelHeight)) / 2;
     
-    const startX = printerMargin + Math.floor((printableWidth - totalGridWidth) / 2);
-    const startY = printerMargin + Math.floor((printableHeight - totalGridHeight) / 2);
-    
-    // Individual label position (no gaps - labels are adjacent)
-    const xPos = startX + (col * actualLabelWidth);
-    const yPos = startY + (row * actualLabelHeight);
+    // Transform back to PDF coordinate system (unrotated)
+    // For 90° clockwise rotation: x' = y, y' = pageWidth - x - width
+    const pdfX = printerMargin + rotatedY;
+    const pdfY = printerMargin + (rotatedPageWidth - rotatedX - actualLabelWidth);
     
     return {
-      x: Math.floor(xPos),
-      y: Math.floor(yPos),
-      width: actualLabelWidth,
-      height: actualLabelHeight,
+      x: Math.floor(pdfX),
+      y: Math.floor(pdfY),
+      width: actualLabelHeight,  // In PDF coords: height becomes width
+      height: actualLabelWidth,  // In PDF coords: width becomes height
       
-      // Debug and scaling information
+      // Rotation information
+      isRotated: true,
+      rotationAngle: 90,
+      rotatedWidth: actualLabelWidth,   // Width when rotated (6")
+      rotatedHeight: actualLabelHeight, // Height when rotated (4")
+      
+      // Scaling info
       scaleFactor: scaleFactor,
-      originalWidth: labelWidth,
-      originalHeight: labelHeight,
       isScaled: scaleFactor < 1.0,
-      
-      // Orientation confirmation - CRITICAL
-      orientation: 'horizontal',     // WIDER than tall
-      isHorizontal: actualLabelWidth > actualLabelHeight, // Should be TRUE
-      aspectRatio: actualLabelWidth / actualLabelHeight,  // Should be > 1
+      fitsWithoutScaling: scaleFactor >= 1.0,
       
       // Grid information
       row: row,
       col: col,
       labelIndex: labelIndex,
       
-      // Page information
-      pageWidth: pageWidth,
-      pageHeight: pageHeight,
-      printableWidth: printableWidth,
-      printableHeight: printableHeight
-    };
-  }
-
-  /**
-   * Alternative precise positioning method for physical sheet alignment
-   * CORRECTED for HORIZONTAL labels: 6" WIDE × 4" TALL
-   * @param {number} labelIndex - Index of label (0-3)
-   * @returns {Object} - Position coordinates optimized for physical alignment
-   */
-  static calculateUlineS5492PositionPrecise(labelIndex) {
-    // Physical measurements from actual Uline S-5492 sheets
-    const measurements = {
-      // Page dimensions
-      pageWidth: 612,    // 8.5" legal width
-      pageHeight: 1008,  // 14" legal height
+      // Debug info
+      rotatedCoords: { x: rotatedX, y: rotatedY },
+      rotatedPageSize: { width: rotatedPageWidth, height: rotatedPageHeight },
       
-      // CORRECTED: S-5492 labels are 6" WIDE × 4" TALL (horizontal)
-      labelWidth: 432,   // 6" WIDE in points
-      labelHeight: 288,  // 4" TALL in points
-      
-      // Estimated margins (to be confirmed with physical sheets)
-      topMargin: 120,    // 1.67" from top edge (larger for legal paper)
-      bottomMargin: 120, // 1.67" from bottom edge
-      leftMargin: 0,     // Start at edge (labels will extend beyond)
-      rightMargin: 0,    // No right margin
-      
-      // Gaps between labels (estimated)
-      columnGap: 0,      // No gap - labels are adjacent
-      rowGap: 36         // 0.5" between rows
-    };
-    
-    const cols = 2;
-    const row = Math.floor(labelIndex / cols);
-    const col = labelIndex % cols;
-    
-    // Calculate positions using physical measurements
-    const xPos = measurements.leftMargin + (col * measurements.labelWidth);
-    const yPos = measurements.topMargin + (row * (measurements.labelHeight + measurements.rowGap));
-    
-    // Verify calculations fit within page
-    const totalWidth = measurements.leftMargin + (2 * measurements.labelWidth) + measurements.rightMargin;
-    const totalHeight = measurements.topMargin + (2 * measurements.labelHeight) + measurements.rowGap + measurements.bottomMargin;
-    
-    const fitsWidth = totalWidth <= measurements.pageWidth;
-    const fitsHeight = totalHeight <= measurements.pageHeight;
-    const fitsOnPage = fitsWidth && fitsHeight;
-    
-    return {
-      x: xPos,
-      y: yPos,
-      width: measurements.labelWidth,
-      height: measurements.labelHeight,
-      
-      // Layout characteristics - CORRECTED
-      orientation: 'horizontal',     // Labels are WIDER than tall
-      contentFlow: 'horizontal',     // Content flows horizontally within each label
-      isHorizontal: true,            // Confirmation flag
-      aspectRatio: measurements.labelWidth / measurements.labelHeight, // 1.5 (wider than tall)
-      
-      // Validation
-      fitsOnPage: fitsOnPage,
-      fitsWidth: fitsWidth,
-      fitsHeight: fitsHeight,
-      totalWidth: totalWidth,
-      totalHeight: totalHeight,
-      
-      // Physical measurement info
-      measurements: measurements,
-      row: row,
-      col: col,
-      labelIndex: labelIndex,
-      
-      // Warnings
-      warnings: [
-        ...(!fitsWidth ? ['Labels extend beyond page width - this is expected for S-5492'] : []),
-        ...(!fitsHeight ? ['Labels extend beyond page height - check margins'] : [])
+      // Workflow info
+      workflow: 'print_rotate_peel',
+      instructions: [
+        'Print on legal paper (8.5" × 14")',
+        'Rotate paper 90° clockwise',
+        'Labels are now readable and peelable'
       ]
     };
   }
 
   /**
-   * Hybrid positioning method - combines scaled and precise approaches
-   * Recommended for production use with fine-tuning capability
+   * Alternative positioning method with custom spacing
    * @param {number} labelIndex - Index of label (0-3)
    * @param {Object} options - Positioning options
-   * @returns {Object} - Position coordinates with hybrid calculation
+   * @returns {Object} - Position coordinates with custom spacing
    */
-  static calculateUlineS5492PositionHybrid(labelIndex, options = {}) {
+  static calculateUlineS5492PositionWithSpacing(labelIndex, options = {}) {
     const {
-      usePhysicalMeasurements = false,
-      customScaling = null,
-      debugMode = true
+      columnGap = 12,  // 12pt gap between columns
+      rowGap = 12,     // 12pt gap between rows
+      topMargin = 50,  // Extra top margin
+      leftMargin = 50  // Extra left margin
     } = options;
     
-    // Get both calculations
-    const scaledPosition = this.calculateUlineS5492Position(labelIndex);
-    const precisePosition = this.calculateUlineS5492PositionPrecise(labelIndex);
+    // Start with base rotated positioning
+    const basePosition = this.calculateUlineS5492PositionRotated(labelIndex);
     
-    // Use precise if explicitly requested and fits reasonably
-    if (usePhysicalMeasurements && precisePosition.fitsHeight) {
-      return {
-        ...precisePosition,
-        method: 'precise',
-        alternative: scaledPosition,
-        note: 'Using physical measurements - may extend beyond page width'
-      };
-    }
+    // Apply custom spacing in rotated coordinate system
+    const cols = 2;
+    const row = Math.floor(labelIndex / cols);
+    const col = labelIndex % cols;
     
-    // Apply custom scaling if provided
-    if (customScaling && customScaling !== 1.0) {
-      const customWidth = Math.floor(432 * customScaling);  // Scale original width
-      const customHeight = Math.floor(288 * customScaling); // Scale original height
-      
-      // Recalculate positions with custom scaling
-      const cols = 2;
-      const row = Math.floor(labelIndex / cols);
-      const col = labelIndex % cols;
-      
-      const startX = (612 - (cols * customWidth)) / 2;
-      const startY = (1008 - (2 * customHeight)) / 2;
-      
-      return {
-        x: Math.floor(startX + (col * customWidth)),
-        y: Math.floor(startY + (row * customHeight)),
-        width: customWidth,
-        height: customHeight,
-        scaleFactor: customScaling,
-        isScaled: customScaling !== 1.0,
-        originalWidth: 432,
-        originalHeight: 288,
-        orientation: 'horizontal',
-        isHorizontal: customWidth > customHeight,
-        method: 'custom_scale',
-        original: scaledPosition
-      };
-    }
+    const rotatedX = leftMargin + col * (basePosition.rotatedWidth + columnGap);
+    const rotatedY = topMargin + row * (basePosition.rotatedHeight + rowGap);
     
-    // Default to scaled position
+    // Transform back to PDF coordinates
+    const printerMargin = 12;
+    const rotatedPageWidth = 984; // printableHeight
+    
+    const pdfX = printerMargin + rotatedY;
+    const pdfY = printerMargin + (rotatedPageWidth - rotatedX - basePosition.rotatedWidth);
+    
     return {
-      ...scaledPosition,
-      method: 'scaled',
-      alternative: precisePosition,
-      debugMode: debugMode
+      ...basePosition,
+      x: Math.floor(pdfX),
+      y: Math.floor(pdfY),
+      method: 'custom_spacing',
+      spacing: { columnGap, rowGap, topMargin, leftMargin },
+      rotatedCoords: { x: rotatedX, y: rotatedY }
     };
   }
 
   /**
-   * Generate alignment test data for all 4 label positions
+   * Generate alignment test data for all 4 rotated label positions
    * @param {Object} options - Test options
-   * @returns {Array} - Array of position data for testing
+   * @returns {Object} - Position test data
    */
-  static generateAlignmentTestData(options = {}) {
-    const { method = 'scaled', includeDebug = true } = options;
+  static generateRotatedAlignmentTestData(options = {}) {
+    const { method = 'rotated', includeDebug = true } = options;
     
     const positions = [];
     
@@ -241,34 +150,33 @@ class UlineS5492Label extends React.Component {
       let position;
       
       switch (method) {
-        case 'precise':
-          position = this.calculateUlineS5492PositionPrecise(i);
-          break;
-        case 'hybrid':
-          position = this.calculateUlineS5492PositionHybrid(i, options);
+        case 'spacing':
+          position = this.calculateUlineS5492PositionWithSpacing(i, options);
           break;
         default:
-          position = this.calculateUlineS5492Position(i);
+          position = this.calculateUlineS5492PositionRotated(i);
       }
       
       positions.push({
         labelIndex: i,
         position: position,
-        centerX: position.x + (position.width / 2),
-        centerY: position.y + (position.height / 2),
+        centerX: position.x + position.width / 2,
+        centerY: position.y + position.height / 2,
         corners: {
           topLeft: { x: position.x, y: position.y },
           topRight: { x: position.x + position.width, y: position.y },
           bottomLeft: { x: position.x, y: position.y + position.height },
           bottomRight: { x: position.x + position.width, y: position.y + position.height }
         },
-        // Validation
-        isHorizontal: position.width > position.height,
-        aspectRatio: position.width / position.height,
-        dimensionsInches: {
-          width: (position.width / 72).toFixed(2),
-          height: (position.height / 72).toFixed(2)
-        }
+        // Rotated view info
+        rotatedDimensions: {
+          width: position.rotatedWidth,
+          height: position.rotatedHeight,
+          widthInches: (position.rotatedWidth / 72).toFixed(2),
+          heightInches: (position.rotatedHeight / 72).toFixed(2)
+        },
+        isProperlyRotated: position.isRotated,
+        fitsWithoutScaling: position.fitsWithoutScaling
       });
     }
     
@@ -277,24 +185,28 @@ class UlineS5492Label extends React.Component {
       method: method,
       pageSize: { width: 612, height: 1008 },
       labelCount: 4,
-      gridLayout: '2×2',
+      gridLayout: '2×2 (when rotated)',
       sheetFormat: 'Legal (8.5" × 14")',
-      labelSize: '6" WIDE × 4" TALL (HORIZONTAL)',
-      orientation: 'horizontal',
+      labelSize: '6" wide × 4" tall (when rotated)',
+      orientation: 'rotated',
+      rotationAngle: 90,
+      workflow: 'Print → Rotate 90° → Peel',
       generatedAt: new Date().toISOString(),
       validation: {
-        allHorizontal: positions.every(p => p.isHorizontal),
-        averageAspectRatio: positions.reduce((sum, p) => sum + p.aspectRatio, 0) / positions.length
+        allRotated: positions.every(p => p.isProperlyRotated),
+        allFitWithoutScaling: positions.every(p => p.fitsWithoutScaling),
+        averageRotatedWidth: positions.reduce((sum, p) => sum + p.rotatedDimensions.width, 0) / positions.length,
+        averageRotatedHeight: positions.reduce((sum, p) => sum + p.rotatedDimensions.height, 0) / positions.length
       }
     };
   }
 
   /**
-   * Validate S-5492 positioning calculations
+   * Validate rotated positioning calculations
    * @param {Object} positionData - Position data to validate
    * @returns {Object} - Validation results
    */
-  static validatePositioning(positionData) {
+  static validateRotatedPositioning(positionData) {
     const { positions } = positionData;
     const issues = [];
     const warnings = [];
@@ -302,16 +214,12 @@ class UlineS5492Label extends React.Component {
     positions.forEach((pos, index) => {
       const { position } = pos;
       
-      // Check orientation - CRITICAL for S-5492
-      if (!pos.isHorizontal) {
-        issues.push(`Label ${index}: NOT HORIZONTAL - width (${position.width}) should be > height (${position.height})`);
+      // Check rotation status
+      if (!pos.isProperlyRotated) {
+        issues.push(`Label ${index}: Not marked as rotated`);
       }
       
-      if (pos.aspectRatio < 1.0) {
-        issues.push(`Label ${index}: Aspect ratio ${pos.aspectRatio.toFixed(2)} indicates vertical orientation (should be > 1.0)`);
-      }
-      
-      // Check if label extends beyond page boundaries
+      // Check if labels fit on page
       if (position.x < 0) issues.push(`Label ${index}: X position is negative (${position.x})`);
       if (position.y < 0) issues.push(`Label ${index}: Y position is negative (${position.y})`);
       if (position.x + position.width > 612) {
@@ -321,17 +229,23 @@ class UlineS5492Label extends React.Component {
         issues.push(`Label ${index}: Extends beyond page height by ${(position.y + position.height - 1008).toFixed(0)}pt`);
       }
       
-      // Check for reasonable margins
-      if (position.x < 6) warnings.push(`Label ${index}: Very close to left edge (${position.x}pt)`);
-      if (position.y < 6) warnings.push(`Label ${index}: Very close to top edge (${position.y}pt)`);
+      // Check printer margins (12pt on all sides)
+      if (position.x < 12) warnings.push(`Label ${index}: Within printer margin (left)`);
+      if (position.y < 12) warnings.push(`Label ${index}: Within printer margin (top)`);
+      if (612 - (position.x + position.width) < 12) warnings.push(`Label ${index}: Within printer margin (right)`);
+      if (1008 - (position.y + position.height) < 12) warnings.push(`Label ${index}: Within printer margin (bottom)`);
       
-      // Check label dimensions are reasonable
-      if (position.width < 200) warnings.push(`Label ${index}: Width is quite small (${position.width}pt = ${(position.width/72).toFixed(2)}")`);
-      if (position.height < 150) warnings.push(`Label ${index}: Height is quite small (${position.height}pt = ${(position.height/72).toFixed(2)}")`);
+      // Check rotated dimensions
+      if (pos.rotatedDimensions.width < 300) {
+        warnings.push(`Label ${index}: Rotated width is small (${pos.rotatedDimensions.widthInches}")`);
+      }
+      if (pos.rotatedDimensions.height < 200) {
+        warnings.push(`Label ${index}: Rotated height is small (${pos.rotatedDimensions.heightInches}")`);
+      }
       
-      // Check that scaled labels aren't too small
-      if (position.isScaled && position.scaleFactor < 0.6) {
-        warnings.push(`Label ${index}: Heavy scaling (${(position.scaleFactor * 100).toFixed(0)}%) - text may be hard to read`);
+      // Check if scaling is needed but not applied
+      if (!pos.fitsWithoutScaling && !position.isScaled) {
+        warnings.push(`Label ${index}: May need scaling but none applied`);
       }
     });
     
@@ -341,7 +255,6 @@ class UlineS5492Label extends React.Component {
         const pos1 = positions[i].position;
         const pos2 = positions[j].position;
         
-        // Simple overlap detection
         const overlapX = pos1.x < pos2.x + pos2.width && pos2.x < pos1.x + pos1.width;
         const overlapY = pos1.y < pos2.y + pos2.height && pos2.y < pos1.y + pos1.height;
         
@@ -351,10 +264,9 @@ class UlineS5492Label extends React.Component {
       }
     }
     
-    // Check overall orientation consistency
-    const horizontalCount = positions.filter(p => p.isHorizontal).length;
-    if (horizontalCount !== positions.length) {
-      issues.push(`Only ${horizontalCount}/${positions.length} labels are horizontal - all should be horizontal for S-5492`);
+    // Overall rotation validation
+    if (!positionData.validation.allRotated) {
+      issues.push('Not all labels are properly marked as rotated');
     }
     
     return {
@@ -363,146 +275,120 @@ class UlineS5492Label extends React.Component {
       warnings: warnings,
       summary: {
         totalLabels: positions.length,
-        horizontalLabels: horizontalCount,
+        rotatedLabels: positions.filter(p => p.isProperlyRotated).length,
         labelsWithIssues: issues.length,
         labelsWithWarnings: warnings.length,
-        averageAspectRatio: positionData.validation?.averageAspectRatio || 0
+        fitWithoutScaling: positions.filter(p => p.fitsWithoutScaling).length
       }
     };
   }
 
   /**
-   * Get debug information for spacing verification and troubleshooting
+   * Get debug information for rotated positioning
    * @param {string} method - Positioning method to analyze
    * @returns {Object} - Detailed debug information
    */
-  static getDebugInfo(method = 'scaled') {
-    const testData = this.generateAlignmentTestData({ method: method, includeDebug: true });
-    const validation = this.validatePositioning(testData);
-    
-    // Calculate spacing between labels
-    const positions = testData.positions;
-    const horizontalGaps = [];
-    const verticalGaps = [];
-    
-    // Horizontal gaps (between columns)
-    for (let row = 0; row < 2; row++) {
-      const leftLabel = positions[row * 2];
-      const rightLabel = positions[row * 2 + 1];
-      const gap = rightLabel.position.x - (leftLabel.position.x + leftLabel.position.width);
-      horizontalGaps.push(gap);
-    }
-    
-    // Vertical gaps (between rows)
-    for (let col = 0; col < 2; col++) {
-      const topLabel = positions[col];
-      const bottomLabel = positions[col + 2];
-      const gap = bottomLabel.position.y - (topLabel.position.y + topLabel.position.height);
-      verticalGaps.push(gap);
-    }
+  static getRotatedDebugInfo(method = 'rotated') {
+    const testData = this.generateRotatedAlignmentTestData({ method: method, includeDebug: true });
+    const validation = this.validateRotatedPositioning(testData);
     
     return {
       migrationInfo: {
-        from: 'S-21846 (7-3/4" × 4-3/4", 2 per sheet, 8.5" × 11")',
-        to: 'S-5492 (6" WIDE × 4" TALL horizontal, 4 per sheet, 8.5" × 14")',
-        status: 'CORRECTED for horizontal orientation',
-        version: '6.0.0'
+        from: 'S-21846 (7-3/4" × 4-3/4", 2 per sheet, letter)',
+        to: 'S-5492 (4" × 6" positioned sideways, 4 per sheet, legal)',
+        status: 'ROTATED LAYOUT - Print then rotate paper 90°',
+        version: '6.1.0'
       },
       positioningMethod: method,
       testData: testData,
       validation: validation,
-      spacing: {
-        horizontalGaps: horizontalGaps,
-        verticalGaps: verticalGaps,
-        averageHorizontalGap: horizontalGaps.length > 0 ? horizontalGaps.reduce((a, b) => a + b, 0) / horizontalGaps.length : 0,
-        averageVerticalGap: verticalGaps.length > 0 ? verticalGaps.reduce((a, b) => a + b, 0) / verticalGaps.length : 0
+      rotationInfo: {
+        angle: 90,
+        direction: 'clockwise',
+        workflow: 'Print PDF → Rotate paper 90° → Read/peel labels',
+        afterRotation: {
+          effectivePageSize: '14" × 8.5" (rotated view)',
+          labelSize: '6" wide × 4" tall',
+          readableOrientation: true
+        }
       },
-      pageUtilization: {
-        totalLabelArea: positions.reduce((sum, pos) => sum + (pos.position.width * pos.position.height), 0),
-        pageArea: 612 * 1008,
-        utilizationPercent: ((positions.reduce((sum, pos) => sum + (pos.position.width * pos.position.height), 0)) / (612 * 1008)) * 100
+      printerInfo: {
+        model: 'HP E877',
+        margins: '0.167" on all sides',
+        printableArea: '588 × 984 points',
+        recommendedSetting: 'Actual Size (no scaling)'
       },
-      orientationCheck: {
-        expectedOrientation: 'horizontal',
-        allLabelsHorizontal: validation.summary.horizontalLabels === 4,
-        averageAspectRatio: validation.summary.averageAspectRatio,
-        aspectRatioExpected: '> 1.0 (wider than tall)'
+      physicalAlignment: {
+        labelSheet: 'Uline S-5492',
+        positioning: 'Sideways on legal paper',
+        peelDirection: 'After 90° rotation',
+        expectedFit: validation.summary.fitWithoutScaling === 4 ? 'Perfect' : 'Needs adjustment'
       },
-      recommendations: this.generatePositioningRecommendations(testData, validation)
+      recommendations: this.generateRotatedPositioningRecommendations(testData, validation)
     };
   }
 
   /**
-   * Generate positioning recommendations based on analysis
+   * Generate positioning recommendations for rotated layout
    * @param {Object} testData - Test positioning data
    * @param {Object} validation - Validation results
    * @returns {Array} - Array of recommendations
    */
-  static generatePositioningRecommendations(testData, validation) {
+  static generateRotatedPositioningRecommendations(testData, validation) {
     const recommendations = [];
     
     if (validation.issues.length > 0) {
-      recommendations.push('CRITICAL: Positioning issues detected - labels may not print correctly');
-      
-      // Check for orientation issues specifically
-      if (validation.summary.horizontalLabels < 4) {
-        recommendations.push('ORIENTATION ERROR: Labels should be HORIZONTAL (6" WIDE × 4" TALL)');
-        recommendations.push('Check label dimensions - width should be greater than height');
-      }
+      recommendations.push('CRITICAL: Positioning issues detected for rotated layout');
+      recommendations.push('Verify calculations and test print alignment');
     }
     
     if (validation.warnings.length > 0) {
-      recommendations.push('Positioning warnings detected - verify alignment with physical sheets');
+      recommendations.push('Positioning warnings detected - check printer margins');
     }
     
-    const positions = testData.positions;
-    const firstLabel = positions[0].position;
-    
-    if (firstLabel.isScaled) {
-      recommendations.push(`Labels are scaled to ${(firstLabel.scaleFactor * 100).toFixed(1)}% to fit on legal paper`);
-      if (firstLabel.scaleFactor < 0.7) {
-        recommendations.push('Heavy scaling detected - consider using precise positioning or custom margins');
-      } else {
-        recommendations.push('Scaling is reasonable for S-5492 format');
-      }
-    }
-    
-    // Check orientation
-    if (testData.validation.allHorizontal) {
-      recommendations.push('✓ All labels are correctly oriented HORIZONTAL');
+    // Check rotation status
+    if (testData.validation.allRotated) {
+      recommendations.push('✓ All labels are properly configured for rotation');
     } else {
-      recommendations.push('✗ Some labels are not horizontal - check calculations');
+      recommendations.push('✗ Some labels are not configured for rotation');
     }
     
-    if (validation.summary.labelsWithWarnings === 0 && validation.summary.labelsWithIssues === 0) {
-      recommendations.push('Positioning looks good - ready for test printing');
-      recommendations.push('Print a test page with "Actual Size" setting on HP E877');
-      recommendations.push('Verify alignment with physical Uline S-5492 sheets');
+    // Check scaling requirements
+    if (testData.validation.allFitWithoutScaling) {
+      recommendations.push('✓ Labels fit without scaling - optimal quality');
+    } else {
+      recommendations.push('⚠ Some labels may require scaling');
     }
     
-    // Specific S-5492 recommendations
-    recommendations.push('For S-5492: Each label should be 6" WIDE × 4" TALL');
-    recommendations.push('Content should flow horizontally within each label');
-    recommendations.push('Use bottom-focused layout as specified in requirements');
+    // Workflow recommendations
+    recommendations.push('WORKFLOW: Print → Rotate paper 90° clockwise → Peel labels');
+    recommendations.push('Each label will be 6" wide × 4" tall when paper is rotated');
+    recommendations.push('Use HP E877 with "Actual Size" print setting');
+    recommendations.push('Test alignment with physical Uline S-5492 sheets');
+    
+    if (validation.summary.labelsWithIssues === 0 && validation.summary.labelsWithWarnings === 0) {
+      recommendations.push('✓ Rotated positioning looks correct - ready for test printing');
+    }
     
     return recommendations;
   }
 
   /**
-   * Export positioning data for external tools or debugging
+   * Export rotated positioning data
    * @param {string} method - Positioning method
    * @param {string} format - Export format ('json', 'csv', 'debug')
    * @returns {string} - Formatted export data
    */
-  static exportPositioningData(method = 'scaled', format = 'json') {
-    const debugInfo = this.getDebugInfo(method);
+  static exportRotatedPositioningData(method = 'rotated', format = 'json') {
+    const debugInfo = this.getRotatedDebugInfo(method);
     
     switch (format) {
       case 'csv':
-        let csv = 'Label,X,Y,Width,Height,WidthInches,HeightInches,IsHorizontal,AspectRatio\n';
+        let csv = 'Label,PDFx,PDFy,PDFWidth,PDFHeight,RotatedWidth,RotatedHeight,RotatedWidthInches,RotatedHeightInches\n';
         debugInfo.testData.positions.forEach((pos, index) => {
           const p = pos.position;
-          csv += `${index},${p.x},${p.y},${p.width},${p.height},${pos.dimensionsInches.width},${pos.dimensionsInches.height},${pos.isHorizontal},${pos.aspectRatio.toFixed(2)}\n`;
+          const r = pos.rotatedDimensions;
+          csv += `${index},${p.x},${p.y},${p.width},${p.height},${r.width},${r.height},${r.widthInches},${r.heightInches}\n`;
         });
         return csv;
         
@@ -512,46 +398,25 @@ class UlineS5492Label extends React.Component {
       default: // json
         return JSON.stringify({
           method: method,
-          orientation: 'horizontal',
-          labelSize: '6" WIDE × 4" TALL',
+          orientation: 'rotated',
+          rotationAngle: 90,
+          workflow: 'print_rotate_peel',
           positions: debugInfo.testData.positions.map(pos => ({
             ...pos.position,
-            isHorizontal: pos.isHorizontal,
-            aspectRatio: pos.aspectRatio,
-            dimensionsInches: pos.dimensionsInches
+            rotatedDimensions: pos.rotatedDimensions
           })),
-          validation: debugInfo.validation,
-          spacing: debugInfo.spacing
+          validation: debugInfo.validation
         }, null, 2);
     }
   }
 
   // Legacy compatibility methods
-  
-  /**
-   * Legacy method for backward compatibility with existing code
-   * @param {number} labelIndex - Label index
-   * @returns {Object} - Position data
-   */
   static calculateUlineLabelPosition(labelIndex) {
-    return this.calculateUlineS5492Position(labelIndex % 4);
+    return this.calculateUlineS5492PositionRotated(labelIndex % 4);
   }
 
-  /**
-   * Legacy precise method for backward compatibility
-   * @param {number} labelIndex - Label index
-   * @returns {Object} - Position data
-   */
-  static calculateUlineLabelPositionPrecise(labelIndex) {
-    return this.calculateUlineS5492PositionPrecise(labelIndex % 4);
-  }
-
-  /**
-   * Legacy spacing debug method for backward compatibility
-   * @returns {Object} - Debug spacing information
-   */
   static getSpacingDebugInfo() {
-    return this.getDebugInfo('scaled');
+    return this.getRotatedDebugInfo('rotated');
   }
 
   // React Component Methods
@@ -559,10 +424,10 @@ class UlineS5492Label extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
-      selectedMethod: 'scaled',
+      selectedMethod: 'rotated',
       showDebugInfo: false,
       testPositions: null,
-      orientationValid: null
+      rotationValid: null
     };
   }
 
@@ -571,14 +436,14 @@ class UlineS5492Label extends React.Component {
   }
 
   updateTestPositions = () => {
-    const testData = UlineS5492Label.generateAlignmentTestData({ 
+    const testData = UlineS5492Label.generateRotatedAlignmentTestData({ 
       method: this.state.selectedMethod 
     });
-    const validation = UlineS5492Label.validatePositioning(testData);
+    const validation = UlineS5492Label.validateRotatedPositioning(testData);
     
     this.setState({ 
       testPositions: testData,
-      orientationValid: validation.summary.horizontalLabels === 4
+      rotationValid: validation.summary.rotatedLabels === 4
     });
   }
 
@@ -591,32 +456,44 @@ class UlineS5492Label extends React.Component {
   }
 
   render() {
-    const { selectedMethod, showDebugInfo, testPositions, orientationValid } = this.state;
+    const { selectedMethod, showDebugInfo, testPositions, rotationValid } = this.state;
     
     return (
       <div className="uline-s5492-label-component p-6">
         <div className="bg-white rounded-lg shadow-lg">
-          <div className="bg-blue-600 text-white px-6 py-4 rounded-t-lg">
-            <h2 className="text-2xl font-bold">Uline S-5492 Label Configuration</h2>
-            <p className="text-blue-100">6" WIDE × 4" TALL HORIZONTAL Labels - Legal Size Sheets (8.5" × 14")</p>
+          <div className="bg-purple-600 text-white px-6 py-4 rounded-t-lg">
+            <h2 className="text-2xl font-bold">Uline S-5492 Label Configuration (ROTATED)</h2>
+            <p className="text-purple-100">Labels positioned SIDEWAYS - Rotate paper 90° to read/peel</p>
           </div>
           
           <div className="p-6">
-            {/* Orientation Status */}
-            {orientationValid !== null && (
+            {/* Rotation Status */}
+            {rotationValid !== null && (
               <div className={`mb-4 p-3 rounded-lg ${
-                orientationValid 
+                rotationValid 
                   ? 'bg-green-100 border border-green-200' 
                   : 'bg-red-100 border border-red-200'
               }`}>
-                <div className={`font-medium ${orientationValid ? 'text-green-800' : 'text-red-800'}`}>
-                  {orientationValid ? '✓ Labels are HORIZONTAL (correct)' : '✗ Labels are NOT horizontal (issue)'}
+                <div className={`font-medium ${rotationValid ? 'text-green-800' : 'text-red-800'}`}>
+                  {rotationValid ? '✓ Labels configured for ROTATION (correct)' : '✗ Labels NOT configured for rotation (issue)'}
                 </div>
-                <div className={`text-sm ${orientationValid ? 'text-green-700' : 'text-red-700'}`}>
-                  Expected: 6" WIDE × 4" TALL (aspect ratio > 1.0)
+                <div className={`text-sm ${rotationValid ? 'text-green-700' : 'text-red-700'}`}>
+                  Workflow: Print PDF → Rotate paper 90° clockwise → Read/peel labels
                 </div>
               </div>
             )}
+
+            {/* Workflow Instructions */}
+            <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <h3 className="text-lg font-semibold text-blue-800 mb-2">Rotated Label Workflow</h3>
+              <ol className="list-decimal list-inside text-blue-700 space-y-1">
+                <li>Print PDF on legal size paper (8.5" × 14")</li>
+                <li>Use HP E877 with "Actual Size" setting</li>
+                <li><strong>Rotate the printed paper 90° clockwise</strong></li>
+                <li>Labels are now readable and properly oriented for peeling</li>
+                <li>Each label: 6" wide × 4" tall (in rotated view)</li>
+              </ol>
+            </div>
 
             {/* Method Selection */}
             <div className="mb-6">
@@ -624,13 +501,13 @@ class UlineS5492Label extends React.Component {
                 Positioning Method:
               </label>
               <div className="flex space-x-4">
-                {['scaled', 'precise', 'hybrid'].map(method => (
+                {['rotated', 'spacing'].map(method => (
                   <button
                     key={method}
                     onClick={() => this.handleMethodChange(method)}
                     className={`px-4 py-2 rounded-md font-medium ${
                       selectedMethod === method
-                        ? 'bg-blue-600 text-white'
+                        ? 'bg-purple-600 text-white'
                         : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                     }`}
                   >
@@ -639,36 +516,38 @@ class UlineS5492Label extends React.Component {
                 ))}
               </div>
               <div className="mt-2 text-sm text-gray-600">
-                <strong>Scaled:</strong> Proportionally sized to fit legal paper (recommended) | 
-                <strong> Precise:</strong> Full size positioning | 
-                <strong> Hybrid:</strong> Custom options
+                <strong>Rotated:</strong> Optimized sideways positioning | 
+                <strong> Spacing:</strong> Custom gaps and margins
               </div>
             </div>
 
             {/* Position Preview */}
             {testPositions && (
               <div className="mb-6">
-                <h3 className="text-lg font-semibold mb-3">Label Positions Preview</h3>
+                <h3 className="text-lg font-semibold mb-3">Rotated Label Positions Preview</h3>
                 <div className="border rounded-lg p-4 bg-gray-50">
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     {testPositions.positions.map((pos, index) => (
                       <div key={index} className={`p-3 rounded border ${
-                        pos.isHorizontal ? 'bg-white' : 'bg-red-50 border-red-200'
+                        pos.isProperlyRotated ? 'bg-white' : 'bg-red-50 border-red-200'
                       }`}>
-                        <div className="font-medium mb-2">Label {index + 1}</div>
+                        <div className="font-medium mb-2">Label {index + 1} (ROTATED)</div>
                         <div className="text-gray-600">
-                          <div>Position: {pos.position.x}, {pos.position.y} pt</div>
-                          <div>Size: {pos.position.width} × {pos.position.height} pt</div>
-                          <div>Size: {pos.dimensionsInches.width}" × {pos.dimensionsInches.height}"</div>
-                          <div className={pos.isHorizontal ? 'text-green-600' : 'text-red-600'}>
-                            {pos.isHorizontal ? '✓ Horizontal' : '✗ Not horizontal'}
-                          </div>
-                          <div>Aspect: {pos.aspectRatio.toFixed(2)}</div>
-                          {pos.position.isScaled && (
-                            <div className="text-orange-600">
-                              Scaled: {(pos.position.scaleFactor * 100).toFixed(1)}%
+                          <div><strong>PDF Position:</strong> {pos.position.x}, {pos.position.y} pt</div>
+                          <div><strong>PDF Size:</strong> {pos.position.width} × {pos.position.height} pt</div>
+                          <div className="mt-2 p-2 bg-blue-50 rounded">
+                            <div className="text-blue-800 font-medium">After 90° Rotation:</div>
+                            <div className="text-blue-700">
+                              <div>Size: {pos.rotatedDimensions.widthInches}" × {pos.rotatedDimensions.heightInches}"</div>
+                              <div>({pos.rotatedDimensions.width} × {pos.rotatedDimensions.height} pt)</div>
                             </div>
-                          )}
+                          </div>
+                          <div className={pos.isProperlyRotated ? 'text-green-600' : 'text-red-600'}>
+                            {pos.isProperlyRotated ? '✓ Rotated' : '✗ Not rotated'}
+                          </div>
+                          <div className={pos.fitsWithoutScaling ? 'text-green-600' : 'text-orange-600'}>
+                            {pos.fitsWithoutScaling ? '✓ Fits perfectly' : '⚠ May need scaling'}
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -692,39 +571,52 @@ class UlineS5492Label extends React.Component {
               <div className="bg-gray-100 rounded-lg p-4">
                 <h3 className="text-lg font-semibold mb-3">Debug Information</h3>
                 <pre className="text-xs overflow-auto bg-white p-3 rounded border max-h-96">
-                  {JSON.stringify(UlineS5492Label.getDebugInfo(selectedMethod), null, 2)}
+                  {JSON.stringify(UlineS5492Label.getRotatedDebugInfo(selectedMethod), null, 2)}
                 </pre>
               </div>
             )}
 
             {/* Migration Information */}
             <div className="mt-6 bg-green-50 border border-green-200 rounded-lg p-4">
-              <h3 className="text-lg font-semibold text-green-800 mb-2">S-5492 Migration Complete</h3>
+              <h3 className="text-lg font-semibold text-green-800 mb-2">S-5492 ROTATED Migration Complete</h3>
               <div className="text-green-700 text-sm">
-                <p><strong>From:</strong> S-21846 (7-3/4" × 4-3/4", 2 labels per 8.5" × 11" sheet)</p>
-                <p><strong>To:</strong> S-5492 (6" WIDE × 4" TALL horizontal, 4 labels per 8.5" × 14" legal sheet)</p>
+                <p><strong>From:</strong> S-21846 (7-3/4" × 4-3/4", 2 labels per letter sheet)</p>
+                <p><strong>To:</strong> S-5492 (4" × 6" positioned sideways, 4 labels per legal sheet)</p>
                 <p className="mt-2"><strong>Key Features:</strong></p>
                 <ul className="list-disc list-inside mt-1 space-y-1">
-                  <li>HORIZONTAL orientation (labels are wider than tall)</li>
-                  <li>Bottom-focused content layout for scanning workflow</li>
-                  <li>Brand detection and separation</li>
-                  <li>Massive product names for far-away visibility</li>
-                  <li>Legal size paper optimization with proportional scaling</li>
+                  <li>Labels positioned SIDEWAYS on legal paper</li>
+                  <li>Print-rotate-peel workflow</li>
+                  <li>6" wide × 4" tall when paper is rotated</li>
+                  <li>HP E877 printer margin compensation</li>
+                  <li>No scaling required - labels fit perfectly</li>
                 </ul>
               </div>
             </div>
 
-            {/* Physical Alignment Instructions */}
-            <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <h3 className="text-lg font-semibold text-blue-800 mb-2">Physical Alignment Instructions</h3>
-              <div className="text-blue-700 text-sm">
-                <ol className="list-decimal list-inside space-y-1">
-                  <li>Print test page using "Actual Size" setting (no scaling)</li>
-                  <li>Use HP E877 printer with legal size paper (8.5" × 14")</li>
-                  <li>Verify labels align with Uline S-5492 sheet perforations</li>
-                  <li>Each label should be 6" WIDE × 4" TALL (horizontal)</li>
-                  <li>If alignment is off, try the "precise" positioning method</li>
-                </ol>
+            {/* Visual Rotation Guide */}
+            <div className="mt-4 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <h3 className="text-lg font-semibold text-yellow-800 mb-2">Visual Rotation Guide</h3>
+              <div className="flex items-center space-x-4">
+                <div className="text-center">
+                  <div className="w-16 h-24 bg-white border-2 border-gray-400 rounded flex items-center justify-center text-xs">
+                    <div className="transform -rotate-90">Labels</div>
+                  </div>
+                  <div className="text-sm mt-1">1. Print</div>
+                </div>
+                <div className="text-2xl">→</div>
+                <div className="text-center">
+                  <div className="w-24 h-16 bg-white border-2 border-gray-400 rounded flex items-center justify-center text-xs">
+                    Labels
+                  </div>
+                  <div className="text-sm mt-1">2. Rotate 90°</div>
+                </div>
+                <div className="text-2xl">→</div>
+                <div className="text-center">
+                  <div className="w-20 h-12 bg-green-100 border-2 border-green-400 rounded flex items-center justify-center text-xs">
+                    Peel
+                  </div>
+                  <div className="text-sm mt-1">3. Use</div>
+                </div>
               </div>
             </div>
           </div>
