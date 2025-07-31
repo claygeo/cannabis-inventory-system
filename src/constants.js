@@ -1,7 +1,7 @@
-// Application constants - Updated for S-21846 migration
+// Application constants - Updated for S-5492 4x6 horizontal migration
 export const APP_NAME = 'Cannabis Inventory Management System';
-export const APP_VERSION = '5.4.0'; // Updated for S-21846 migration
-export const APP_SUBTITLE = 'S-21846 Large Label Edition';
+export const APP_VERSION = '5.5.0'; // Updated for S-5492 migration
+export const APP_SUBTITLE = 'S-5492 Horizontal Label Edition';
 
 // Data source identifiers
 export const DATA_SOURCES = {
@@ -23,7 +23,7 @@ export const EVENT_TYPES = {
   ENHANCED_DATA_SAVED: 'enhanced_data_saved',
   SESSION_CLEARED: 'session_cleared',
   ERROR_OCCURRED: 'error_occurred',
-  LABEL_MIGRATION: 'label_migration' // New event type for S-21846 migration
+  LABEL_MIGRATION: 'label_migration'
 };
 
 // Main Inventory (Homestead) CSV column mapping (0-based indices)
@@ -91,81 +91,90 @@ export const FILE_STRUCTURE = {
   }
 };
 
-// Barcode configuration for Code 39 format - Enhanced for S-21846
+// Barcode configuration for Code 39 format - Enhanced for S-5492
 export const BARCODE_CONFIG = {
   FORMAT: 'CODE39',
-  WIDTH: 4,              // Increased bar width for larger labels
-  HEIGHT: 80,            // Increased height for S-21846
-  DISPLAY_VALUE: false,  // NO TEXT EVER on scannable barcode
-  MARGIN: 0,             // No margins for better space usage
-  FONT_SIZE: 14,         // Larger font for barcode display text
+  WIDTH: 3,              // Optimized for horizontal layout
+  HEIGHT: 45,            // Adjusted for bottom row
+  DISPLAY_VALUE: false,  // NO TEXT on barcode itself
+  MARGIN: 0,
+  FONT_SIZE: 10,         // For separate display above barcode
   FONT_FAMILY: 'Arial',
-  TEXT_MARGIN: 8,        // Increased spacing
+  TEXT_MARGIN: 5,
   BACKGROUND: '#ffffff',
   LINE_COLOR: '#000000'
 };
 
-// Label specifications for Uline S-21846 (MIGRATED FROM S-5627)
+// Label specifications for Uline S-5492 (4" × 6" HORIZONTAL)
 export const LABEL_SPECS = {
-  // New S-21846 specifications
-  WIDTH_INCHES: 7.75,     // 7-3/4"
-  HEIGHT_INCHES: 4.75,    // 4-3/4"
-  LABELS_PER_SHEET: 2,    // 2 labels per sheet (down from 12)
-  COLUMNS: 1,             // 1 column
-  ROWS: 2,                // 2 rows (vertically stacked)
-  SHEET_FORMAT: 'Uline S-21846',
-  AVERY_EQUIVALENT: '6876',
+  // S-5492 specifications (HORIZONTAL orientation)
+  WIDTH_INCHES: 6,        // 6" wide (horizontal)
+  HEIGHT_INCHES: 4,       // 4" tall (horizontal)
+  LABELS_PER_SHEET: 4,    // 4 labels per legal sheet
+  COLUMNS: 2,             // 2 columns
+  ROWS: 2,                // 2 rows
+  SHEET_FORMAT: 'Uline S-5492',
+  SHEET_SIZE: 'Legal',    // 8.5" × 14" legal size sheets
+  ORIENTATION: 'Horizontal',
   
-  // Migration notes
-  MIGRATED_FROM: 'Uline S-5627',
+  // Migration history
+  MIGRATED_FROM: 'Uline S-21846',
   MIGRATION_DATE: '2025-07-31',
-  MIGRATION_REASON: 'User requested larger labels for better readability and manual writing space',
+  MIGRATION_REASON: 'Management decision for 4×6 horizontal format with brand separation',
   
-  // Layout enhancements for S-21846
+  // Layout features for S-5492
   ENHANCED_FEATURES: [
-    'Much larger product name area',
-    'Spaced barcode display (no hyphens)',
-    'Large manual writing text box',
-    'Bigger date and box information',
-    'Enhanced readability for all elements'
+    'Brand separation (Curaleaf, Grassroots, etc.)',
+    'Massive product name (up to 48pt font)',
+    'Bottom-focused layout design',
+    'Larger harvest/packaged dates',
+    'Enlarged case quantity and box info',
+    'Horizontal 4×6 orientation for better visibility'
   ]
 };
 
-// Legacy S-5627 specifications (preserved for reference)
-export const LEGACY_S5627_SPECS = {
-  WIDTH_INCHES: 4,
-  HEIGHT_INCHES: 1.5,
-  LABELS_PER_SHEET: 12,
-  COLUMNS: 2,
-  ROWS: 6,
-  SHEET_FORMAT: 'Uline S-5627',
-  STATUS: 'DEPRECATED',
-  REPLACED_BY: 'S-21846',
-  DEPRECATION_DATE: '2025-07-31'
+// Cannabis brand detection for product name separation
+export const CANNABIS_BRANDS = [
+  'Curaleaf', 'Grassroots', 'Reef', 'B-Noble', 'Cresco', 'Rythm', 'GTI',
+  'Verano', 'Aeriz', 'Revolution', 'Cookies', 'Jeeter', 'Raw Garden',
+  'Stiiizy', 'Select', 'Heavy Hitters', 'Papa & Barkley', 'Kiva',
+  'Wyld', 'Wana', 'Plus Products', 'Legion of Bloom', 'AbsoluteXtracts',
+  'Matter', 'Pharmacann', 'Green Thumb', 'Columbia Care', 'Trulieve',
+  'MedMen', 'Harvest', 'Acreage', 'Canopy Growth', 'Tilray',
+  'Pax', 'Dosist', 'Beboe', 'Lord Jones', 'Caliva', 'Flow Kana',
+  'Glass House', 'Connected', 'Alien Labs', 'Jungle Boys'
+];
+
+// Legacy specifications for reference
+export const LEGACY_SPECS = {
+  S5627: {
+    WIDTH_INCHES: 4,
+    HEIGHT_INCHES: 1.5,
+    LABELS_PER_SHEET: 12,
+    STATUS: 'DEPRECATED',
+    REPLACED_BY: 'S-21846'
+  },
+  S21846: {
+    WIDTH_INCHES: 7.75,
+    HEIGHT_INCHES: 4.75,
+    LABELS_PER_SHEET: 2,
+    STATUS: 'DEPRECATED',
+    REPLACED_BY: 'S-5492'
+  }
 };
 
-// HP E877 Printer Configuration (Critical for proper printing)
-export const HP_E877_CONFIG = {
-  PRINTABLE_AREA: {
-    WIDTH_INCHES: 8.17,
-    HEIGHT_INCHES: 10.67,
-    WIDTH_POINTS: 588,
-    HEIGHT_POINTS: 768
-  },
-  NON_PRINTABLE_MARGINS: {
-    ALL_SIDES_INCHES: 0.167,
-    ALL_SIDES_POINTS: 12
-  },
-  PRINT_SETTINGS: {
-    REQUIRED_SETTING: 'ACTUAL SIZE',
-    NEVER_USE: 'Fit to printable area',
-    REASON: 'Prevents crooked/skewed printing'
-  },
-  OPTIMIZATION_NOTES: [
-    'PDFs designed within printable area only',
-    'Prevents progressive left-leaning during printing',
-    'S-21846 labels fit naturally within printable area'
-  ]
+// Legal size sheet configuration (for S-5492)
+export const LEGAL_SHEET_CONFIG = {
+  WIDTH_INCHES: 8.5,
+  HEIGHT_INCHES: 14,
+  WIDTH_POINTS: 612,
+  HEIGHT_POINTS: 1008,
+  MARGINS: {
+    TOP: 18,
+    BOTTOM: 18,
+    LEFT: 18,
+    RIGHT: 18
+  }
 };
 
 // Authentication roles
@@ -191,19 +200,19 @@ export const STORAGE_KEYS = {
   SCANNED_ITEMS: 'cannabis_scanned_items',
   ENHANCED_DATA: 'cannabis_enhanced_data',
   SESSION_DATA: 'cannabis_session_data',
-  LABEL_FORMAT_PREFERENCE: 'cannabis_label_format' // New for format selection
+  LABEL_FORMAT_PREFERENCE: 'cannabis_label_format'
 };
 
-// Validation limits - Updated for larger labels
+// Validation limits - Updated for S-5492
 export const VALIDATION_LIMITS = {
-  LABEL_QUANTITY: { min: 1, max: 25 }, // Reduced max due to larger labels
+  LABEL_QUANTITY: { min: 1, max: 20 }, // Fewer labels due to larger size
   CASE_QUANTITY: { min: 1, max: 1000 },
   BOX_COUNT: { min: 1, max: 100 }
 };
 
-// Validation constants (for LabelFormatter class)
+// Validation constants
 export const VALIDATION = {
-  LABEL_QUANTITY: { min: 1, max: 25 }, // Reduced for S-21846
+  LABEL_QUANTITY: { min: 1, max: 20 },
   CASE_QUANTITY: { min: 1, max: 1000 },
   BOX_COUNT: { min: 1, max: 100 },
   DATE_FORMATS: [
@@ -232,71 +241,90 @@ export const TOAST_CONFIG = {
   SUCCESS_DURATION: 3000,
   ERROR_DURATION: 5000,
   WARNING_DURATION: 4000,
-  MIGRATION_DURATION: 6000 // New for migration notifications
+  MIGRATION_DURATION: 6000
 };
 
-// Pagination - Adjusted for larger labels (fewer per page in preview)
+// Pagination - Adjusted for larger labels
 export const PAGINATION = {
-  ITEMS_PER_PAGE: 10, // Reduced for larger label previews
+  ITEMS_PER_PAGE: 8, // Fewer items due to larger preview size
   MAX_VISIBLE_PAGES: 5
 };
 
-// Label Layout Configuration for S-21846
-export const S21846_LAYOUT = {
+// S-5492 Horizontal Layout Configuration
+export const S5492_LAYOUT = {
+  ORIENTATION: 'horizontal',
+  
+  BRAND_NAME: {
+    MAX_FONT_SIZE: 48,
+    MIN_FONT_SIZE: 16,
+    FONT_WEIGHT: 'bold',
+    DETECTION: 'automatic' // Auto-detect brands from CANNABIS_BRANDS list
+  },
+  
   PRODUCT_NAME: {
-    AREA_HEIGHT: 60,
-    MAX_FONT_SIZE: 36,
+    MAX_FONT_SIZE: 36, // When brand present
+    MAX_FONT_SIZE_NO_BRAND: 48, // When no brand detected
     MIN_FONT_SIZE: 14,
-    FONT_WEIGHT: 'bold'
+    FONT_WEIGHT: 'bold',
+    MAX_LINES: 4,
+    AREA_HEIGHT: 140 // Most of the label height
   },
-  BARCODE_DISPLAY: {
-    FONT_SIZE: 14,
-    FORMAT: 'SPACED', // Spaces instead of hyphens
-    COLOR: '#666666'
+  
+  BOTTOM_ROW: {
+    HEIGHT: 60,
+    BARCODE_WIDTH: 140,
+    TEXT_BOX_WIDTH: 120,
+    SPACING: 10
   },
-  SCANNABLE_BARCODE: {
-    WIDTH: 200,
-    HEIGHT: 80,
-    POSITION: 'left',
-    TEXT_DISPLAY: false // NEVER show text
+  
+  BARCODE: {
+    WIDTH: 140,
+    HEIGHT: 45,
+    DISPLAY_FONT_SIZE: 10,
+    FORMAT: 'SPACED' // Spaces not hyphens
   },
-  WRITING_BOX: {
-    WIDTH: 160,
-    HEIGHT: 80,
-    POSITION: 'center',
-    GRID_LINES: true,
-    LINE_SPACING: 20
+  
+  TEXT_BOX: {
+    WIDTH: 120,
+    HEIGHT: 60,
+    GRID_LINES: 3,
+    LABEL: false // No "Notes:" label
   },
+  
   RIGHT_INFO: {
-    DATE_FONT_SIZE: 12,
-    BOX_WIDTH: 70,
-    BOX_HEIGHT: 25,
-    BOX_FONT_SIZE: 11
+    HARVEST_FONT_SIZE: 14,  // LARGER
+    PACKAGED_FONT_SIZE: 14, // LARGER
+    BOX_WIDTH: 65,          // LARGER
+    BOX_HEIGHT: 18,         // LARGER
+    BOX_FONT_SIZE: 12       // LARGER
   },
+  
   AUDIT_TRAIL: {
     FONT_SIZE: 8,
     COLOR: '#666666',
-    POSITION: 'bottom-left'
+    POSITION: 'bottom-left-absolute'
   }
 };
 
-// Migration tracking
+// Migration tracking for S-5492
 export const MIGRATION_INFO = {
-  FROM_FORMAT: 'S-5627',
-  TO_FORMAT: 'S-21846',
+  FROM_FORMAT: 'S-21846',
+  TO_FORMAT: 'S-5492',
   MIGRATION_DATE: '2025-07-31',
-  VERSION: '5.4.0',
+  VERSION: '5.5.0',
   CHANGES: [
-    'Label size: 4″×1.5″ → 7.75″×4.75″',
-    'Labels per sheet: 12 → 2',
-    'Layout: Grid → Vertical stack',
-    'Enhanced readability and writing space',
-    'Larger fonts and elements throughout'
+    'Label size: 7.75″×4.75″ → 6″×4″ (horizontal)',
+    'Labels per sheet: 2 → 4',
+    'Layout: Vertical → 2×2 grid horizontal',
+    'Brand separation: Auto-detect cannabis brands',
+    'Product name: Massive sizing (up to 48pt)',
+    'Bottom layout: Barcode, text box, larger dates/boxes',
+    'Sheet size: HP E877 → Legal size (8.5″×14″)'
   ],
   COMPATIBILITY: {
-    HP_E877: 'Optimized',
-    ULINE_SHEETS: 'S-21846 required',
-    AVERY_EQUIVALENT: '6876'
+    SHEET_SIZE: 'Legal (8.5″ × 14″)',
+    ULINE_SHEETS: 'S-5492 required',
+    ORIENTATION: 'Horizontal landscape'
   }
 };
 
@@ -311,8 +339,9 @@ export default {
   FILE_STRUCTURE,
   BARCODE_CONFIG,
   LABEL_SPECS,
-  LEGACY_S5627_SPECS,
-  HP_E877_CONFIG,
+  CANNABIS_BRANDS,
+  LEGACY_SPECS,
+  LEGAL_SHEET_CONFIG,
   USER_ROLES,
   DEFAULT_USERS,
   STORAGE_KEYS,
@@ -322,6 +351,6 @@ export default {
   ACCEPTED_FILE_TYPES,
   TOAST_CONFIG,
   PAGINATION,
-  S21846_LAYOUT,
+  S5492_LAYOUT,
   MIGRATION_INFO
 };
