@@ -196,14 +196,14 @@ export class PDFGenerator {
       // 3. Scannable Barcode (Left side, larger)
       await this.drawEnhancedBarcode(pdf, labelData.barcode, contentX, contentY + 90, 200, 80);
 
-      // 4. Large Text Box for Manual Writing (Center area)
+      // 4. Large Text Box for Manual Writing (Center area) - NO "Notes:" label
       this.drawManualWritingBox(pdf, contentX + 210, contentY + 90, 160, 80);
 
-      // 5. Right Side Information (Dates and boxes - LARGER)
-      this.drawEnhancedRightSideInfo(pdf, labelData, contentX + 380, contentY + 90, 150, boxNumber, totalBoxes);
+      // 5. Bottom Right Information (Dates and boxes moved to bottom)
+      this.drawBottomRightInfo(pdf, labelData, contentX, y + height - padding, contentWidth, boxNumber, totalBoxes);
 
       // 6. Audit Trail (Bottom left with EST time)
-      this.drawEnhancedAuditTrail(pdf, currentUser, contentX, y + height - padding - 12);
+      this.drawEnhancedAuditTrail(pdf, currentUser, contentX, y + height - padding - 40);
 
     } catch (error) {
       console.error('Error drawing enhanced label components:', error);
@@ -383,7 +383,7 @@ export class PDFGenerator {
   }
 
   /**
-   * Draw large text box for manual writing
+   * Draw large text box for manual writing (NO "Notes:" label)
    * @param {jsPDF} pdf - PDF document
    * @param {number} x - X position
    * @param {number} y - Y position
@@ -407,70 +407,74 @@ export class PDFGenerator {
       pdf.line(x, lineY, x + width, lineY);
     }
 
-    // Label the box
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(8);
-    pdf.setTextColor(150, 150, 150);
-    pdf.text('Notes:', x + 2, y - 2);
+    // NO "Notes:" label - removed as requested
   }
 
   /**
-   * Draw enhanced right side information with larger elements
+   * Draw bottom right information with dates and boxes moved to bottom
    * @param {jsPDF} pdf - PDF document
    * @param {Object} labelData - Label data
-   * @param {number} x - X position
-   * @param {number} y - Y position
+   * @param {number} x - Content X position
+   * @param {number} y - Bottom Y position
    * @param {number} width - Available width
    * @param {number} boxNumber - Current box number
    * @param {number} totalBoxes - Total boxes
    */
-  static drawEnhancedRightSideInfo(pdf, labelData, x, y, width, boxNumber, totalBoxes) {
-    let currentY = y;
+  static drawBottomRightInfo(pdf, labelData, x, y, width, boxNumber, totalBoxes) {
+    // Position everything to the right side, working upward from bottom
+    const rightAlignX = x + width - 180; // 180pt from right edge for more space
+    let currentYFromBottom = y - 10; // Start 10pt from bottom
 
-    // Harvest Date - Larger font
-    pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(12);
-    pdf.setTextColor(0, 0, 0);
-    const harvestText = `Harvest: ${labelData.harvestDate || 'MM/DD/YYYY'}`;
-    pdf.text(harvestText, x, currentY + 12);
-
-    currentY += 22;
-
-    // Packaged Date - Larger font
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(12);
-    const packagedText = `Packaged: ${labelData.packagedDate || 'MM/DD/YYYY'}`;
-    pdf.text(packagedText, x, currentY + 12);
-
-    // MUCH LARGER BOXES for S-21846
-    const largeBoxWidth = 70;
-    const largeBoxHeight = 25;
+    // CASE/BOX BOXES at the very bottom
+    const largeBoxWidth = 80;  // Made slightly wider
+    const largeBoxHeight = 20; // Made slightly shorter for bottom positioning
     const boxGap = 5;
     
-    const box1X = x;
-    const box2X = x + largeBoxWidth + boxGap;
-    const boxY = y + 40;
+    const box1X = rightAlignX;
+    const box2X = rightAlignX + largeBoxWidth + boxGap;
+    const boxY = currentYFromBottom - largeBoxHeight;
 
-    // Case Qty Box - MUCH LARGER
+    // Case Qty Box
     pdf.setDrawColor(0, 0, 0);
     pdf.setLineWidth(1);
     pdf.rect(box1X, boxY, largeBoxWidth, largeBoxHeight);
     
     pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(11);
+    pdf.setFontSize(10);
+    pdf.setTextColor(0, 0, 0);
     const caseQtyValue = labelData.caseQuantity || '___';
     const caseQtyText = `Case: ${caseQtyValue}`;
     const caseQtyWidth = pdf.getTextWidth(caseQtyText);
-    pdf.text(caseQtyText, box1X + (largeBoxWidth - caseQtyWidth) / 2, boxY + (largeBoxHeight / 2) + 4);
+    pdf.text(caseQtyText, box1X + (largeBoxWidth - caseQtyWidth) / 2, boxY + (largeBoxHeight / 2) + 3);
 
-    // Box Number Box - MUCH LARGER
+    // Box Number Box
     pdf.rect(box2X, boxY, largeBoxWidth, largeBoxHeight);
     
     pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(11);
+    pdf.setFontSize(10);
     const boxText = `Box ${boxNumber}/${totalBoxes}`;
     const boxTextWidth = pdf.getTextWidth(boxText);
-    pdf.text(boxText, box2X + (largeBoxWidth - boxTextWidth) / 2, boxY + (largeBoxHeight / 2) + 4);
+    pdf.text(boxText, box2X + (largeBoxWidth - boxTextWidth) / 2, boxY + (largeBoxHeight / 2) + 3);
+
+    // Move up for dates
+    currentYFromBottom = boxY - 8; // 8pt gap above boxes
+
+    // Packaged Date (above boxes)
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(11);
+    const packagedText = `Packaged: ${labelData.packagedDate || 'MM/DD/YYYY'}`;
+    const packagedWidth = pdf.getTextWidth(packagedText);
+    pdf.text(packagedText, rightAlignX + (largeBoxWidth * 2 + boxGap - packagedWidth) / 2, currentYFromBottom);
+
+    // Move up for harvest date
+    currentYFromBottom -= 15;
+
+    // Harvest Date (above packaged date)
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(11);
+    const harvestText = `Harvest: ${labelData.harvestDate || 'MM/DD/YYYY'}`;
+    const harvestWidth = pdf.getTextWidth(harvestText);
+    pdf.text(harvestText, rightAlignX + (largeBoxWidth * 2 + boxGap - harvestWidth) / 2, currentYFromBottom);
   }
 
   /**
@@ -484,7 +488,23 @@ export class PDFGenerator {
    * @param {number} totalBoxes - Total boxes
    */
   static drawRightSideInfo(pdf, labelData, x, y, width, boxNumber, totalBoxes) {
-    return this.drawEnhancedRightSideInfo(pdf, labelData, x, y, width, boxNumber, totalBoxes);
+    // Redirect to new bottom right method, but adjust positioning
+    return this.drawBottomRightInfo(pdf, labelData, x - width, y + 100, width * 2, boxNumber, totalBoxes);
+  }
+
+  /**
+   * Legacy method for old right side positioning
+   * @param {jsPDF} pdf - PDF document
+   * @param {Object} labelData - Label data
+   * @param {number} x - X position
+   * @param {number} y - Y position
+   * @param {number} width - Available width
+   * @param {number} boxNumber - Current box number
+   * @param {number} totalBoxes - Total boxes
+   */
+  static drawEnhancedRightSideInfo(pdf, labelData, x, y, width, boxNumber, totalBoxes) {
+    // For legacy compatibility, redirect to new bottom method
+    return this.drawBottomRightInfo(pdf, labelData, x - 200, y + 80, width + 200, boxNumber, totalBoxes);
   }
 
   /**
@@ -636,9 +656,9 @@ export class PDFGenerator {
         layout: "2×6 grid → 2×1 vertical stack",
         features: [
           "Much larger product name",
-          "Spaced barcode display (not hyphens)",
-          "Large manual writing text box",
-          "Bigger date/box information",
+          "Spaced barcode display above barcode",
+          "Large manual writing text box (no label)",
+          "Dates and boxes moved to bottom right",
           "Enhanced readability for all elements"
         ]
       },
