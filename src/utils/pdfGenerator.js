@@ -189,21 +189,27 @@ export class PDFGenerator {
       // 1. Product Name (Top section - MUCH LARGER)
       await this.drawEnhancedProductName(pdf, labelData.productName, contentX, contentY, contentWidth, 60);
 
-      // 2. Barcode Display (ABOVE barcode with SPACES, not hyphens)
+      // 2. Barcode area positioning
+      const barcodeX = contentX;
+      const barcodeY = contentY + 85;
+      const barcodeWidth = 200;
+      const barcodeHeight = 80;
+
+      // 3. Barcode Display (DIRECTLY above the barcode, not full width)
       const spacedBarcodeDisplay = this.formatBarcodeWithSpaces(labelData.barcodeDisplay);
-      this.drawEnhancedBarcodeDisplay(pdf, spacedBarcodeDisplay, contentX, contentY + 70, contentWidth);
+      this.drawBarcodeDisplayAboveBarcode(pdf, spacedBarcodeDisplay, barcodeX, barcodeY - 15, barcodeWidth);
 
-      // 3. Scannable Barcode (Left side, larger)
-      await this.drawEnhancedBarcode(pdf, labelData.barcode, contentX, contentY + 90, 200, 80);
+      // 4. Scannable Barcode (Left side, larger)
+      await this.drawEnhancedBarcode(pdf, labelData.barcode, barcodeX, barcodeY, barcodeWidth, barcodeHeight);
 
-      // 4. Large Text Box for Manual Writing (Center area) - NO "Notes:" label
-      this.drawManualWritingBox(pdf, contentX + 210, contentY + 90, 160, 80);
+      // 5. Large Text Box for Manual Writing (Center area) - NO "Notes:" label
+      this.drawManualWritingBox(pdf, contentX + 210, barcodeY, 160, 80);
 
-      // 5. Bottom Right Information (Dates and boxes moved to bottom)
-      this.drawBottomRightInfo(pdf, labelData, contentX, y + height - padding, contentWidth, boxNumber, totalBoxes);
+      // 6. Bottom Right Information (Dates and boxes moved to bottom)
+      const bottomInfo = this.drawBottomRightInfo(pdf, labelData, contentX, y + height - padding, contentWidth, boxNumber, totalBoxes);
 
-      // 6. Audit Trail (Bottom left with EST time)
-      this.drawEnhancedAuditTrail(pdf, currentUser, contentX, y + height - padding - 40);
+      // 7. Audit Trail (Bottom left, aligned with Case/Box level)
+      this.drawEnhancedAuditTrail(pdf, currentUser, contentX, bottomInfo.boxY + 12); // Align with box center
 
     } catch (error) {
       console.error('Error drawing enhanced label components:', error);
@@ -289,7 +295,28 @@ export class PDFGenerator {
   }
 
   /**
-   * Draw enhanced barcode display with larger font
+   * Draw barcode display directly above the barcode (not full width)
+   * @param {jsPDF} pdf - PDF document
+   * @param {string} barcodeDisplay - Spaced barcode for display
+   * @param {number} x - Barcode X position
+   * @param {number} y - Y position above barcode
+   * @param {number} barcodeWidth - Width of the barcode below
+   */
+  static drawBarcodeDisplayAboveBarcode(pdf, barcodeDisplay, x, y, barcodeWidth) {
+    if (!barcodeDisplay) return;
+
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(14); // Larger font for S-21846
+    pdf.setTextColor(102, 102, 102);
+
+    // Center the text above the barcode (not full label width)
+    const textWidth = pdf.getTextWidth(barcodeDisplay);
+    const centerX = x + (barcodeWidth - textWidth) / 2;
+    pdf.text(barcodeDisplay, centerX, y + 12);
+  }
+
+  /**
+   * Draw enhanced barcode display with larger font (legacy - for full width)
    * @param {jsPDF} pdf - PDF document
    * @param {string} barcodeDisplay - Spaced barcode for display
    * @param {number} x - X position
@@ -419,6 +446,7 @@ export class PDFGenerator {
    * @param {number} width - Available width
    * @param {number} boxNumber - Current box number
    * @param {number} totalBoxes - Total boxes
+   * @returns {Object} - Position info for audit trail alignment
    */
   static drawBottomRightInfo(pdf, labelData, x, y, width, boxNumber, totalBoxes) {
     // Position everything to the right side, working upward from bottom
@@ -475,6 +503,12 @@ export class PDFGenerator {
     const harvestText = `Harvest: ${labelData.harvestDate || 'MM/DD/YYYY'}`;
     const harvestWidth = pdf.getTextWidth(harvestText);
     pdf.text(harvestText, rightAlignX + (largeBoxWidth * 2 + boxGap - harvestWidth) / 2, currentYFromBottom);
+
+    // Return box position for audit trail alignment
+    return {
+      boxY: boxY,
+      boxHeight: largeBoxHeight
+    };
   }
 
   /**
@@ -508,11 +542,11 @@ export class PDFGenerator {
   }
 
   /**
-   * Draw enhanced audit trail with larger font
+   * Draw enhanced audit trail aligned with Case/Box level
    * @param {jsPDF} pdf - PDF document
    * @param {string} currentUser - Current user
-   * @param {number} x - X position
-   * @param {number} y - Y position
+   * @param {number} x - X position (left side)
+   * @param {number} y - Y position (aligned with boxes)
    */
   static drawEnhancedAuditTrail(pdf, currentUser, x, y) {
     const now = new Date();
@@ -656,9 +690,10 @@ export class PDFGenerator {
         layout: "2×6 grid → 2×1 vertical stack",
         features: [
           "Much larger product name",
-          "Spaced barcode display above barcode",
+          "Spaced barcode display directly above barcode",
           "Large manual writing text box (no label)",
           "Dates and boxes moved to bottom right",
+          "Audit trail aligned with Case/Box level",
           "Enhanced readability for all elements"
         ]
       },
