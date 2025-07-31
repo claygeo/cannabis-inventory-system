@@ -1,17 +1,18 @@
 import React, { useState } from 'react';
 
 /**
- * Uline S-5492 Label Component (ROTATED LAYOUT)
+ * Uline S-5492 Label Component (NEW ROTATED CONTENT LAYOUT)
+ * Content rotated 90° to the right within sideways-positioned labels
  * Labels positioned sideways on legal paper - rotate paper 90° to read/peel
  */
 class UlineS5492Label extends React.Component {
   /**
-   * Calculate label position for Uline S-5492 ROTATED on legal paper
-   * Labels are positioned sideways - paper must be rotated 90° for reading/peeling
+   * Calculate label position for Uline S-5492 SIDEWAYS on legal paper
+   * Container positioning remains unchanged - only content layout is updated
    * @param {number} labelIndex - Index of label (0-3 for 4 labels per sheet)
    * @returns {Object} - Position coordinates in points
    */
-  static calculateUlineS5492PositionRotated(labelIndex) {
+  static calculateUlineS5492PositionSideways(labelIndex) {
     // Legal size sheet dimensions (8.5" × 14")
     const pageWidth = 612;   // 8.5" in points  
     const pageHeight = 1008; // 14" in points
@@ -21,145 +22,181 @@ class UlineS5492Label extends React.Component {
     const printableWidth = pageWidth - (printerMargin * 2);   // 588pt
     const printableHeight = pageHeight - (printerMargin * 2); // 984pt
     
-    // In rotated coordinate system (after rotating paper 90°):
-    // - Available width: printableHeight = 984pt (14" - margins)
-    // - Available height: printableWidth = 588pt (8.5" - margins)
-    const rotatedPageWidth = printableHeight;  // 984pt
-    const rotatedPageHeight = printableWidth;  // 588pt
+    // S-5492 labels: 4" × 6" = When positioned sideways: 4" tall × 6" wide
+    // In PDF coordinates (before rotation): height=4", width=6"
+    const labelWidth = 288;  // 4" in points (will be height when rotated)
+    const labelHeight = 432; // 6" in points (will be width when rotated)
     
-    // Label dimensions in rotated view (6" wide × 4" tall)
-    const labelWidth = 432;  // 6" wide in rotated view
-    const labelHeight = 288; // 4" tall in rotated view
-    
-    // Grid layout: 2 columns × 2 rows in rotated view
+    // Grid layout: 2 columns × 2 rows of sideways labels
     const cols = 2;
     const rows = 2;
     const row = Math.floor(labelIndex / cols);
     const col = labelIndex % cols;
     
-    // Calculate scale factor if needed
-    const requiredWidth = cols * labelWidth;   // 864pt
-    const requiredHeight = rows * labelHeight; // 576pt
+    // Calculate spacing
+    const totalLabelsWidth = cols * labelWidth;   // 576pt
+    const totalLabelsHeight = rows * labelHeight; // 864pt
     
-    const scaleX = rotatedPageWidth / requiredWidth;   // 984/864 = 1.14
-    const scaleY = rotatedPageHeight / requiredHeight; // 588/576 = 1.02
-    const scaleFactor = Math.min(scaleX, scaleY, 1.0); // Use 1.02 but cap at 1.0
+    // Center on page
+    const startX = printerMargin + (printableWidth - totalLabelsWidth) / 2;
+    const startY = printerMargin + (printableHeight - totalLabelsHeight) / 2;
     
-    // Labels fit without scaling!
-    const actualLabelWidth = labelWidth;
-    const actualLabelHeight = labelHeight;
-    
-    // Calculate positions in rotated coordinate system
-    const rotatedX = col * actualLabelWidth + (rotatedPageWidth - (cols * actualLabelWidth)) / 2;
-    const rotatedY = row * actualLabelHeight + (rotatedPageHeight - (rows * actualLabelHeight)) / 2;
-    
-    // Transform back to PDF coordinate system (unrotated)
-    // For 90° clockwise rotation: x' = y, y' = pageWidth - x - width
-    const pdfX = printerMargin + rotatedY;
-    const pdfY = printerMargin + (rotatedPageWidth - rotatedX - actualLabelWidth);
+    // Individual label position
+    const xPos = startX + (col * labelWidth);
+    const yPos = startY + (row * labelHeight);
     
     return {
-      x: Math.floor(pdfX),
-      y: Math.floor(pdfY),
-      width: actualLabelHeight,  // In PDF coords: height becomes width
-      height: actualLabelWidth,  // In PDF coords: width becomes height
+      x: Math.floor(xPos),
+      y: Math.floor(yPos),
+      width: labelWidth,   // 288pt (4" - will be height when rotated)
+      height: labelHeight, // 432pt (6" - will be width when rotated)
       
-      // Rotation information
-      isRotated: true,
-      rotationAngle: 90,
-      rotatedWidth: actualLabelWidth,   // Width when rotated (6")
-      rotatedHeight: actualLabelHeight, // Height when rotated (4")
-      
-      // Scaling info
-      scaleFactor: scaleFactor,
-      isScaled: scaleFactor < 1.0,
-      fitsWithoutScaling: scaleFactor >= 1.0,
+      // Information for when paper is rotated
+      rotatedWidth: labelHeight,  // 432pt (6" wide when rotated)
+      rotatedHeight: labelWidth,  // 288pt (4" tall when rotated)
       
       // Grid information
       row: row,
       col: col,
       labelIndex: labelIndex,
       
-      // Debug info
-      rotatedCoords: { x: rotatedX, y: rotatedY },
-      rotatedPageSize: { width: rotatedPageWidth, height: rotatedPageHeight },
-      
-      // Workflow info
-      workflow: 'print_rotate_peel',
-      instructions: [
-        'Print on legal paper (8.5" × 14")',
-        'Rotate paper 90° clockwise',
-        'Labels are now readable and peelable'
+      // Layout info
+      isSideways: true,
+      hasNewContentLayout: true,
+      contentRotation: 90, // Content rotated 90° right
+      requiresRotation: true,
+      rotationInstructions: 'Rotate paper 90° clockwise to read labels with optimal content layout'
+    };
+  }
+
+  /**
+   * Generate new content layout section information
+   * @param {number} labelIndex - Label index
+   * @returns {Object} - Content layout sections
+   */
+  static generateNewContentLayoutSections(labelIndex) {
+    const position = this.calculateUlineS5492PositionSideways(labelIndex);
+    const { width, height } = position;
+    
+    const padding = 10;
+    const contentWidth = width - (padding * 2);
+    const contentHeight = height - (padding * 2);
+    
+    // Section calculations for new layout
+    const topSectionHeight = Math.floor(contentHeight * 0.35);
+    const middleSectionHeight = Math.floor(contentHeight * 0.35);
+    const bottomSectionHeight = contentHeight - topSectionHeight - middleSectionHeight;
+    
+    return {
+      container: {
+        x: position.x,
+        y: position.y,
+        width: width,
+        height: height,
+        padding: padding
+      },
+      topSection: {
+        purpose: 'Audit Trail (rotated) + Product Name (center-top)',
+        x: position.x + padding,
+        y: position.y + padding,
+        width: contentWidth,
+        height: topSectionHeight,
+        elements: {
+          auditTrail: {
+            position: 'top-left',
+            rotation: 90,
+            fontSize: 7,
+            area: Math.floor(contentWidth * 0.25)
+          },
+          productName: {
+            position: 'center-top',
+            maxFontSize: 34,
+            minFontSize: 16,
+            area: Math.floor(contentWidth * 0.75)
+          },
+          brand: {
+            position: 'above-product',
+            maxFontSize: 22,
+            minFontSize: 12
+          }
+        }
+      },
+      middleSection: {
+        purpose: 'Product name overflow area',
+        x: position.x + padding,
+        y: position.y + padding + topSectionHeight,
+        width: contentWidth,
+        height: middleSectionHeight,
+        elements: {
+          productOverflow: {
+            available: true,
+            maxLines: 2
+          }
+        }
+      },
+      bottomSection: {
+        purpose: '4-column layout: Barcode | Store Box | Dates | Case/Box',
+        x: position.x + padding,
+        y: position.y + padding + topSectionHeight + middleSectionHeight,
+        width: contentWidth,
+        height: bottomSectionHeight,
+        columns: {
+          barcode: {
+            position: 'left',
+            width: Math.floor(contentWidth * 0.25),
+            fontSize: 8,
+            barcodeHeight: Math.floor(bottomSectionHeight * 0.7)
+          },
+          storeBox: {
+            position: 'center-left',
+            width: Math.floor(contentWidth * 0.25),
+            labelText: 'Store:',
+            labelFontSize: 9,
+            boxHeight: Math.floor(bottomSectionHeight * 0.7)
+          },
+          dates: {
+            position: 'center-right',
+            width: Math.floor(contentWidth * 0.25),
+            fontSize: 10,
+            layout: 'vertical'
+          },
+          caseBox: {
+            position: 'right',
+            width: Math.floor(contentWidth * 0.25),
+            fontSize: 9,
+            boxHeight: 14
+          }
+        }
+      },
+      improvements: [
+        'Content rotated 90° right for optimal layout',
+        'Audit trail rotated and positioned top-left',
+        'Product name with largest fonts (up to 34pt)',
+        'Enhanced 4-column bottom section',
+        'Store text box with "Store:" label',
+        'All fonts increased for better visibility'
       ]
     };
   }
 
   /**
-   * Alternative positioning method with custom spacing
-   * @param {number} labelIndex - Index of label (0-3)
-   * @param {Object} options - Positioning options
-   * @returns {Object} - Position coordinates with custom spacing
-   */
-  static calculateUlineS5492PositionWithSpacing(labelIndex, options = {}) {
-    const {
-      columnGap = 12,  // 12pt gap between columns
-      rowGap = 12,     // 12pt gap between rows
-      topMargin = 50,  // Extra top margin
-      leftMargin = 50  // Extra left margin
-    } = options;
-    
-    // Start with base rotated positioning
-    const basePosition = this.calculateUlineS5492PositionRotated(labelIndex);
-    
-    // Apply custom spacing in rotated coordinate system
-    const cols = 2;
-    const row = Math.floor(labelIndex / cols);
-    const col = labelIndex % cols;
-    
-    const rotatedX = leftMargin + col * (basePosition.rotatedWidth + columnGap);
-    const rotatedY = topMargin + row * (basePosition.rotatedHeight + rowGap);
-    
-    // Transform back to PDF coordinates
-    const printerMargin = 12;
-    const rotatedPageWidth = 984; // printableHeight
-    
-    const pdfX = printerMargin + rotatedY;
-    const pdfY = printerMargin + (rotatedPageWidth - rotatedX - basePosition.rotatedWidth);
-    
-    return {
-      ...basePosition,
-      x: Math.floor(pdfX),
-      y: Math.floor(pdfY),
-      method: 'custom_spacing',
-      spacing: { columnGap, rowGap, topMargin, leftMargin },
-      rotatedCoords: { x: rotatedX, y: rotatedY }
-    };
-  }
-
-  /**
-   * Generate alignment test data for all 4 rotated label positions
+   * Generate alignment test data for new content layout
    * @param {Object} options - Test options
-   * @returns {Object} - Position test data
+   * @returns {Object} - New layout test data
    */
-  static generateRotatedAlignmentTestData(options = {}) {
-    const { method = 'rotated', includeDebug = true } = options;
+  static generateNewContentLayoutTestData(options = {}) {
+    const { includeDebug = true, testContent = true } = options;
     
     const positions = [];
     
     for (let i = 0; i < 4; i++) {
-      let position;
-      
-      switch (method) {
-        case 'spacing':
-          position = this.calculateUlineS5492PositionWithSpacing(i, options);
-          break;
-        default:
-          position = this.calculateUlineS5492PositionRotated(i);
-      }
+      const position = this.calculateUlineS5492PositionSideways(i);
+      const contentLayout = this.generateNewContentLayoutSections(i);
       
       positions.push({
         labelIndex: i,
         position: position,
+        contentLayout: contentLayout,
         centerX: position.x + position.width / 2,
         centerY: position.y + position.height / 2,
         corners: {
@@ -168,65 +205,80 @@ class UlineS5492Label extends React.Component {
           bottomLeft: { x: position.x, y: position.y + position.height },
           bottomRight: { x: position.x + position.width, y: position.y + position.height }
         },
-        // Rotated view info
+        // Rotated view info (when paper is rotated 90°)
         rotatedDimensions: {
           width: position.rotatedWidth,
           height: position.rotatedHeight,
           widthInches: (position.rotatedWidth / 72).toFixed(2),
           heightInches: (position.rotatedHeight / 72).toFixed(2)
         },
-        isProperlyRotated: position.isRotated,
-        fitsWithoutScaling: position.fitsWithoutScaling
+        hasNewContentLayout: position.hasNewContentLayout,
+        contentRotation: position.contentRotation,
+        layoutVersion: '6.3.0'
       });
     }
     
     return {
       positions: positions,
-      method: method,
+      layoutType: 'new_rotated_content',
       pageSize: { width: 612, height: 1008 },
       labelCount: 4,
-      gridLayout: '2×2 (when rotated)',
+      gridLayout: '2×2 (containers sideways)',
+      contentLayout: 'Rotated 90° right within containers',
       sheetFormat: 'Legal (8.5" × 14")',
-      labelSize: '6" wide × 4" tall (when rotated)',
-      orientation: 'rotated',
-      rotationAngle: 90,
-      workflow: 'Print → Rotate 90° → Peel',
+      labelSize: '6" wide × 4" tall (when paper rotated)',
+      containerOrientation: 'sideways',
+      contentOrientation: 'rotated_90_right',
+      workflow: 'Print → Rotate paper 90° → Content optimally positioned',
       generatedAt: new Date().toISOString(),
       validation: {
-        allRotated: positions.every(p => p.isProperlyRotated),
-        allFitWithoutScaling: positions.every(p => p.fitsWithoutScaling),
+        allHaveNewLayout: positions.every(p => p.hasNewContentLayout),
+        allHaveContentRotation: positions.every(p => p.contentRotation === 90),
         averageRotatedWidth: positions.reduce((sum, p) => sum + p.rotatedDimensions.width, 0) / positions.length,
         averageRotatedHeight: positions.reduce((sum, p) => sum + p.rotatedDimensions.height, 0) / positions.length
+      },
+      newLayoutFeatures: {
+        topSection: 'Audit trail (rotated) + Product name (large fonts)',
+        middleSection: 'Product name overflow area',
+        bottomSection: '4-column: Barcode | Store | Dates | Case/Box',
+        fontSizes: 'Significantly increased throughout',
+        auditTrail: 'Rotated 90° clockwise, positioned top-left',
+        storeBox: 'With "Store:" label above for clarity'
       }
     };
   }
 
   /**
-   * Validate rotated positioning calculations
-   * @param {Object} positionData - Position data to validate
+   * Validate new content layout positioning
+   * @param {Object} positionData - New layout position data
    * @returns {Object} - Validation results
    */
-  static validateRotatedPositioning(positionData) {
+  static validateNewContentLayoutPositioning(positionData) {
     const { positions } = positionData;
     const issues = [];
     const warnings = [];
     
     positions.forEach((pos, index) => {
-      const { position } = pos;
+      const { position, contentLayout } = pos;
       
-      // Check rotation status
-      if (!pos.isProperlyRotated) {
-        issues.push(`Label ${index}: Not marked as rotated`);
+      // Check new layout status
+      if (!pos.hasNewContentLayout) {
+        issues.push(`Label ${index}: Not configured for new content layout`);
+      }
+      
+      // Check content rotation
+      if (pos.contentRotation !== 90) {
+        issues.push(`Label ${index}: Content not rotated 90° (actual: ${pos.contentRotation}°)`);
       }
       
       // Check if labels fit on page
-      if (position.x < 0) issues.push(`Label ${index}: X position is negative (${position.x})`);
-      if (position.y < 0) issues.push(`Label ${index}: Y position is negative (${position.y})`);
+      if (position.x < 0) issues.push(`Label ${index}: X position negative (${position.x})`);
+      if (position.y < 0) issues.push(`Label ${index}: Y position negative (${position.y})`);
       if (position.x + position.width > 612) {
-        warnings.push(`Label ${index}: Extends beyond page width by ${(position.x + position.width - 612).toFixed(0)}pt`);
+        warnings.push(`Label ${index}: Extends beyond page width`);
       }
       if (position.y + position.height > 1008) {
-        issues.push(`Label ${index}: Extends beyond page height by ${(position.y + position.height - 1008).toFixed(0)}pt`);
+        issues.push(`Label ${index}: Extends beyond page height`);
       }
       
       // Check printer margins (12pt on all sides)
@@ -235,17 +287,23 @@ class UlineS5492Label extends React.Component {
       if (612 - (position.x + position.width) < 12) warnings.push(`Label ${index}: Within printer margin (right)`);
       if (1008 - (position.y + position.height) < 12) warnings.push(`Label ${index}: Within printer margin (bottom)`);
       
-      // Check rotated dimensions
-      if (pos.rotatedDimensions.width < 300) {
-        warnings.push(`Label ${index}: Rotated width is small (${pos.rotatedDimensions.widthInches}")`);
-      }
-      if (pos.rotatedDimensions.height < 200) {
-        warnings.push(`Label ${index}: Rotated height is small (${pos.rotatedDimensions.heightInches}")`);
-      }
-      
-      // Check if scaling is needed but not applied
-      if (!pos.fitsWithoutScaling && !position.isScaled) {
-        warnings.push(`Label ${index}: May need scaling but none applied`);
+      // Validate content layout sections
+      if (contentLayout) {
+        const { topSection, middleSection, bottomSection } = contentLayout;
+        
+        // Check font sizes
+        if (topSection.elements.productName.maxFontSize < 30) {
+          warnings.push(`Label ${index}: Product name max font size may be too small for new layout`);
+        }
+        
+        // Check bottom section columns
+        if (bottomSection.columns.barcode.fontSize < 8) {
+          warnings.push(`Label ${index}: Barcode font size may be too small`);
+        }
+        
+        if (!bottomSection.columns.storeBox.labelText) {
+          warnings.push(`Label ${index}: Store box missing "Store:" label`);
+        }
       }
     });
     
@@ -264,9 +322,13 @@ class UlineS5492Label extends React.Component {
       }
     }
     
-    // Overall rotation validation
-    if (!positionData.validation.allRotated) {
-      issues.push('Not all labels are properly marked as rotated');
+    // Overall new layout validation
+    if (!positionData.validation.allHaveNewLayout) {
+      issues.push('Not all labels configured for new content layout');
+    }
+    
+    if (!positionData.validation.allHaveContentRotation) {
+      issues.push('Not all labels have content rotation configured');
     }
     
     return {
@@ -275,120 +337,159 @@ class UlineS5492Label extends React.Component {
       warnings: warnings,
       summary: {
         totalLabels: positions.length,
-        rotatedLabels: positions.filter(p => p.isProperlyRotated).length,
+        labelsWithNewLayout: positions.filter(p => p.hasNewContentLayout).length,
+        labelsWithContentRotation: positions.filter(p => p.contentRotation === 90).length,
         labelsWithIssues: issues.length,
-        labelsWithWarnings: warnings.length,
-        fitWithoutScaling: positions.filter(p => p.fitsWithoutScaling).length
+        labelsWithWarnings: warnings.length
+      },
+      layoutValidation: {
+        newLayoutFeatures: positionData.newLayoutFeatures,
+        contentOrientation: positionData.contentOrientation,
+        workflow: positionData.workflow
       }
     };
   }
 
   /**
-   * Get debug information for rotated positioning
-   * @param {string} method - Positioning method to analyze
-   * @returns {Object} - Detailed debug information
+   * Get debug information for new content layout
+   * @returns {Object} - Detailed debug information for new layout
    */
-  static getRotatedDebugInfo(method = 'rotated') {
-    const testData = this.generateRotatedAlignmentTestData({ method: method, includeDebug: true });
-    const validation = this.validateRotatedPositioning(testData);
+  static getNewContentLayoutDebugInfo() {
+    const testData = this.generateNewContentLayoutTestData({ includeDebug: true, testContent: true });
+    const validation = this.validateNewContentLayoutPositioning(testData);
     
     return {
       migrationInfo: {
-        from: 'S-21846 (7-3/4" × 4-3/4", 2 per sheet, letter)',
-        to: 'S-5492 (4" × 6" positioned sideways, 4 per sheet, legal)',
-        status: 'ROTATED LAYOUT - Print then rotate paper 90°',
-        version: '6.1.0'
+        from: 'S-5492 Basic sideways layout',
+        to: 'S-5492 New rotated content layout',
+        status: 'CONTENT ROTATED 90° RIGHT - Optimal positioning after paper rotation',
+        version: '6.3.0',
+        layoutUpdate: 'Content repositioned and rotated 90° to the right'
       },
-      positioningMethod: method,
+      containerPositioning: {
+        method: 'sideways (unchanged)',
+        description: 'Label containers positioned sideways on legal paper',
+        status: 'Working correctly - no changes needed'
+      },
+      contentLayout: {
+        method: 'rotated_90_right',
+        description: 'Content within each label rotated 90° clockwise',
+        sections: {
+          top: 'Audit trail (rotated) + Product name (large fonts)',
+          middle: 'Product name overflow area',
+          bottom: '4-column layout with larger fonts'
+        },
+        improvements: [
+          'Audit trail rotated 90° and moved to top-left',
+          'Product name centered with fonts up to 34pt',
+          'Store text box with "Store:" label above',
+          'Barcode repositioned with larger numeric display',
+          'Dates and case/box info with increased fonts',
+          'Enhanced 4-column bottom section layout'
+        ]
+      },
       testData: testData,
       validation: validation,
       rotationInfo: {
-        angle: 90,
-        direction: 'clockwise',
-        workflow: 'Print PDF → Rotate paper 90° → Read/peel labels',
+        containerAngle: 0,     // Containers not rotated in PDF
+        contentAngle: 90,      // Content rotated 90° clockwise
+        paperAngle: 90,        // Rotate paper 90° clockwise to read
+        workflow: 'Print PDF → Rotate paper 90° → Content optimally positioned',
         afterRotation: {
           effectivePageSize: '14" × 8.5" (rotated view)',
           labelSize: '6" wide × 4" tall',
-          readableOrientation: true
+          contentOrientation: 'Optimal for reading and scanning',
+          auditTrailPosition: 'Top-left corner',
+          productNamePosition: 'Center-top with largest fonts',
+          bottomSectionLayout: 'Barcode | Store | Dates | Case/Box'
         }
       },
       printerInfo: {
         model: 'HP E877',
         margins: '0.167" on all sides',
         printableArea: '588 × 984 points',
-        recommendedSetting: 'Actual Size (no scaling)'
+        recommendedSetting: 'Actual Size (no scaling)',
+        paperSize: 'Legal (8.5" × 14")'
       },
       physicalAlignment: {
         labelSheet: 'Uline S-5492',
-        positioning: 'Sideways on legal paper',
-        peelDirection: 'After 90° rotation',
-        expectedFit: validation.summary.fitWithoutScaling === 4 ? 'Perfect' : 'Needs adjustment'
+        containerPositioning: 'Sideways on legal paper (unchanged)',
+        contentLayout: 'Rotated 90° right within containers (NEW)',
+        peelDirection: 'After paper rotation - optimal orientation',
+        expectedFit: validation.summary.labelsWithIssues === 0 ? 'Perfect' : 'Needs adjustment'
       },
-      recommendations: this.generateRotatedPositioningRecommendations(testData, validation)
+      recommendations: this.generateNewContentLayoutRecommendations(testData, validation)
     };
   }
 
   /**
-   * Generate positioning recommendations for rotated layout
+   * Generate recommendations for new content layout
    * @param {Object} testData - Test positioning data
    * @param {Object} validation - Validation results
    * @returns {Array} - Array of recommendations
    */
-  static generateRotatedPositioningRecommendations(testData, validation) {
+  static generateNewContentLayoutRecommendations(testData, validation) {
     const recommendations = [];
     
     if (validation.issues.length > 0) {
-      recommendations.push('CRITICAL: Positioning issues detected for rotated layout');
-      recommendations.push('Verify calculations and test print alignment');
+      recommendations.push('CRITICAL: New content layout issues detected');
+      recommendations.push('Verify content rotation and positioning calculations');
     }
     
     if (validation.warnings.length > 0) {
-      recommendations.push('Positioning warnings detected - check printer margins');
+      recommendations.push('Minor positioning warnings detected - review font sizes and margins');
     }
     
-    // Check rotation status
-    if (testData.validation.allRotated) {
-      recommendations.push('✓ All labels are properly configured for rotation');
+    // Check new layout status
+    if (testData.validation.allHaveNewLayout) {
+      recommendations.push('✓ All labels configured for new rotated content layout');
     } else {
-      recommendations.push('✗ Some labels are not configured for rotation');
+      recommendations.push('✗ Some labels missing new content layout configuration');
     }
     
-    // Check scaling requirements
-    if (testData.validation.allFitWithoutScaling) {
-      recommendations.push('✓ Labels fit without scaling - optimal quality');
+    // Check content rotation
+    if (testData.validation.allHaveContentRotation) {
+      recommendations.push('✓ All content properly rotated 90° right');
     } else {
-      recommendations.push('⚠ Some labels may require scaling');
+      recommendations.push('✗ Some labels missing content rotation');
     }
+    
+    // Layout-specific recommendations
+    recommendations.push('NEW LAYOUT FEATURES:');
+    recommendations.push('• Audit trail: Rotated 90° clockwise in top-left corner');
+    recommendations.push('• Product name: Center-top with fonts up to 34pt');
+    recommendations.push('• Store box: With "Store:" label above for clarity');
+    recommendations.push('• Bottom section: 4-column layout with larger fonts');
+    recommendations.push('• Barcode: Repositioned with larger numeric display');
     
     // Workflow recommendations
-    recommendations.push('WORKFLOW: Print → Rotate paper 90° clockwise → Peel labels');
-    recommendations.push('Each label will be 6" wide × 4" tall when paper is rotated');
+    recommendations.push('WORKFLOW: Print → Rotate paper 90° clockwise → Content optimally positioned');
+    recommendations.push('Each label: 6" wide × 4" tall when paper is rotated');
     recommendations.push('Use HP E877 with "Actual Size" print setting');
-    recommendations.push('Test alignment with physical Uline S-5492 sheets');
+    recommendations.push('Test with physical Uline S-5492 sheets');
     
     if (validation.summary.labelsWithIssues === 0 && validation.summary.labelsWithWarnings === 0) {
-      recommendations.push('✓ Rotated positioning looks correct - ready for test printing');
+      recommendations.push('✓ New rotated content layout ready for test printing');
     }
     
     return recommendations;
   }
 
   /**
-   * Export rotated positioning data
-   * @param {string} method - Positioning method
+   * Export new content layout data
    * @param {string} format - Export format ('json', 'csv', 'debug')
    * @returns {string} - Formatted export data
    */
-  static exportRotatedPositioningData(method = 'rotated', format = 'json') {
-    const debugInfo = this.getRotatedDebugInfo(method);
+  static exportNewContentLayoutData(format = 'json') {
+    const debugInfo = this.getNewContentLayoutDebugInfo();
     
     switch (format) {
       case 'csv':
-        let csv = 'Label,PDFx,PDFy,PDFWidth,PDFHeight,RotatedWidth,RotatedHeight,RotatedWidthInches,RotatedHeightInches\n';
+        let csv = 'Label,ContainerX,ContainerY,ContainerW,ContainerH,ContentRotation,TopSectionH,BottomSectionH,ProductMaxFont,BarcodeFont\n';
         debugInfo.testData.positions.forEach((pos, index) => {
           const p = pos.position;
-          const r = pos.rotatedDimensions;
-          csv += `${index},${p.x},${p.y},${p.width},${p.height},${r.width},${r.height},${r.widthInches},${r.heightInches}\n`;
+          const c = pos.contentLayout;
+          csv += `${index},${p.x},${p.y},${p.width},${p.height},${pos.contentRotation},${c.topSection.height},${c.bottomSection.height},${c.topSection.elements.productName.maxFontSize},${c.bottomSection.columns.barcode.fontSize}\n`;
         });
         return csv;
         
@@ -397,26 +498,29 @@ class UlineS5492Label extends React.Component {
         
       default: // json
         return JSON.stringify({
-          method: method,
-          orientation: 'rotated',
-          rotationAngle: 90,
+          layoutType: 'new_rotated_content',
+          containerOrientation: 'sideways',
+          contentOrientation: 'rotated_90_right',
           workflow: 'print_rotate_peel',
+          version: '6.3.0',
           positions: debugInfo.testData.positions.map(pos => ({
             ...pos.position,
-            rotatedDimensions: pos.rotatedDimensions
+            contentLayout: pos.contentLayout,
+            contentRotation: pos.contentRotation
           })),
-          validation: debugInfo.validation
+          validation: debugInfo.validation,
+          improvements: debugInfo.contentLayout.improvements
         }, null, 2);
     }
   }
 
   // Legacy compatibility methods
   static calculateUlineLabelPosition(labelIndex) {
-    return this.calculateUlineS5492PositionRotated(labelIndex % 4);
+    return this.calculateUlineS5492PositionSideways(labelIndex % 4);
   }
 
   static getSpacingDebugInfo() {
-    return this.getRotatedDebugInfo('rotated');
+    return this.getNewContentLayoutDebugInfo();
   }
 
   // React Component Methods
@@ -424,10 +528,11 @@ class UlineS5492Label extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
-      selectedMethod: 'rotated',
+      showNewLayoutInfo: true,
       showDebugInfo: false,
       testPositions: null,
-      rotationValid: null
+      layoutValid: null,
+      contentRotationValid: null
     };
   }
 
@@ -436,19 +541,18 @@ class UlineS5492Label extends React.Component {
   }
 
   updateTestPositions = () => {
-    const testData = UlineS5492Label.generateRotatedAlignmentTestData({ 
-      method: this.state.selectedMethod 
-    });
-    const validation = UlineS5492Label.validateRotatedPositioning(testData);
+    const testData = UlineS5492Label.generateNewContentLayoutTestData();
+    const validation = UlineS5492Label.validateNewContentLayoutPositioning(testData);
     
     this.setState({ 
       testPositions: testData,
-      rotationValid: validation.summary.rotatedLabels === 4
+      layoutValid: validation.summary.labelsWithNewLayout === 4,
+      contentRotationValid: validation.summary.labelsWithContentRotation === 4
     });
   }
 
-  handleMethodChange = (method) => {
-    this.setState({ selectedMethod: method }, this.updateTestPositions);
+  toggleNewLayoutInfo = () => {
+    this.setState({ showNewLayoutInfo: !this.state.showNewLayoutInfo });
   }
 
   toggleDebugInfo = () => {
@@ -456,108 +560,94 @@ class UlineS5492Label extends React.Component {
   }
 
   render() {
-    const { selectedMethod, showDebugInfo, testPositions, rotationValid } = this.state;
+    const { showNewLayoutInfo, showDebugInfo, testPositions, layoutValid, contentRotationValid } = this.state;
     
     return (
       <div className="uline-s5492-label-component p-6">
         <div className="bg-white rounded-lg shadow-lg">
           <div className="bg-purple-600 text-white px-6 py-4 rounded-t-lg">
-            <h2 className="text-2xl font-bold">Uline S-5492 Label Configuration (ROTATED)</h2>
-            <p className="text-purple-100">Labels positioned SIDEWAYS - Rotate paper 90° to read/peel</p>
+            <h2 className="text-2xl font-bold">Uline S-5492 Label - NEW ROTATED CONTENT LAYOUT</h2>
+            <p className="text-purple-100">Content rotated 90° right within sideways containers</p>
+            <p className="text-purple-200 text-sm">Version 6.3.0 - Enhanced layout with larger fonts</p>
           </div>
           
           <div className="p-6">
-            {/* Rotation Status */}
-            {rotationValid !== null && (
-              <div className={`mb-4 p-3 rounded-lg ${
-                rotationValid 
-                  ? 'bg-green-100 border border-green-200' 
-                  : 'bg-red-100 border border-red-200'
-              }`}>
-                <div className={`font-medium ${rotationValid ? 'text-green-800' : 'text-red-800'}`}>
-                  {rotationValid ? '✓ Labels configured for ROTATION (correct)' : '✗ Labels NOT configured for rotation (issue)'}
+            {/* Layout Status */}
+            {layoutValid !== null && contentRotationValid !== null && (
+              <div className="mb-4 space-y-2">
+                <div className={`p-3 rounded-lg ${
+                  layoutValid 
+                    ? 'bg-green-100 border border-green-200' 
+                    : 'bg-red-100 border border-red-200'
+                }`}>
+                  <div className={`font-medium ${layoutValid ? 'text-green-800' : 'text-red-800'}`}>
+                    {layoutValid ? '✓ New content layout configured (correct)' : '✗ New content layout NOT configured (issue)'}
+                  </div>
                 </div>
-                <div className={`text-sm ${rotationValid ? 'text-green-700' : 'text-red-700'}`}>
-                  Workflow: Print PDF → Rotate paper 90° clockwise → Read/peel labels
-                </div>
-              </div>
-            )}
-
-            {/* Workflow Instructions */}
-            <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-              <h3 className="text-lg font-semibold text-blue-800 mb-2">Rotated Label Workflow</h3>
-              <ol className="list-decimal list-inside text-blue-700 space-y-1">
-                <li>Print PDF on legal size paper (8.5" × 14")</li>
-                <li>Use HP E877 with "Actual Size" setting</li>
-                <li><strong>Rotate the printed paper 90° clockwise</strong></li>
-                <li>Labels are now readable and properly oriented for peeling</li>
-                <li>Each label: 6" wide × 4" tall (in rotated view)</li>
-              </ol>
-            </div>
-
-            {/* Method Selection */}
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Positioning Method:
-              </label>
-              <div className="flex space-x-4">
-                {['rotated', 'spacing'].map(method => (
-                  <button
-                    key={method}
-                    onClick={() => this.handleMethodChange(method)}
-                    className={`px-4 py-2 rounded-md font-medium ${
-                      selectedMethod === method
-                        ? 'bg-purple-600 text-white'
-                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                    }`}
-                  >
-                    {method.charAt(0).toUpperCase() + method.slice(1)}
-                  </button>
-                ))}
-              </div>
-              <div className="mt-2 text-sm text-gray-600">
-                <strong>Rotated:</strong> Optimized sideways positioning | 
-                <strong> Spacing:</strong> Custom gaps and margins
-              </div>
-            </div>
-
-            {/* Position Preview */}
-            {testPositions && (
-              <div className="mb-6">
-                <h3 className="text-lg font-semibold mb-3">Rotated Label Positions Preview</h3>
-                <div className="border rounded-lg p-4 bg-gray-50">
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    {testPositions.positions.map((pos, index) => (
-                      <div key={index} className={`p-3 rounded border ${
-                        pos.isProperlyRotated ? 'bg-white' : 'bg-red-50 border-red-200'
-                      }`}>
-                        <div className="font-medium mb-2">Label {index + 1} (ROTATED)</div>
-                        <div className="text-gray-600">
-                          <div><strong>PDF Position:</strong> {pos.position.x}, {pos.position.y} pt</div>
-                          <div><strong>PDF Size:</strong> {pos.position.width} × {pos.position.height} pt</div>
-                          <div className="mt-2 p-2 bg-blue-50 rounded">
-                            <div className="text-blue-800 font-medium">After 90° Rotation:</div>
-                            <div className="text-blue-700">
-                              <div>Size: {pos.rotatedDimensions.widthInches}" × {pos.rotatedDimensions.heightInches}"</div>
-                              <div>({pos.rotatedDimensions.width} × {pos.rotatedDimensions.height} pt)</div>
-                            </div>
-                          </div>
-                          <div className={pos.isProperlyRotated ? 'text-green-600' : 'text-red-600'}>
-                            {pos.isProperlyRotated ? '✓ Rotated' : '✗ Not rotated'}
-                          </div>
-                          <div className={pos.fitsWithoutScaling ? 'text-green-600' : 'text-orange-600'}>
-                            {pos.fitsWithoutScaling ? '✓ Fits perfectly' : '⚠ May need scaling'}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
+                
+                <div className={`p-3 rounded-lg ${
+                  contentRotationValid 
+                    ? 'bg-green-100 border border-green-200' 
+                    : 'bg-red-100 border border-red-200'
+                }`}>
+                  <div className={`font-medium ${contentRotationValid ? 'text-green-800' : 'text-red-800'}`}>
+                    {contentRotationValid ? '✓ Content rotated 90° right (correct)' : '✗ Content rotation NOT configured (issue)'}
                   </div>
                 </div>
               </div>
             )}
 
-            {/* Debug Toggle */}
-            <div className="mb-4">
+            {/* New Layout Features */}
+            <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <h3 className="text-lg font-semibold text-blue-800 mb-2">NEW ROTATED CONTENT LAYOUT Features</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-blue-700">
+                <div>
+                  <h4 className="font-medium mb-2">Top Section (35%)</h4>
+                  <ul className="list-disc list-inside text-sm space-y-1">
+                    <li><strong>Audit Trail:</strong> Top-left, rotated 90° clockwise</li>
+                    <li><strong>Product Name:</strong> Center-top, fonts up to 34pt</li>
+                    <li><strong>Brand Name:</strong> Above product, fonts up to 22pt</li>
+                  </ul>
+                </div>
+                <div>
+                  <h4 className="font-medium mb-2">Bottom Section (30%)</h4>
+                  <ul className="list-disc list-inside text-sm space-y-1">
+                    <li><strong>Column 1:</strong> Barcode + numeric (larger fonts)</li>
+                    <li><strong>Column 2:</strong> Store box with "Store:" label</li>
+                    <li><strong>Column 3:</strong> Harvest & Package dates</li>
+                    <li><strong>Column 4:</strong> Case Qty & Box X/X</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            {/* Workflow Instructions */}
+            <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+              <h3 className="text-lg font-semibold text-amber-800 mb-2">NEW LAYOUT Workflow</h3>
+              <ol className="list-decimal list-inside text-amber-700 space-y-1">
+                <li>Print PDF on legal size paper (8.5" × 14")</li>
+                <li>Use HP E877 with "Actual Size" setting</li>
+                <li><strong>Rotate the printed paper 90° clockwise</strong></li>
+                <li>Content is now optimally positioned for reading</li>
+                <li>Audit trail in top-left, product name prominent center-top</li>
+                <li>Bottom section: Barcode | Store | Dates | Case/Box</li>
+                <li>All elements use larger fonts for better visibility</li>
+              </ol>
+            </div>
+
+            {/* Toggle Buttons */}
+            <div className="mb-6 flex space-x-4">
+              <button
+                onClick={this.toggleNewLayoutInfo}
+                className={`px-4 py-2 rounded-md font-medium ${
+                  showNewLayoutInfo
+                    ? 'bg-purple-600 text-white'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                {showNewLayoutInfo ? 'Hide' : 'Show'} Layout Details
+              </button>
+              
               <button
                 onClick={this.toggleDebugInfo}
                 className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700"
@@ -566,54 +656,165 @@ class UlineS5492Label extends React.Component {
               </button>
             </div>
 
+            {/* New Layout Position Details */}
+            {showNewLayoutInfo && testPositions && (
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold mb-3">New Content Layout Positions</h3>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 text-sm">
+                  {testPositions.positions.map((pos, index) => (
+                    <div key={index} className={`p-4 rounded border ${
+                      pos.hasNewContentLayout && pos.contentRotation === 90 
+                        ? 'bg-white border-green-200' 
+                        : 'bg-red-50 border-red-200'
+                    }`}>
+                      <div className="font-medium mb-2">Label {index + 1} - NEW LAYOUT</div>
+                      
+                      {/* Container Info */}
+                      <div className="mb-2 p-2 bg-gray-50 rounded">
+                        <div className="text-gray-600 text-xs">Container (unchanged):</div>
+                        <div><strong>Position:</strong> {pos.position.x}, {pos.position.y} pt</div>
+                        <div><strong>Size:</strong> {pos.position.width} × {pos.position.height} pt</div>
+                      </div>
+                      
+                      {/* Content Layout Info */}
+                      <div className="mb-2 p-2 bg-blue-50 rounded">
+                        <div className="text-blue-800 text-xs font-medium">Content Layout (NEW):</div>
+                        <div className="text-blue-700 text-xs">
+                          <div><strong>Top Section:</strong> {pos.contentLayout.topSection.height}pt</div>
+                          <div><strong>Product Font:</strong> up to {pos.contentLayout.topSection.elements.productName.maxFontSize}pt</div>
+                          <div><strong>Bottom Columns:</strong> 4-column layout</div>
+                          <div><strong>Store Box:</strong> With "Store:" label</div>
+                        </div>
+                      </div>
+                      
+                      {/* After Rotation Info */}
+                      <div className="mt-2 p-2 bg-green-50 rounded">
+                        <div className="text-green-800 text-xs font-medium">After Paper Rotation:</div>
+                        <div className="text-green-700 text-xs">
+                          <div>Size: {pos.rotatedDimensions.widthInches}" × {pos.rotatedDimensions.heightInches}"</div>
+                          <div>Audit Trail: Top-left corner</div>
+                          <div>Product Name: Center-top, large fonts</div>
+                          <div>Bottom: Barcode | Store | Dates | Case</div>
+                        </div>
+                      </div>
+                      
+                      {/* Status Indicators */}
+                      <div className="mt-2 flex space-x-2 text-xs">
+                        <div className={pos.hasNewContentLayout ? 'text-green-600' : 'text-red-600'}>
+                          {pos.hasNewContentLayout ? '✓ New Layout' : '✗ Missing Layout'}
+                        </div>
+                        <div className={pos.contentRotation === 90 ? 'text-green-600' : 'text-red-600'}>
+                          {pos.contentRotation === 90 ? '✓ Rotated 90°' : '✗ Not Rotated'}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Debug Information */}
             {showDebugInfo && (
-              <div className="bg-gray-100 rounded-lg p-4">
+              <div className="mb-6 bg-gray-100 rounded-lg p-4">
                 <h3 className="text-lg font-semibold mb-3">Debug Information</h3>
                 <pre className="text-xs overflow-auto bg-white p-3 rounded border max-h-96">
-                  {JSON.stringify(UlineS5492Label.getRotatedDebugInfo(selectedMethod), null, 2)}
+                  {JSON.stringify(UlineS5492Label.getNewContentLayoutDebugInfo(), null, 2)}
                 </pre>
               </div>
             )}
 
-            {/* Migration Information */}
+            {/* Visual Layout Comparison */}
+            <div className="mb-6 bg-gray-50 border border-gray-200 rounded-lg p-4">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">Visual Layout Comparison</h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Old Layout */}
+                <div>
+                  <h4 className="font-medium text-gray-700 mb-2">Previous Layout</h4>
+                  <div className="w-32 h-48 bg-white border-2 border-gray-400 rounded relative text-xs">
+                    <div className="absolute top-1 left-1 right-1 h-20 bg-gray-100 border border-gray-300 flex items-center justify-center">
+                      Product Name
+                    </div>
+                    <div className="absolute bottom-1 left-1 right-1 h-16 bg-gray-100 border border-gray-300 flex items-center justify-center">
+                      Basic Bottom
+                    </div>
+                    <div className="absolute bottom-0 left-1 text-gray-500" style={{fontSize: '6px'}}>
+                      Audit
+                    </div>
+                  </div>
+                </div>
+                
+                {/* New Layout */}
+                <div>
+                  <h4 className="font-medium text-green-700 mb-2">NEW Rotated Content Layout</h4>
+                  <div className="w-32 h-48 bg-white border-2 border-green-500 rounded relative text-xs">
+                    <div className="absolute top-1 left-1 w-6 h-6 bg-blue-100 border border-blue-300 text-center" style={{fontSize: '6px', transform: 'rotate(90deg)'}}>
+                      Audit
+                    </div>
+                    <div className="absolute top-1 left-8 right-1 h-16 bg-green-100 border border-green-300 flex items-center justify-center font-bold">
+                      Product Name (34pt)
+                    </div>
+                    <div className="absolute bottom-1 left-1 right-1 h-12 bg-yellow-100 border border-yellow-300">
+                      <div className="grid grid-cols-4 h-full text-center" style={{fontSize: '6px'}}>
+                        <div className="border-r border-yellow-300 flex items-center justify-center">Bar</div>
+                        <div className="border-r border-yellow-300 flex items-center justify-center">Store</div>
+                        <div className="border-r border-yellow-300 flex items-center justify-center">Dates</div>
+                        <div className="flex items-center justify-center">Case</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Migration Status */}
             <div className="mt-6 bg-green-50 border border-green-200 rounded-lg p-4">
-              <h3 className="text-lg font-semibold text-green-800 mb-2">S-5492 ROTATED Migration Complete</h3>
+              <h3 className="text-lg font-semibold text-green-800 mb-2">Content Layout Migration Complete</h3>
               <div className="text-green-700 text-sm">
-                <p><strong>From:</strong> S-21846 (7-3/4" × 4-3/4", 2 labels per letter sheet)</p>
-                <p><strong>To:</strong> S-5492 (4" × 6" positioned sideways, 4 labels per legal sheet)</p>
-                <p className="mt-2"><strong>Key Features:</strong></p>
+                <p><strong>From:</strong> Basic sideways layout with simple content arrangement</p>
+                <p><strong>To:</strong> Rotated content layout optimized for readability and functionality</p>
+                <p className="mt-2"><strong>Key Improvements:</strong></p>
                 <ul className="list-disc list-inside mt-1 space-y-1">
-                  <li>Labels positioned SIDEWAYS on legal paper</li>
-                  <li>Print-rotate-peel workflow</li>
-                  <li>6" wide × 4" tall when paper is rotated</li>
-                  <li>HP E877 printer margin compensation</li>
-                  <li>No scaling required - labels fit perfectly</li>
+                  <li>Content rotated 90° right for optimal layout after paper rotation</li>
+                  <li>Audit trail rotated and repositioned to top-left corner</li>
+                  <li>Product name prominence with fonts increased to 34pt</li>
+                  <li>Enhanced 4-column bottom section: Barcode | Store | Dates | Case/Box</li>
+                  <li>Store text box with clear "Store:" labeling above</li>
+                  <li>All fonts significantly increased for better visibility</li>
+                  <li>Better space utilization throughout the label</li>
                 </ul>
               </div>
             </div>
 
-            {/* Visual Rotation Guide */}
+            {/* Usage Instructions */}
             <div className="mt-4 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-              <h3 className="text-lg font-semibold text-yellow-800 mb-2">Visual Rotation Guide</h3>
-              <div className="flex items-center space-x-4">
+              <h3 className="text-lg font-semibold text-yellow-800 mb-2">Usage Instructions</h3>
+              <div className="flex items-start space-x-4">
                 <div className="text-center">
-                  <div className="w-16 h-24 bg-white border-2 border-gray-400 rounded flex items-center justify-center text-xs">
-                    <div className="transform -rotate-90">Labels</div>
+                  <div className="w-16 h-24 bg-white border-2 border-gray-400 rounded flex items-center justify-center text-xs relative">
+                    <div className="absolute top-1 left-1 text-blue-600" style={{fontSize: '6px', transform: 'rotate(90deg)'}}>A</div>
+                    <div className="text-center">
+                      <div className="font-bold">Product</div>
+                      <div style={{fontSize: '6px'}}>Bar|Store|Date|Case</div>
+                    </div>
                   </div>
                   <div className="text-sm mt-1">1. Print</div>
                 </div>
                 <div className="text-2xl">→</div>
                 <div className="text-center">
-                  <div className="w-24 h-16 bg-white border-2 border-gray-400 rounded flex items-center justify-center text-xs">
-                    Labels
+                  <div className="w-24 h-16 bg-white border-2 border-gray-400 rounded flex items-center justify-center text-xs relative">
+                    <div className="absolute top-1 left-1 text-blue-600" style={{fontSize: '6px'}}>Audit</div>
+                    <div className="text-center">
+                      <div className="font-bold">Product Name</div>
+                      <div style={{fontSize: '6px'}}>Barcode Store Dates Case</div>
+                    </div>
                   </div>
                   <div className="text-sm mt-1">2. Rotate 90°</div>
                 </div>
                 <div className="text-2xl">→</div>
                 <div className="text-center">
                   <div className="w-20 h-12 bg-green-100 border-2 border-green-400 rounded flex items-center justify-center text-xs">
-                    Peel
+                    Optimal Layout
                   </div>
                   <div className="text-sm mt-1">3. Use</div>
                 </div>

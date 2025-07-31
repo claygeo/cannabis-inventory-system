@@ -6,7 +6,7 @@ import storage from './storage.js';
 
 /**
  * PDF Generation utilities for Uline S-5492 label sheets
- * SIDEWAYS LAYOUT: Labels positioned sideways on legal paper - rotate paper 90° to read
+ * NEW LAYOUT: Content repositioned and rotated 90° to the right for optimal layout
  */
 export class PDFGenerator {
   /**
@@ -57,8 +57,8 @@ export class PDFGenerator {
           // Calculate which box number this label represents
           const boxNumber = Math.floor(labelCopy / Math.max(1, Math.floor(formattedData.labelQuantity / formattedData.boxCount))) + 1;
 
-          // Draw the sideways label
-          await this.drawSidewaysLabel(pdf, formattedData, position, boxNumber, formattedData.boxCount, debug, currentUser);
+          // Draw the sideways label with NEW CONTENT LAYOUT
+          await this.drawSidewaysLabelNewLayout(pdf, formattedData, position, boxNumber, formattedData.boxCount, debug, currentUser);
 
           currentLabelIndex++;
         }
@@ -67,17 +67,17 @@ export class PDFGenerator {
       // Add metadata
       pdf.setDocumentProperties({
         title: `Cannabis Inventory Labels - ${new Date().toISOString().slice(0, 10)}`,
-        subject: 'Uline S-5492 Format Labels (SIDEWAYS for 90° rotation)',
+        subject: 'Uline S-5492 Format Labels (NEW ROTATED CONTENT LAYOUT)',
         author: 'Cannabis Inventory Management System',
-        creator: 'Cannabis Inventory Management System v6.2.0',
-        keywords: 'cannabis, inventory, labels, uline, s-5492, sideways, legal'
+        creator: 'Cannabis Inventory Management System v6.3.0',
+        keywords: 'cannabis, inventory, labels, uline, s-5492, rotated, content, layout'
       });
 
       // Log generation event
       storage.addSessionEvent(
         EVENT_TYPES.LABEL_GENERATED,
-        `Generated ${currentLabelIndex} S-5492 sideways labels across ${currentPage} pages`,
-        `Items: ${labelDataArray.length}, Format: Uline S-5492 (Sideways for 90° rotation)`
+        `Generated ${currentLabelIndex} S-5492 labels with new rotated content layout across ${currentPage} pages`,
+        `Items: ${labelDataArray.length}, Format: Uline S-5492 (New Rotated Content Layout)`
       );
 
       return pdf.output('blob');
@@ -97,7 +97,7 @@ export class PDFGenerator {
 
   /**
    * Calculate label position for Uline S-5492 positioned SIDEWAYS on legal paper
-   * Labels are positioned sideways - paper must be rotated 90° for reading/peeling
+   * Container positioning remains unchanged - only content layout is updated
    * @param {number} labelIndex - Index of label (0-3 for 4 labels per sheet)
    * @returns {Object} - Position coordinates in points
    */
@@ -157,7 +157,7 @@ export class PDFGenerator {
   }
 
   /**
-   * Draw sideways label - content will be readable when paper is rotated 90°
+   * NEW LAYOUT: Draw sideways label with content rotated 90° to the right
    * @param {jsPDF} pdf - PDF document
    * @param {Object} labelData - Formatted label data
    * @param {Object} position - Label position and dimensions
@@ -166,7 +166,7 @@ export class PDFGenerator {
    * @param {boolean} debug - Show debug borders
    * @param {string} currentUser - Current user
    */
-  static async drawSidewaysLabel(pdf, labelData, position, boxNumber = 1, totalBoxes = 1, debug = false, currentUser = 'Unknown') {
+  static async drawSidewaysLabelNewLayout(pdf, labelData, position, boxNumber = 1, totalBoxes = 1, debug = false, currentUser = 'Unknown') {
     const { x, y, width, height, rotatedWidth, rotatedHeight } = position;
 
     try {
@@ -186,34 +186,33 @@ export class PDFGenerator {
         pdf.setTextColor(255, 0, 0);
         pdf.text(`Label ${position.labelIndex + 1}`, x + 5, y + 15);
         pdf.text(`${width}×${height}pt`, x + 5, y + 25);
-        pdf.text('SIDEWAYS', x + 5, y + 35);
+        pdf.text('NEW LAYOUT', x + 5, y + 35);
       }
 
-      const padding = 8;
+      const padding = 10;
       const contentX = x + padding;
       const contentY = y + padding;
       const contentWidth = width - (padding * 2);
       const contentHeight = height - (padding * 2);
 
-      // Draw content positioned for sideways reading
-      // When paper is rotated 90° clockwise, this will be readable
+      // NEW LAYOUT SECTIONS
       
-      // 1. Product name (will be at top when rotated)
-      const productNameHeight = Math.floor(contentHeight * 0.6);
-      const brandInfo = this.extractBrandFromProductName(labelData.productName);
-      await this.drawSidewaysProductName(pdf, brandInfo, contentX, contentY, contentWidth, productNameHeight);
+      // 1. Top section: Audit Trail (top-left, rotated) + Product Name (center-top)
+      const topSectionHeight = Math.floor(contentHeight * 0.35);
+      await this.drawNewTopSection(pdf, labelData, currentUser, contentX, contentY, contentWidth, topSectionHeight);
       
-      // 2. Bottom section (will be at bottom when rotated)
-      const bottomSectionHeight = Math.floor(contentHeight * 0.35);
-      const bottomSectionY = contentY + contentHeight - bottomSectionHeight;
-      await this.drawSidewaysBottomSection(pdf, labelData, contentX, bottomSectionY, contentWidth, bottomSectionHeight, boxNumber, totalBoxes);
+      // 2. Middle section: Expanded product name area
+      const middleSectionY = contentY + topSectionHeight;
+      const middleSectionHeight = Math.floor(contentHeight * 0.35);
+      await this.drawNewMiddleSection(pdf, labelData, contentX, middleSectionY, contentWidth, middleSectionHeight);
       
-      // 3. Audit trail (absolute bottom)
-      const auditY = y + height - 6;
-      this.drawSidewaysAuditTrail(pdf, currentUser, contentX, auditY);
+      // 3. Bottom section: 4-column layout (Barcode | Store Box | Dates | Case/Box)
+      const bottomSectionY = contentY + topSectionHeight + middleSectionHeight;
+      const bottomSectionHeight = contentHeight - topSectionHeight - middleSectionHeight;
+      await this.drawNewBottomSection(pdf, labelData, contentX, bottomSectionY, contentWidth, bottomSectionHeight, boxNumber, totalBoxes);
 
     } catch (error) {
-      console.error('Error drawing sideways label:', error);
+      console.error('Error drawing new layout label:', error);
       pdf.setFontSize(10);
       pdf.setTextColor(255, 0, 0);
       pdf.text('Label Error', x + 5, y + 20);
@@ -221,21 +220,82 @@ export class PDFGenerator {
   }
 
   /**
-   * Draw product name positioned for sideways reading
+   * Draw new top section: Audit Trail (rotated, top-left) + Product Name (center-top)
    * @param {jsPDF} pdf - PDF document
-   * @param {Object} brandInfo - Brand and product info
+   * @param {Object} labelData - Label data
+   * @param {string} currentUser - Current user
    * @param {number} x - X position
    * @param {number} y - Y position
    * @param {number} width - Available width
    * @param {number} height - Available height
    */
-  static async drawSidewaysProductName(pdf, brandInfo, x, y, width, height) {
-    let currentY = y;
-    const lineSpacing = 1.1;
+  static async drawNewTopSection(pdf, labelData, currentUser, x, y, width, height) {
+    // 1. Audit Trail - Top-left corner with 90° rotation
+    await this.drawRotatedAuditTrail(pdf, currentUser, x + 5, y + height - 10);
+    
+    // 2. Product Name - Center-top, largest possible font
+    const brandInfo = this.extractBrandFromProductName(labelData.productName);
+    const productNameStartX = x + (width * 0.25); // Leave space for rotated audit trail
+    const productNameWidth = width * 0.75;
+    
+    await this.drawCenterTopProductName(pdf, brandInfo, productNameStartX, y, productNameWidth, height);
+  }
 
-    // Draw brand name if present
+  /**
+   * Draw rotated audit trail (90° clockwise rotation)
+   * @param {jsPDF} pdf - PDF document
+   * @param {string} currentUser - Current user
+   * @param {number} x - X position
+   * @param {number} y - Y position
+   */
+  static async drawRotatedAuditTrail(pdf, currentUser, x, y) {
+    const now = new Date();
+    const month = (now.getMonth() + 1).toString().padStart(2, '0');
+    const day = now.getDate().toString().padStart(2, '0');
+    const year = now.getFullYear().toString().slice(-2);
+    
+    let hours = now.getHours();
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+    const hoursStr = hours.toString();
+    
+    const minutes = now.getMinutes().toString().padStart(2, '0');
+    const auditString = `${month}/${day}/${year} ${hoursStr}:${minutes} ${ampm} EST (${currentUser})`;
+    
+    // Save current state
+    pdf.saveGraphicsState();
+    
+    // Rotate 90 degrees clockwise around the point
+    pdf.setGState({
+      CTM: [0, 1, -1, 0, x + y, y - x]
+    });
+    
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(7);
+    pdf.setTextColor(102, 102, 102);
+    pdf.text(auditString, 0, 0);
+    
+    // Restore state
+    pdf.restoreGraphicsState();
+  }
+
+  /**
+   * Draw center-top product name with large fonts
+   * @param {jsPDF} pdf - PDF document
+   * @param {Object} brandInfo - Brand information
+   * @param {number} x - X position
+   * @param {number} y - Y position
+   * @param {number} width - Available width
+   * @param {number} height - Available height
+   */
+  static async drawCenterTopProductName(pdf, brandInfo, x, y, width, height) {
+    let currentY = y + 10;
+    const lineSpacing = 1.2;
+
+    // Draw brand name if present (larger font)
     if (brandInfo.brand) {
-      const brandFontSize = Math.min(18, LabelFormatter.autoFitFontSize(brandInfo.brand, width, 25, 18));
+      const brandFontSize = Math.min(22, LabelFormatter.autoFitFontSize(brandInfo.brand, width, 30, 22));
       
       pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(brandFontSize);
@@ -245,12 +305,12 @@ export class PDFGenerator {
       const brandWidth = pdf.getTextWidth(brandInfo.brand);
       const brandX = x + (width - brandWidth) / 2;
       pdf.text(brandInfo.brand, brandX, currentY + (brandFontSize * 0.8));
-      currentY += brandFontSize * lineSpacing + 8;
+      currentY += brandFontSize * lineSpacing + 6;
     }
 
-    // Draw product name
-    const remainingHeight = Math.max(15, height - (currentY - y));
-    const maxProductFontSize = brandInfo.brand ? 22 : 28;
+    // Draw product name (larger font)
+    const remainingHeight = Math.max(20, height - (currentY - y));
+    const maxProductFontSize = brandInfo.brand ? 28 : 34;
     
     const productFontSize = LabelFormatter.autoFitFontSize(
       brandInfo.productName, 
@@ -273,7 +333,28 @@ export class PDFGenerator {
   }
 
   /**
-   * Draw bottom section positioned for sideways reading
+   * Draw new middle section: Extended product name area
+   * @param {jsPDF} pdf - PDF document
+   * @param {Object} labelData - Label data
+   * @param {number} x - X position
+   * @param {number} y - Y position
+   * @param {number} width - Available width
+   * @param {number} height - Available height
+   */
+  static async drawNewMiddleSection(pdf, labelData, x, y, width, height) {
+    // This section is mainly for product name overflow or additional product details
+    // Could be used for extended product information if needed
+    
+    // For now, leave this section for product name continuation
+    // The main product name drawing in top section will handle multi-line text
+  }
+
+  /**
+   * Draw new bottom section: 4-column layout
+   * Column 1: Barcode + numeric display
+   * Column 2: Store text box with "Store:" label
+   * Column 3: Harvest & Package dates (larger fonts)
+   * Column 4: Case Qty & Box X/X (larger fonts)
    * @param {jsPDF} pdf - PDF document
    * @param {Object} labelData - Label data
    * @param {number} x - X position
@@ -283,160 +364,197 @@ export class PDFGenerator {
    * @param {number} boxNumber - Box number
    * @param {number} totalBoxes - Total boxes
    */
-  static async drawSidewaysBottomSection(pdf, labelData, x, y, width, height, boxNumber, totalBoxes) {
-    // Layout info across the width
-    const section1Width = width * 0.25; // Barcode
-    const section2Width = width * 0.25; // Text box
-    const section3Width = width * 0.25; // Dates
-    const section4Width = width * 0.25; // Case/Box
-    
+  static async drawNewBottomSection(pdf, labelData, x, y, width, height, boxNumber, totalBoxes) {
+    const columnWidth = width / 4;
     let currentX = x;
     
-    // 1. Barcode section
-    await this.drawSidewaysBarcode(pdf, labelData, currentX, y, section1Width, height);
-    currentX += section1Width;
+    // Column 1: Barcode (left)
+    await this.drawNewBarcodeColumn(pdf, labelData, currentX, y, columnWidth, height);
+    currentX += columnWidth;
     
-    // 2. Manual text box
-    this.drawManualWritingBox(pdf, currentX + 2, y + height - 30, section2Width - 4, 25);
-    currentX += section2Width;
+    // Column 2: Store text box (center-left)
+    this.drawNewStoreColumn(pdf, currentX, y, columnWidth, height);
+    currentX += columnWidth;
     
-    // 3. Dates section
-    this.drawSidewaysDates(pdf, labelData, currentX, y, section3Width, height);
-    currentX += section3Width;
+    // Column 3: Dates (center-right)
+    this.drawNewDatesColumn(pdf, labelData, currentX, y, columnWidth, height);
+    currentX += columnWidth;
     
-    // 4. Case/Box section
-    this.drawSidewaysCaseBox(pdf, labelData, currentX, y, section4Width, height, boxNumber, totalBoxes);
+    // Column 4: Case/Box info (right)
+    this.drawNewCaseBoxColumn(pdf, labelData, currentX, y, columnWidth, height, boxNumber, totalBoxes);
   }
 
   /**
-   * Draw barcode positioned for sideways reading
+   * Draw barcode column with larger numeric display above
    * @param {jsPDF} pdf - PDF document
    * @param {Object} labelData - Label data
    * @param {number} x - X position
    * @param {number} y - Y position
-   * @param {number} width - Section width
-   * @param {number} height - Section height
+   * @param {number} width - Column width
+   * @param {number} height - Column height
    */
-  static async drawSidewaysBarcode(pdf, labelData, x, y, width, height) {
-    const barcodeHeight = Math.min(30, height * 0.6);
+  static async drawNewBarcodeColumn(pdf, labelData, x, y, width, height) {
+    const padding = 2;
+    const innerX = x + padding;
+    const innerWidth = width - (padding * 2);
     
-    // Barcode display text
+    // Barcode numeric display (larger font, positioned above barcode)
     const spacedBarcodeDisplay = this.formatBarcodeWithSpaces(labelData.barcodeDisplay);
     
     pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(6);
+    pdf.setFontSize(8); // Increased from 6
     pdf.setTextColor(102, 102, 102);
     const displayWidth = pdf.getTextWidth(spacedBarcodeDisplay);
-    const displayX = x + Math.max(0, (width - displayWidth) / 2);
-    pdf.text(spacedBarcodeDisplay, displayX, y + 8);
+    const displayX = innerX + Math.max(0, (innerWidth - displayWidth) / 2);
+    pdf.text(spacedBarcodeDisplay, displayX, y + 12);
     
-    // Draw barcode
+    // Barcode (larger)
+    const barcodeHeight = Math.min(height * 0.7, 40); // Increased height
     await this.drawEnhancedBarcode(
       pdf, 
       labelData.barcode, 
-      x + 2, 
-      y + 12, 
-      width - 4, 
+      innerX, 
+      y + 18, 
+      innerWidth, 
       barcodeHeight
     );
   }
 
   /**
-   * Draw dates positioned for sideways reading
+   * Draw store text box with "Store:" label above
    * @param {jsPDF} pdf - PDF document
-   * @param {Object} labelData - Label data
    * @param {number} x - X position
    * @param {number} y - Y position
-   * @param {number} width - Section width
-   * @param {number} height - Section height
+   * @param {number} width - Column width
+   * @param {number} height - Column height
    */
-  static drawSidewaysDates(pdf, labelData, x, y, width, height) {
-    let currentY = y + 10;
+  static drawNewStoreColumn(pdf, x, y, width, height) {
+    const padding = 2;
+    const innerX = x + padding;
+    const innerWidth = width - (padding * 2);
     
-    // Harvest Date
+    // "Store:" label (larger font)
     pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(8);
+    pdf.setFontSize(9); // Increased from 7
     pdf.setTextColor(0, 0, 0);
-    const harvestText = `Harvest: ${labelData.harvestDate || 'MM/DD/YY'}`;
-    pdf.text(harvestText, x, currentY);
-    currentY += 10;
+    pdf.text('Store:', innerX, y + 12);
     
-    // Packaged Date
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(8);
-    const packagedText = `Packaged: ${labelData.packagedDate || 'MM/DD/YY'}`;
-    pdf.text(packagedText, x, currentY);
+    // Text box (larger)
+    const boxHeight = height * 0.7;
+    const boxY = y + 16;
+    this.drawEnhancedManualWritingBox(pdf, innerX, boxY, innerWidth, boxHeight);
   }
 
   /**
-   * Draw case/box info positioned for sideways reading
+   * Draw dates column with larger fonts
    * @param {jsPDF} pdf - PDF document
    * @param {Object} labelData - Label data
    * @param {number} x - X position
    * @param {number} y - Y position
-   * @param {number} width - Section width
-   * @param {number} height - Section height
+   * @param {number} width - Column width
+   * @param {number} height - Column height
+   */
+  static drawNewDatesColumn(pdf, labelData, x, y, width, height) {
+    const padding = 2;
+    const innerX = x + padding;
+    let currentY = y + 12;
+    
+    // Harvest Date (larger font)
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(10); // Increased from 8
+    pdf.setTextColor(0, 0, 0);
+    const harvestText = `Harvest:`;
+    pdf.text(harvestText, innerX, currentY);
+    currentY += 12;
+    
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(10);
+    const harvestDate = labelData.harvestDate || 'MM/DD/YY';
+    pdf.text(harvestDate, innerX, currentY);
+    currentY += 16;
+    
+    // Package Date (larger font)
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(10);
+    const packageText = `Package:`;
+    pdf.text(packageText, innerX, currentY);
+    currentY += 12;
+    
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(10);
+    const packageDate = labelData.packagedDate || 'MM/DD/YY';
+    pdf.text(packageDate, innerX, currentY);
+  }
+
+  /**
+   * Draw case/box column with larger fonts
+   * @param {jsPDF} pdf - PDF document
+   * @param {Object} labelData - Label data
+   * @param {number} x - X position
+   * @param {number} y - Y position
+   * @param {number} width - Column width
+   * @param {number} height - Column height
    * @param {number} boxNumber - Box number
    * @param {number} totalBoxes - Total boxes
    */
-  static drawSidewaysCaseBox(pdf, labelData, x, y, width, height, boxNumber, totalBoxes) {
-    const boxWidth = Math.min(width - 4, 50);
-    const boxHeight = 10;
-    let currentY = y + 8;
+  static drawNewCaseBoxColumn(pdf, labelData, x, y, width, height, boxNumber, totalBoxes) {
+    const padding = 2;
+    const innerX = x + padding;
+    const innerWidth = width - (padding * 2);
+    let currentY = y + 12;
     
-    // Case Qty Box
+    // Case Qty (larger box and font)
+    const boxHeight = 14; // Increased from 10
+    
     pdf.setDrawColor(0, 0, 0);
     pdf.setLineWidth(1);
-    pdf.rect(x, currentY, boxWidth, boxHeight);
+    pdf.rect(innerX, currentY, innerWidth, boxHeight);
     
     pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(7);
+    pdf.setFontSize(9); // Increased from 7
+    pdf.setTextColor(0, 0, 0);
     const caseQtyValue = labelData.caseQuantity || '___';
     const caseQtyText = `Case: ${caseQtyValue}`;
     const caseQtyWidth = pdf.getTextWidth(caseQtyText);
-    pdf.text(caseQtyText, x + (boxWidth - caseQtyWidth) / 2, currentY + 7);
+    pdf.text(caseQtyText, innerX + (innerWidth - caseQtyWidth) / 2, currentY + 9);
     
-    currentY += boxHeight + 3;
+    currentY += boxHeight + 8;
     
-    // Box Number Box
-    pdf.rect(x, currentY, boxWidth, boxHeight);
+    // Box Number (larger box and font)
+    pdf.rect(innerX, currentY, innerWidth, boxHeight);
     
     const boxText = `Box ${boxNumber}/${totalBoxes}`;
     const boxTextWidth = pdf.getTextWidth(boxText);
-    pdf.text(boxText, x + (boxWidth - boxTextWidth) / 2, currentY + 7);
+    pdf.text(boxText, innerX + (innerWidth - boxTextWidth) / 2, currentY + 9);
   }
 
   /**
-   * Draw audit trail positioned for sideways reading
+   * Draw enhanced manual writing text box with lines
    * @param {jsPDF} pdf - PDF document
-   * @param {string} currentUser - Current user
    * @param {number} x - X position
    * @param {number} y - Y position
+   * @param {number} width - Box width
+   * @param {number} height - Box height
    */
-  static drawSidewaysAuditTrail(pdf, currentUser, x, y) {
-    const now = new Date();
-    const month = (now.getMonth() + 1).toString().padStart(2, '0');
-    const day = now.getDate().toString().padStart(2, '0');
-    const year = now.getFullYear().toString().slice(-2);
+  static drawEnhancedManualWritingBox(pdf, x, y, width, height) {
+    // Main box
+    pdf.setDrawColor(0, 0, 0);
+    pdf.setLineWidth(1);
+    pdf.rect(x, y, width, height);
+
+    // Writing lines (more spaced for larger box)
+    pdf.setDrawColor(220, 220, 220);
+    pdf.setLineWidth(0.5);
     
-    let hours = now.getHours();
-    const ampm = hours >= 12 ? 'PM' : 'AM';
-    hours = hours % 12;
-    hours = hours ? hours : 12;
-    const hoursStr = hours.toString();
-    
-    const minutes = now.getMinutes().toString().padStart(2, '0');
-    
-    const auditString = `${month}/${day}/${year} ${hoursStr}:${minutes} ${ampm} EST (${currentUser})`;
-    
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(5);
-    pdf.setTextColor(102, 102, 102);
-    pdf.text(auditString, x, y);
+    const numLines = Math.floor(height / 8); // More lines for larger box
+    for (let i = 1; i < numLines; i++) {
+      const lineY = y + (i * (height / numLines));
+      pdf.line(x + 2, lineY, x + width - 2, lineY);
+    }
   }
 
   /**
-   * Extract brand from product name
+   * Extract brand from product name (enhanced)
    * @param {string} productName - Full product name
    * @returns {Object} - Brand and remaining product name
    */
@@ -519,24 +637,6 @@ export class PDFGenerator {
   }
 
   /**
-   * Draw manual writing text box
-   */
-  static drawManualWritingBox(pdf, x, y, width, height) {
-    pdf.setDrawColor(0, 0, 0);
-    pdf.setLineWidth(1);
-    pdf.rect(x, y, width, height);
-
-    pdf.setDrawColor(220, 220, 220);
-    pdf.setLineWidth(0.5);
-    
-    const lineSpacing = height / 3;
-    for (let i = 1; i < 3; i++) {
-      const lineY = y + (i * lineSpacing);
-      pdf.line(x, lineY, x + width, lineY);
-    }
-  }
-
-  /**
    * Draw barcode error placeholder
    */
   static drawBarcodeError(pdf, x, y, width, height) {
@@ -550,14 +650,14 @@ export class PDFGenerator {
   }
 
   /**
-   * Generate test PDF for S-5492 sideways verification
+   * Generate test PDF for S-5492 new layout verification
    * @returns {Promise<Blob>} - Test PDF blob
    */
   static async generateTestPDF() {
     const testData = [{
-      sku: 'TEST-S5492-SIDE',
+      sku: 'TEST-S5492-NEW',
       barcode: 'TEST123456',
-      productName: 'Curaleaf Pink Champagne Premium Cannabis Capsules [10mg THC] 30-Count Test Product',
+      productName: 'Curaleaf Pink Champagne Premium Cannabis Capsules [10mg THC] 30-Count Test Product with New Layout',
       brand: 'Test Brand',
       enhancedData: {
         labelQuantity: 4,
@@ -573,8 +673,8 @@ export class PDFGenerator {
   }
 
   /**
-   * Generate alignment test PDF showing sideways positioning
-   * @returns {Promise<Blob>} - Test PDF with measurements
+   * Generate alignment test PDF showing new content layout
+   * @returns {Promise<Blob>} - Test PDF with new layout measurements
    */
   static async generateAlignmentTestPDF() {
     const pdf = new jsPDF({
@@ -596,9 +696,9 @@ export class PDFGenerator {
     // Title
     pdf.setFontSize(14);
     pdf.setTextColor(0, 0, 0);
-    pdf.text('S-5492 SIDEWAYS Test - Rotate Paper 90° to Read Labels', 50, 30);
+    pdf.text('S-5492 NEW CONTENT LAYOUT Test - Rotate Paper 90° to Read Labels', 50, 30);
 
-    // Draw all 4 label positions
+    // Draw all 4 label positions with new layout indicators
     for (let i = 0; i < 4; i++) {
       const pos = this.calculateUlineS5492PositionSideways(i);
       
@@ -610,19 +710,29 @@ export class PDFGenerator {
       // Position info
       pdf.setFontSize(10);
       pdf.setTextColor(255, 0, 0);
-      pdf.text(`Label ${i + 1}`, pos.x + 5, pos.y + 15);
+      pdf.text(`Label ${i + 1} - NEW LAYOUT`, pos.x + 5, pos.y + 15);
       pdf.text(`${pos.width}×${pos.height}pt`, pos.x + 5, pos.y + 28);
-      pdf.text('SIDEWAYS', pos.x + 5, pos.y + 41);
+      pdf.text('Content rotated 90° right', pos.x + 5, pos.y + 41);
+      
+      // Layout sections
+      pdf.setDrawColor(0, 128, 255);
+      pdf.setLineWidth(1);
+      // Top section (35%)
+      pdf.rect(pos.x + 5, pos.y + 5, pos.width - 10, Math.floor(pos.height * 0.35));
+      // Bottom section (remaining)
+      pdf.rect(pos.x + 5, pos.y + 5 + Math.floor(pos.height * 0.7), pos.width - 10, Math.floor(pos.height * 0.25));
     }
 
-    // Instructions
+    // New layout instructions
     pdf.setFontSize(12);
     pdf.setTextColor(0, 0, 0);
-    pdf.text('Instructions:', 50, 80);
+    pdf.text('NEW CONTENT LAYOUT:', 50, 80);
     pdf.setFontSize(10);
-    pdf.text('1. Print this PDF on legal size paper', 50, 95);
-    pdf.text('2. Rotate paper 90° clockwise', 50, 110);
-    pdf.text('3. Labels should now be readable (6" wide × 4" tall)', 50, 125);
+    pdf.text('1. Audit Trail: Top-left, rotated 90°', 50, 95);
+    pdf.text('2. Product Name: Center-top, largest fonts', 50, 110);
+    pdf.text('3. Bottom: Barcode | Store Box | Dates | Case/Box', 50, 125);
+    pdf.text('4. All fonts increased for better visibility', 50, 140);
+    pdf.text('5. Rotate paper 90° clockwise after printing', 50, 155);
 
     return pdf.output('blob');
   }
@@ -661,9 +771,10 @@ export class PDFGenerator {
       warnings,
       totalLabels,
       estimatedPages: Math.ceil(totalLabels / 4),
-      labelFormat: 'S-5492 (SIDEWAYS)',
+      labelFormat: 'S-5492 (NEW ROTATED CONTENT LAYOUT)',
       pageSize: 'Legal (8.5" × 14")',
       labelsPerPage: 4,
+      contentLayout: 'Content rotated 90° right for optimal viewing',
       rotationNote: 'Labels positioned sideways - rotate paper 90° clockwise for reading/peeling'
     };
   }
@@ -678,10 +789,24 @@ export class PDFGenerator {
     }
 
     return {
-      migration: 'S-21846 → S-5492 (SIDEWAYS FIXED)',
+      migration: 'S-5492 CONTENT LAYOUT UPDATE',
+      version: '6.3.0',
+      contentLayout: {
+        topSection: 'Audit Trail (rotated 90°) + Product Name (center, large fonts)',
+        middleSection: 'Product name overflow area',
+        bottomSection: 'Barcode | Store Box | Dates | Case/Box (4 columns, larger fonts)',
+        improvements: [
+          'Audit trail rotated 90° and moved to top-left',
+          'Product name centered at top with largest fonts',
+          'Store text box with "Store:" label above',
+          'Dates and case/box info with larger fonts',
+          'Barcode repositioned to bottom-left',
+          'All content rotated 90° right for optimal layout'
+        ]
+      },
       labelSpecs: {
         dimensions: '4" × 6" (positioned sideways)',
-        orientation: 'SIDEWAYS (no PDF transformation)',
+        orientation: 'SIDEWAYS (container), content rotated 90° right',
         labelsPerSheet: 4,
         layout: '2×2 grid of sideways labels',
         workflow: 'Print → Rotate paper 90° clockwise → Read/peel labels'
@@ -692,18 +817,13 @@ export class PDFGenerator {
         printableArea: '588 × 984 points (HP E877 margins)'
       },
       positions: positions,
-      fixes: [
-        'Removed all PDF transformation functions',
-        'No setTransformationMatrix calls',
-        'Simple positioning without rotation',
-        'Content oriented for post-rotation reading'
-      ],
-      instructions: [
-        'Print PDF on legal size paper using HP E877',
-        'Use "Actual Size" print setting (no scaling)',
-        'Rotate printed paper 90° clockwise',
-        'Labels are now readable: 6" wide × 4" tall',
-        'Peel and apply labels normally'
+      newFeatures: [
+        'Content repositioned and rotated 90° to the right',
+        'Larger fonts throughout for better visibility',
+        'Store text box with clear labeling',
+        'Enhanced 4-column bottom layout',
+        'Rotated audit trail in top-left corner',
+        'Product name prominence with brand separation'
       ]
     };
   }
@@ -711,5 +831,10 @@ export class PDFGenerator {
   // Legacy compatibility
   static calculateUlineLabelPosition(labelIndex) {
     return this.calculateUlineS5492PositionSideways(labelIndex % 4);
+  }
+
+  // Backwards compatibility - redirect to new method
+  static async drawSidewaysLabel(pdf, labelData, position, boxNumber, totalBoxes, debug, currentUser) {
+    return this.drawSidewaysLabelNewLayout(pdf, labelData, position, boxNumber, totalBoxes, debug, currentUser);
   }
 }
