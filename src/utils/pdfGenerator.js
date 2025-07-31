@@ -6,7 +6,8 @@ import storage from './storage.js';
 
 /**
  * PDF Generation utilities for Uline S-5492 label sheets
- * NEW LAYOUT: Content repositioned and rotated 90° to the right for optimal layout
+ * NEW LAYOUT: Content repositioned for optimal layout when paper is rotated 90°
+ * NO PDF TRANSFORMATIONS - Simple positioning only
  */
 export class PDFGenerator {
   /**
@@ -67,17 +68,17 @@ export class PDFGenerator {
       // Add metadata
       pdf.setDocumentProperties({
         title: `Cannabis Inventory Labels - ${new Date().toISOString().slice(0, 10)}`,
-        subject: 'Uline S-5492 Format Labels (NEW ROTATED CONTENT LAYOUT)',
+        subject: 'Uline S-5492 Format Labels (NEW CONTENT LAYOUT - No PDF Transformations)',
         author: 'Cannabis Inventory Management System',
-        creator: 'Cannabis Inventory Management System v6.3.0',
-        keywords: 'cannabis, inventory, labels, uline, s-5492, rotated, content, layout'
+        creator: 'Cannabis Inventory Management System v6.3.1',
+        keywords: 'cannabis, inventory, labels, uline, s-5492, new, layout, simple, positioning'
       });
 
       // Log generation event
       storage.addSessionEvent(
         EVENT_TYPES.LABEL_GENERATED,
-        `Generated ${currentLabelIndex} S-5492 labels with new rotated content layout across ${currentPage} pages`,
-        `Items: ${labelDataArray.length}, Format: Uline S-5492 (New Rotated Content Layout)`
+        `Generated ${currentLabelIndex} S-5492 labels with new content layout (no transformations) across ${currentPage} pages`,
+        `Items: ${labelDataArray.length}, Format: Uline S-5492 (New Content Layout)`
       );
 
       return pdf.output('blob');
@@ -157,7 +158,7 @@ export class PDFGenerator {
   }
 
   /**
-   * NEW LAYOUT: Draw sideways label with content rotated 90° to the right
+   * NEW LAYOUT: Draw sideways label with repositioned content (NO PDF TRANSFORMATIONS)
    * @param {jsPDF} pdf - PDF document
    * @param {Object} labelData - Formatted label data
    * @param {Object} position - Label position and dimensions
@@ -184,9 +185,9 @@ export class PDFGenerator {
         // Debug text
         pdf.setFontSize(8);
         pdf.setTextColor(255, 0, 0);
-        pdf.text(`Label ${position.labelIndex + 1}`, x + 5, y + 15);
+        pdf.text(`L${position.labelIndex + 1} NEW`, x + 5, y + 15);
         pdf.text(`${width}×${height}pt`, x + 5, y + 25);
-        pdf.text('NEW LAYOUT', x + 5, y + 35);
+        pdf.text('NO TRANSFORMS', x + 5, y + 35);
       }
 
       const padding = 10;
@@ -195,16 +196,16 @@ export class PDFGenerator {
       const contentWidth = width - (padding * 2);
       const contentHeight = height - (padding * 2);
 
-      // NEW LAYOUT SECTIONS
+      // NEW LAYOUT SECTIONS - Simple positioning only
       
-      // 1. Top section: Audit Trail (top-left, rotated) + Product Name (center-top)
+      // 1. Top section: Audit Trail (top-left) + Product Name (center-top)
       const topSectionHeight = Math.floor(contentHeight * 0.35);
       await this.drawNewTopSection(pdf, labelData, currentUser, contentX, contentY, contentWidth, topSectionHeight);
       
-      // 2. Middle section: Expanded product name area
+      // 2. Middle section: Product name overflow area if needed
       const middleSectionY = contentY + topSectionHeight;
       const middleSectionHeight = Math.floor(contentHeight * 0.35);
-      await this.drawNewMiddleSection(pdf, labelData, contentX, middleSectionY, contentWidth, middleSectionHeight);
+      // Middle section is mostly reserved for long product names
       
       // 3. Bottom section: 4-column layout (Barcode | Store Box | Dates | Case/Box)
       const bottomSectionY = contentY + topSectionHeight + middleSectionHeight;
@@ -220,7 +221,7 @@ export class PDFGenerator {
   }
 
   /**
-   * Draw new top section: Audit Trail (rotated, top-left) + Product Name (center-top)
+   * Draw new top section: Audit Trail (top-left) + Product Name (center-top) - NO TRANSFORMATIONS
    * @param {jsPDF} pdf - PDF document
    * @param {Object} labelData - Label data
    * @param {string} currentUser - Current user
@@ -230,25 +231,25 @@ export class PDFGenerator {
    * @param {number} height - Available height
    */
   static async drawNewTopSection(pdf, labelData, currentUser, x, y, width, height) {
-    // 1. Audit Trail - Top-left corner with 90° rotation
-    await this.drawRotatedAuditTrail(pdf, currentUser, x + 5, y + height - 10);
+    // 1. Audit Trail - Top-left corner (simple positioning - NO rotation)
+    await this.drawTopLeftAuditTrail(pdf, currentUser, x + 5, y + 12);
     
     // 2. Product Name - Center-top, largest possible font
     const brandInfo = this.extractBrandFromProductName(labelData.productName);
-    const productNameStartX = x + (width * 0.25); // Leave space for rotated audit trail
-    const productNameWidth = width * 0.75;
+    const productNameStartX = x + (width * 0.15); // Leave space for audit trail
+    const productNameWidth = width * 0.85;
     
     await this.drawCenterTopProductName(pdf, brandInfo, productNameStartX, y, productNameWidth, height);
   }
 
   /**
-   * Draw rotated audit trail (90° clockwise rotation)
+   * Draw audit trail in top-left corner (NO PDF TRANSFORMATIONS - simple text)
    * @param {jsPDF} pdf - PDF document
    * @param {string} currentUser - Current user
    * @param {number} x - X position
    * @param {number} y - Y position
    */
-  static async drawRotatedAuditTrail(pdf, currentUser, x, y) {
+  static async drawTopLeftAuditTrail(pdf, currentUser, x, y) {
     const now = new Date();
     const month = (now.getMonth() + 1).toString().padStart(2, '0');
     const day = now.getDate().toString().padStart(2, '0');
@@ -261,23 +262,22 @@ export class PDFGenerator {
     const hoursStr = hours.toString();
     
     const minutes = now.getMinutes().toString().padStart(2, '0');
-    const auditString = `${month}/${day}/${year} ${hoursStr}:${minutes} ${ampm} EST (${currentUser})`;
     
-    // Save current state
-    pdf.saveGraphicsState();
+    // Create compact audit string for top-left positioning
+    const shortUser = (currentUser || 'Unknown').substring(0, 8);
+    const auditString1 = `${month}/${day}/${year}`;
+    const auditString2 = `${hoursStr}:${minutes}${ampm}`;
+    const auditString3 = `(${shortUser})`;
     
-    // Rotate 90 degrees clockwise around the point
-    pdf.setGState({
-      CTM: [0, 1, -1, 0, x + y, y - x]
-    });
-    
+    // NO PDF TRANSFORMATIONS - Simple vertical text stacking
     pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(7);
+    pdf.setFontSize(6); // Small font for compact display
     pdf.setTextColor(102, 102, 102);
-    pdf.text(auditString, 0, 0);
     
-    // Restore state
-    pdf.restoreGraphicsState();
+    // Stack the audit info vertically in top-left
+    pdf.text(auditString1, x, y);
+    pdf.text(auditString2, x, y + 8);
+    pdf.text(auditString3, x, y + 16);
   }
 
   /**
@@ -290,7 +290,7 @@ export class PDFGenerator {
    * @param {number} height - Available height
    */
   static async drawCenterTopProductName(pdf, brandInfo, x, y, width, height) {
-    let currentY = y + 10;
+    let currentY = y + 15;
     const lineSpacing = 1.2;
 
     // Draw brand name if present (larger font)
@@ -304,20 +304,20 @@ export class PDFGenerator {
       // Center the brand text
       const brandWidth = pdf.getTextWidth(brandInfo.brand);
       const brandX = x + (width - brandWidth) / 2;
-      pdf.text(brandInfo.brand, brandX, currentY + (brandFontSize * 0.8));
-      currentY += brandFontSize * lineSpacing + 6;
+      pdf.text(brandInfo.brand, brandX, currentY);
+      currentY += brandFontSize * lineSpacing + 8;
     }
 
     // Draw product name (larger font)
-    const remainingHeight = Math.max(20, height - (currentY - y));
-    const maxProductFontSize = brandInfo.brand ? 28 : 34;
+    const remainingHeight = Math.max(25, height - (currentY - y));
+    const maxProductFontSize = brandInfo.brand ? 30 : 36; // Even larger fonts
     
-    const productFontSize = LabelFormatter.autoFitFontSize(
+    const productFontSize = Math.min(maxProductFontSize, LabelFormatter.autoFitFontSize(
       brandInfo.productName, 
       width, 
       remainingHeight, 
       maxProductFontSize
-    );
+    ));
     
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(productFontSize);
@@ -327,30 +327,13 @@ export class PDFGenerator {
     productLines.forEach((line) => {
       const textWidth = pdf.getTextWidth(line);
       const centerX = x + (width - textWidth) / 2;
-      pdf.text(line, centerX, currentY + (productFontSize * 0.8));
+      pdf.text(line, centerX, currentY);
       currentY += productFontSize * lineSpacing;
     });
   }
 
   /**
-   * Draw new middle section: Extended product name area
-   * @param {jsPDF} pdf - PDF document
-   * @param {Object} labelData - Label data
-   * @param {number} x - X position
-   * @param {number} y - Y position
-   * @param {number} width - Available width
-   * @param {number} height - Available height
-   */
-  static async drawNewMiddleSection(pdf, labelData, x, y, width, height) {
-    // This section is mainly for product name overflow or additional product details
-    // Could be used for extended product information if needed
-    
-    // For now, leave this section for product name continuation
-    // The main product name drawing in top section will handle multi-line text
-  }
-
-  /**
-   * Draw new bottom section: 4-column layout
+   * Draw new bottom section: 4-column layout - NO TRANSFORMATIONS
    * Column 1: Barcode + numeric display
    * Column 2: Store text box with "Store:" label
    * Column 3: Harvest & Package dates (larger fonts)
@@ -409,7 +392,7 @@ export class PDFGenerator {
     pdf.text(spacedBarcodeDisplay, displayX, y + 12);
     
     // Barcode (larger)
-    const barcodeHeight = Math.min(height * 0.7, 40); // Increased height
+    const barcodeHeight = Math.min(height * 0.7, 45); // Increased height
     await this.drawEnhancedBarcode(
       pdf, 
       labelData.barcode, 
@@ -435,12 +418,12 @@ export class PDFGenerator {
     
     // "Store:" label (larger font)
     pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(9); // Increased from 7
+    pdf.setFontSize(9); // Increased font
     pdf.setTextColor(0, 0, 0);
     pdf.text('Store:', innerX, y + 12);
     
     // Text box (larger)
-    const boxHeight = height * 0.7;
+    const boxHeight = Math.min(height * 0.75, 50);
     const boxY = y + 16;
     this.drawEnhancedManualWritingBox(pdf, innerX, boxY, innerWidth, boxHeight);
   }
@@ -463,21 +446,19 @@ export class PDFGenerator {
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(10); // Increased from 8
     pdf.setTextColor(0, 0, 0);
-    const harvestText = `Harvest:`;
-    pdf.text(harvestText, innerX, currentY);
+    pdf.text('Harvest:', innerX, currentY);
     currentY += 12;
     
     pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(10);
     const harvestDate = labelData.harvestDate || 'MM/DD/YY';
     pdf.text(harvestDate, innerX, currentY);
-    currentY += 16;
+    currentY += 18;
     
     // Package Date (larger font)
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(10);
-    const packageText = `Package:`;
-    pdf.text(packageText, innerX, currentY);
+    pdf.text('Package:', innerX, currentY);
     currentY += 12;
     
     pdf.setFont('helvetica', 'normal');
@@ -504,7 +485,7 @@ export class PDFGenerator {
     let currentY = y + 12;
     
     // Case Qty (larger box and font)
-    const boxHeight = 14; // Increased from 10
+    const boxHeight = 16; // Increased from 10
     
     pdf.setDrawColor(0, 0, 0);
     pdf.setLineWidth(1);
@@ -516,16 +497,16 @@ export class PDFGenerator {
     const caseQtyValue = labelData.caseQuantity || '___';
     const caseQtyText = `Case: ${caseQtyValue}`;
     const caseQtyWidth = pdf.getTextWidth(caseQtyText);
-    pdf.text(caseQtyText, innerX + (innerWidth - caseQtyWidth) / 2, currentY + 9);
+    pdf.text(caseQtyText, innerX + (innerWidth - caseQtyWidth) / 2, currentY + 11);
     
-    currentY += boxHeight + 8;
+    currentY += boxHeight + 10;
     
     // Box Number (larger box and font)
     pdf.rect(innerX, currentY, innerWidth, boxHeight);
     
     const boxText = `Box ${boxNumber}/${totalBoxes}`;
     const boxTextWidth = pdf.getTextWidth(boxText);
-    pdf.text(boxText, innerX + (innerWidth - boxTextWidth) / 2, currentY + 9);
+    pdf.text(boxText, innerX + (innerWidth - boxTextWidth) / 2, currentY + 11);
   }
 
   /**
@@ -546,7 +527,7 @@ export class PDFGenerator {
     pdf.setDrawColor(220, 220, 220);
     pdf.setLineWidth(0.5);
     
-    const numLines = Math.floor(height / 8); // More lines for larger box
+    const numLines = Math.max(3, Math.floor(height / 10)); // More lines for larger box
     for (let i = 1; i < numLines; i++) {
       const lineY = y + (i * (height / numLines));
       pdf.line(x + 2, lineY, x + width - 2, lineY);
@@ -712,24 +693,24 @@ export class PDFGenerator {
       pdf.setTextColor(255, 0, 0);
       pdf.text(`Label ${i + 1} - NEW LAYOUT`, pos.x + 5, pos.y + 15);
       pdf.text(`${pos.width}×${pos.height}pt`, pos.x + 5, pos.y + 28);
-      pdf.text('Content rotated 90° right', pos.x + 5, pos.y + 41);
+      pdf.text('Simple positioning only', pos.x + 5, pos.y + 41);
       
       // Layout sections
       pdf.setDrawColor(0, 128, 255);
       pdf.setLineWidth(1);
       // Top section (35%)
       pdf.rect(pos.x + 5, pos.y + 5, pos.width - 10, Math.floor(pos.height * 0.35));
-      // Bottom section (remaining)
-      pdf.rect(pos.x + 5, pos.y + 5 + Math.floor(pos.height * 0.7), pos.width - 10, Math.floor(pos.height * 0.25));
+      // Bottom section (30%)
+      pdf.rect(pos.x + 5, pos.y + 5 + Math.floor(pos.height * 0.70), pos.width - 10, Math.floor(pos.height * 0.25));
     }
 
     // New layout instructions
     pdf.setFontSize(12);
     pdf.setTextColor(0, 0, 0);
-    pdf.text('NEW CONTENT LAYOUT:', 50, 80);
+    pdf.text('NEW CONTENT LAYOUT (No PDF Transformations):', 50, 80);
     pdf.setFontSize(10);
-    pdf.text('1. Audit Trail: Top-left, rotated 90°', 50, 95);
-    pdf.text('2. Product Name: Center-top, largest fonts', 50, 110);
+    pdf.text('1. Audit Trail: Top-left corner (simple text stacking)', 50, 95);
+    pdf.text('2. Product Name: Center-top, largest fonts (up to 36pt)', 50, 110);
     pdf.text('3. Bottom: Barcode | Store Box | Dates | Case/Box', 50, 125);
     pdf.text('4. All fonts increased for better visibility', 50, 140);
     pdf.text('5. Rotate paper 90° clockwise after printing', 50, 155);
@@ -771,10 +752,10 @@ export class PDFGenerator {
       warnings,
       totalLabels,
       estimatedPages: Math.ceil(totalLabels / 4),
-      labelFormat: 'S-5492 (NEW ROTATED CONTENT LAYOUT)',
+      labelFormat: 'S-5492 (NEW CONTENT LAYOUT - No PDF Transformations)',
       pageSize: 'Legal (8.5" × 14")',
       labelsPerPage: 4,
-      contentLayout: 'Content rotated 90° right for optimal viewing',
+      contentLayout: 'Repositioned content with simple positioning only',
       rotationNote: 'Labels positioned sideways - rotate paper 90° clockwise for reading/peeling'
     };
   }
@@ -789,24 +770,24 @@ export class PDFGenerator {
     }
 
     return {
-      migration: 'S-5492 CONTENT LAYOUT UPDATE',
-      version: '6.3.0',
+      migration: 'S-5492 NEW CONTENT LAYOUT (No PDF Transformations)',
+      version: '6.3.1',
       contentLayout: {
-        topSection: 'Audit Trail (rotated 90°) + Product Name (center, large fonts)',
+        topSection: 'Audit Trail (top-left, simple stacking) + Product Name (center, large fonts)',
         middleSection: 'Product name overflow area',
         bottomSection: 'Barcode | Store Box | Dates | Case/Box (4 columns, larger fonts)',
         improvements: [
-          'Audit trail rotated 90° and moved to top-left',
-          'Product name centered at top with largest fonts',
+          'Audit trail positioned top-left with simple text stacking',
+          'Product name centered at top with fonts up to 36pt',
           'Store text box with "Store:" label above',
-          'Dates and case/box info with larger fonts',
-          'Barcode repositioned to bottom-left',
-          'All content rotated 90° right for optimal layout'
+          'Dates and case/box info with larger fonts (10pt, 9pt)',
+          'Barcode repositioned with larger numeric display (8pt)',
+          'All content uses simple positioning - NO PDF transformations'
         ]
       },
       labelSpecs: {
         dimensions: '4" × 6" (positioned sideways)',
-        orientation: 'SIDEWAYS (container), content rotated 90° right',
+        orientation: 'SIDEWAYS (container), simple content positioning',
         labelsPerSheet: 4,
         layout: '2×2 grid of sideways labels',
         workflow: 'Print → Rotate paper 90° clockwise → Read/peel labels'
@@ -817,13 +798,13 @@ export class PDFGenerator {
         printableArea: '588 × 984 points (HP E877 margins)'
       },
       positions: positions,
-      newFeatures: [
-        'Content repositioned and rotated 90° to the right',
-        'Larger fonts throughout for better visibility',
-        'Store text box with clear labeling',
-        'Enhanced 4-column bottom layout',
-        'Rotated audit trail in top-left corner',
-        'Product name prominence with brand separation'
+      technicalApproach: [
+        'NO setGState() calls',
+        'NO saveGraphicsState() calls', 
+        'NO PDF transformation matrix functions',
+        'Simple text and shape positioning only',
+        'Compatible with all PDF viewers and printers',
+        'Audit trail uses vertical text stacking instead of rotation'
       ]
     };
   }
