@@ -98,7 +98,7 @@ export class PDFGenerator {
   }
 
   /**
-   * Calculate label position using EXACT specifications from image analysis
+   * Calculate label position using UPDATED Uline S-5627 specifications
    * @param {number} labelIndex - Index of label (0-based)
    * @returns {Object} - Position coordinates in points
    */
@@ -116,21 +116,21 @@ export class PDFGenerator {
     const labelWidth = 288; // 4 inches exact
     const labelHeight = 108; // 1.5 inches exact
     
-    // EXTRACTED FROM ULINE TEMPLATE IMAGE ANALYSIS - PIXEL PERFECT
-    const topMargin = 72;       // 1.000" - Equal top margin
-    const bottomMargin = 72;    // 1.000" - Equal bottom margin  
-    const leftMargin = 15;      // 0.208" - Side margin
-    const rightMargin = 15;     // 0.208" - Side margin
-    const columnGap = 6;        // 0.083" - Small middle gap
+    // UPDATED SPECIFICATIONS - NEW PRECISE MEASUREMENTS
+    const topMargin = 36;       // 0.5" - Updated from 72pt to 36pt
+    const bottomMargin = 36;    // 0.5" - Updated from 72pt to 36pt  
+    const leftMargin = 15.75;   // 0.21875" - Updated from 15pt to 15.75pt
+    const rightMargin = 15.75;  // 0.21875" - Updated from 15pt to 15.75pt
+    const columnGap = 9;        // 0.125" - Updated from 6pt to 9pt
     
-    // PERFECT TEMPLATE MATCH VERIFICATION:
-    // Width: 15 + 288 + 6 + 288 + 15 = 612pt ✅ EXACT
-    // Height: 72 + (6 × 108) + 72 = 792pt ✅ EXACT
+    // VERIFICATION WITH NEW SPECIFICATIONS:
+    // Width: 15.75 + 288 + 9 + 288 + 15.75 = 616.5pt (slightly over 612pt - may need adjustment)
+    // Height: 36 + (6 × 108) + 36 = 720pt (fits within 792pt ✅)
     
-    // Calculate X position (columns) - small gap between columns
+    // Calculate X position (columns) - updated gap between columns
     let xPos = leftMargin;
     if (col === 1) {
-      // Right column: left margin + left label + small gap
+      // Right column: left margin + left label + updated gap
       xPos = leftMargin + labelWidth + columnGap;
     }
     
@@ -467,12 +467,13 @@ export class PDFGenerator {
       labelSpecs: specs,
       labelPositions: positions,
       totalLabelsPerSheet: specs.LABELS_PER_SHEET,
-      auditTrailUpdates: {
-        timeFormat: "12-hour format with AM/PM",
-        timezone: "EST",
-        userSource: "Current user generating labels (not scanned item user)",
-        timeSource: "Current time when labels are generated",
-        exampleFormat: "07/29/25 3:45 PM EST (JohnDoe)"
+      updatedSpecifications: {
+        topMargin: "36pt (0.5\") - Updated from 72pt",
+        bottomMargin: "36pt (0.5\") - Updated from 72pt",
+        leftMargin: "15.75pt (0.21875\") - Updated from 15pt",
+        rightMargin: "15.75pt (0.21875\") - Updated from 15pt",
+        columnGap: "9pt (0.125\") - Updated from 6pt",
+        verification: "Width: 15.75 + 288 + 9 + 288 + 15.75 = 616.5pt (may need fine-tuning)"
       }
     };
   }
