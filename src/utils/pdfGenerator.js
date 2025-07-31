@@ -111,16 +111,13 @@ export class PDFGenerator {
     const printableWidth = pageWidth - (printerMargin * 2);   // 588pt
     const printableHeight = pageHeight - (printerMargin * 2); // 984pt
     
-    // S-5492 ROTATED dimensions: When paper is rotated 90°, we have:
-    // - Effective width: 14" (1008pt) minus margins = 984pt
-    // - Effective height: 8.5" (612pt) minus margins = 588pt
-    // - Label size: 4" × 6" becomes 6" wide × 4" tall in rotated view
+    // In rotated coordinate system (after rotating paper 90°):
+    // - Available width: printableHeight = 984pt (14" - margins)
+    // - Available height: printableWidth = 588pt (8.5" - margins)
+    const rotatedPageWidth = printableHeight;  // 984pt
+    const rotatedPageHeight = printableWidth;  // 588pt
     
-    // In the rotated coordinate system:
-    const rotatedPageWidth = printableHeight;  // 984pt (14" - margins)
-    const rotatedPageHeight = printableWidth;  // 588pt (8.5" - margins)
-    
-    // Label dimensions in rotated view
+    // Label dimensions in rotated view (6" wide × 4" tall)
     const labelWidth = 432;  // 6" wide in rotated view
     const labelHeight = 288; // 4" tall in rotated view
     
@@ -130,26 +127,38 @@ export class PDFGenerator {
     const row = Math.floor(labelIndex / cols);
     const col = labelIndex % cols;
     
+    // Calculate scale factor if needed
+    const requiredWidth = cols * labelWidth;   // 864pt
+    const requiredHeight = rows * labelHeight; // 576pt
+    
+    const scaleX = rotatedPageWidth / requiredWidth;   // 984/864 = 1.14
+    const scaleY = rotatedPageHeight / requiredHeight; // 588/576 = 1.02
+    const scaleFactor = Math.min(scaleX, scaleY, 1.0); // Use 1.02 but cap at 1.0
+    
+    // Labels fit without scaling!
+    const actualLabelWidth = labelWidth;
+    const actualLabelHeight = labelHeight;
+    
     // Calculate positions in rotated coordinate system
-    const rotatedX = col * (labelWidth + 12) + 6; // Small gap between columns
-    const rotatedY = row * (labelHeight + 12) + 6; // Small gap between rows
+    const rotatedX = col * actualLabelWidth + (rotatedPageWidth - (cols * actualLabelWidth)) / 2;
+    const rotatedY = row * actualLabelHeight + (rotatedPageHeight - (rows * actualLabelHeight)) / 2;
     
     // Transform back to PDF coordinate system (unrotated)
-    // When rotated 90° clockwise: x' = y, y' = pageWidth - x
+    // For 90° clockwise rotation: x' = y, y' = pageWidth - x
     const pdfX = printerMargin + rotatedY;
-    const pdfY = printerMargin + (rotatedPageWidth - rotatedX - labelWidth);
+    const pdfY = printerMargin + (rotatedPageWidth - rotatedX - actualLabelWidth);
     
     return {
       x: Math.floor(pdfX),
       y: Math.floor(pdfY),
-      width: labelHeight,  // In PDF coords: height becomes width
-      height: labelWidth,  // In PDF coords: width becomes height
+      width: actualLabelHeight,  // In PDF coords: height becomes width
+      height: actualLabelWidth,  // In PDF coords: width becomes height
       
       // Rotation information
       isRotated: true,
       rotationAngle: 90,
-      rotatedWidth: labelWidth,   // Width when rotated (6")
-      rotatedHeight: labelHeight, // Height when rotated (4")
+      rotatedWidth: actualLabelWidth,   // Width when rotated (6")
+      rotatedHeight: actualLabelHeight, // Height when rotated (4")
       
       // Grid information
       row: row,
@@ -164,6 +173,7 @@ export class PDFGenerator {
 
   /**
    * Draw rotated label with content oriented for 90-degree rotation
+   * FIXED: Removed problematic graphics state calls
    * @param {jsPDF} pdf - PDF document
    * @param {Object} labelData - Formatted label data
    * @param {Object} position - Label position and dimensions
@@ -175,51 +185,53 @@ export class PDFGenerator {
   static async drawRotatedLabel(pdf, labelData, position, boxNumber = 1, totalBoxes = 1, debug = false, currentUser = 'Unknown') {
     const { x, y, width, height, rotatedWidth, rotatedHeight } = position;
 
-    // Save the current transformation state
-    pdf.saveGraphicsState();
-    
-    // Move to label position and rotate 90 degrees clockwise
-    pdf.setGState('normal');
-    
-    // Apply rotation: translate to label center, rotate, translate back
+    // Calculate center point for rotation
     const centerX = x + width / 2;
     const centerY = y + height / 2;
     
-    pdf.setTransformationMatrix(
-      0, 1,    // Rotate 90° clockwise
-      -1, 0,   
-      centerX + centerY, centerY - centerX  // Translation
-    );
+    // Draw using transformation matrix for 90-degree rotation
+    // Save current state
+    pdf.saveGraphicsState();
     
-    // Now draw in the rotated coordinate system
-    const rotatedX = -rotatedWidth / 2;
-    const rotatedY = -rotatedHeight / 2;
-
-    // Draw label border
-    pdf.setDrawColor(0, 0, 0);
-    pdf.setLineWidth(1);
-    pdf.rect(rotatedX, rotatedY, rotatedWidth, rotatedHeight);
-
-    // Debug info
-    if (debug) {
-      pdf.setDrawColor(255, 0, 0);
-      pdf.setLineWidth(0.5);
-      pdf.rect(rotatedX + 2, rotatedY + 2, rotatedWidth - 4, rotatedHeight - 4);
-      
-      // Debug text
-      pdf.setFontSize(8);
-      pdf.setTextColor(255, 0, 0);
-      pdf.text(`${(rotatedWidth/72).toFixed(2)}" × ${(rotatedHeight/72).toFixed(2)}"`, rotatedX + 5, rotatedY + 15);
-      pdf.text(`ROTATED Label ${position.labelIndex + 1}`, rotatedX + 5, rotatedY + 25);
-    }
-
-    const padding = 8;
-    const contentX = rotatedX + padding;
-    const contentY = rotatedY + padding;
-    const contentWidth = rotatedWidth - (padding * 2);
-    const contentHeight = rotatedHeight - (padding * 2);
-
     try {
+      // Apply 90-degree clockwise rotation around center point
+      // Transformation matrix for 90° rotation: [cos(90°), sin(90°), -sin(90°), cos(90°), tx, ty]
+      // Which is: [0, 1, -1, 0, tx, ty]
+      const cos90 = 0;
+      const sin90 = 1;
+      const tx = centerX + centerY;  // Translation X
+      const ty = centerY - centerX;  // Translation Y
+      
+      pdf.setTransformationMatrix(cos90, sin90, -sin90, cos90, tx, ty);
+      
+      // Now draw in the rotated coordinate system
+      const rotatedX = -rotatedWidth / 2;
+      const rotatedY = -rotatedHeight / 2;
+
+      // Draw label border
+      pdf.setDrawColor(0, 0, 0);
+      pdf.setLineWidth(1);
+      pdf.rect(rotatedX, rotatedY, rotatedWidth, rotatedHeight);
+
+      // Debug info
+      if (debug) {
+        pdf.setDrawColor(255, 0, 0);
+        pdf.setLineWidth(0.5);
+        pdf.rect(rotatedX + 2, rotatedY + 2, rotatedWidth - 4, rotatedHeight - 4);
+        
+        // Debug text
+        pdf.setFontSize(8);
+        pdf.setTextColor(255, 0, 0);
+        pdf.text(`${(rotatedWidth/72).toFixed(2)}" × ${(rotatedHeight/72).toFixed(2)}"`, rotatedX + 5, rotatedY + 15);
+        pdf.text(`ROTATED Label ${position.labelIndex + 1}`, rotatedX + 5, rotatedY + 25);
+      }
+
+      const padding = 8;
+      const contentX = rotatedX + padding;
+      const contentY = rotatedY + padding;
+      const contentWidth = rotatedWidth - (padding * 2);
+      const contentHeight = rotatedHeight - (padding * 2);
+
       // Draw content in rotated orientation
       
       // 1. Audit trail (bottom left in rotated view)
@@ -237,10 +249,13 @@ export class PDFGenerator {
       await this.drawProductNameRotated(pdf, brandInfo, contentX, contentY, contentWidth, productNameHeight);
 
     } catch (error) {
-      console.error('Error drawing rotated label:', error);
+      console.error('Error drawing rotated label content:', error);
+      // Draw error message in normal orientation
+      pdf.restoreGraphicsState();
       pdf.setFontSize(10);
       pdf.setTextColor(255, 0, 0);
-      pdf.text('Label Error', contentX + 5, contentY + 20);
+      pdf.text('Label Error', x + 5, y + 20);
+      return;
     }
     
     // Restore the graphics state
@@ -691,7 +706,7 @@ export class PDFGenerator {
     }
 
     return {
-      migration: 'S-21846 → S-5492 (ROTATED)',
+      migration: 'S-21846 → S-5492 (ROTATED FIXED)',
       labelSpecs: {
         dimensions: '4" × 6" (positioned sideways)',
         orientation: 'ROTATED 90°',
@@ -705,6 +720,12 @@ export class PDFGenerator {
         printableArea: '588 × 984 points (HP E877 margins)'
       },
       positions: positions,
+      fixes: [
+        'Removed problematic setGState() calls',
+        'Fixed graphics state management',
+        'Proper transformation matrix usage',
+        'Error handling in rotation code'
+      ],
       instructions: [
         'Print PDF on legal size paper',
         'Rotate paper 90 degrees clockwise',
