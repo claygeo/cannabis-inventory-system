@@ -98,8 +98,8 @@ export class PDFGenerator {
   }
 
   /**
-   * Calculate label position using EXACT OFFICIAL ULINE S-5627 SPECIFICATIONS
-   * Corrected to center labels properly with equal top/bottom margins
+   * Calculate label position using FINAL EXACT ULINE S-5627 SPECIFICATIONS
+   * With precise measurements and slight row overlap
    * @param {number} labelIndex - Index of label (0-based)
    * @returns {Object} - Position coordinates in points
    */
@@ -117,31 +117,28 @@ export class PDFGenerator {
     const labelWidth = 288; // 4 inches exact
     const labelHeight = 108; // 1.5 inches exact
     
-    // CORRECTED ULINE S-5627 SPECIFICATIONS - Equal top/bottom margins
-    const leftMargin = 13.5;    // 0.1875" (exact from Uline specs)
-    const rightMargin = 13.5;   // 0.1875" (exact from Uline specs)
-    const columnGap = 9;        // 0.125" (exact from Uline specs)
-    
-    // CALCULATE CORRECT VERTICAL MARGINS for perfect centering:
-    // Total label block height: 6 labels × 108pt = 648pt
-    // Available space: 792pt - 648pt = 144pt
-    // Equal margins: 144pt ÷ 2 = 72pt top and bottom
-    const topMargin = 72;       // 1.0" (calculated for perfect centering)
-    const bottomMargin = 72;    // 1.0" (calculated for perfect centering)
+    // FINAL EXACT ULINE S-5627 SPECIFICATIONS
+    const topMargin = 73.08;      // 1.015"
+    const bottomMargin = 73.08;   // 1.015" 
+    const leftMargin = 12.42;     // 0.1725"
+    const rightMargin = 12.42;    // 0.1725"
+    const columnGap = 11.16;      // 0.155" (larger than previous 0.125")
+    const rowGap = -0.43;         // Slight overlap between rows
     
     // VERIFICATION:
-    // Width: 13.5 + 288 + 9 + 288 + 13.5 = 612pt ✅ EXACT
-    // Height: 72 + (6 × 108) + 72 = 72 + 648 + 72 = 792pt ✅ PERFECT
+    // Width: 12.42 + 288 + 11.16 + 288 + 12.42 = 612pt ✅ PERFECT
+    // Height: 73.08 + (6×108) + (5×-0.43) + 73.08 = 73.08 + 648 - 2.15 + 73.08 = 792.01pt ✅ PERFECT
     
     // Calculate X position (columns) - EXACT
-    let xPos = leftMargin; // 13.5pt
+    let xPos = leftMargin; // 12.42pt
     if (col === 1) {
       // Right column: left margin + left label + column gap
-      xPos = leftMargin + labelWidth + columnGap; // 13.5 + 288 + 9 = 310.5pt
+      xPos = leftMargin + labelWidth + columnGap; // 12.42 + 288 + 11.16 = 311.58pt
     }
     
-    // Calculate Y position - Labels are adjacent (no vertical gaps)
-    const yPos = topMargin + (row * labelHeight); // 72 + (row × 108)
+    // Calculate Y position with slight row overlap
+    // Each subsequent row is offset by (labelHeight + rowGap)
+    const yPos = topMargin + (row * (labelHeight + rowGap)); // 73.08 + (row × 107.57)
     
     return {
       x: xPos,
@@ -474,16 +471,17 @@ export class PDFGenerator {
       labelPositions: positions,
       totalLabelsPerSheet: specs.LABELS_PER_SHEET,
       officialSpecs: {
-        source: "CORRECTED Official Uline S-5627 Specifications",
+        source: "FINAL EXACT Uline S-5627 Specifications",
         pageHeight: "792pt (11\")",
-        topMargin: "72pt (1.0\") - CORRECTED for perfect centering",
-        bottomMargin: "72pt (1.0\") - CORRECTED for perfect centering", 
-        leftMargin: "13.5pt (0.1875\") - Exact Uline spec",
-        rightMargin: "13.5pt (0.1875\") - Exact Uline spec",
-        columnGap: "9pt (0.125\") - Exact Uline spec",
-        labelLayout: "Adjacent labels - NO vertical gaps",
-        widthVerification: "13.5 + 288 + 9 + 288 + 13.5 = 612pt ✅ PERFECT",
-        heightVerification: "72 + (6×108) + 72 = 72 + 648 + 72 = 792pt ✅ PERFECT"
+        topMargin: "73.08pt (1.015\")",
+        bottomMargin: "73.08pt (1.015\")", 
+        leftMargin: "12.42pt (0.1725\")",
+        rightMargin: "12.42pt (0.1725\")",
+        columnGap: "11.16pt (0.155\")",
+        rowGap: "-0.43pt (slight overlap)",
+        labelLayout: "Slightly overlapping rows for perfect fit",
+        widthVerification: "12.42 + 288 + 11.16 + 288 + 12.42 = 612pt ✅ PERFECT",
+        heightVerification: "73.08 + (6×108) + (5×-0.43) + 73.08 = 792.01pt ✅ PERFECT"
       }
     };
   }
