@@ -1,474 +1,660 @@
-import { LABEL_SPECS, VALIDATION, S21846_LAYOUT } from '../constants.js';
+import jsPDF from 'jspdf';
+import { BarcodeGenerator } from './barcodeGenerator.js';
+import { LabelFormatter } from './labelFormatter.js';
+import { EVENT_TYPES } from '../constants.js';
+import storage from './storage.js';
 
 /**
- * Label formatting utilities for Uline S-21846 labels (7-3/4" × 4-3/4")
- * Enhanced from S-5627 with larger fonts, better layout, and improved readability
+ * PDF Generation utilities for Uline S-21846 label sheets (7-3/4" × 4-3/4")
+ * Migrated from S-5627 with enhanced layout and HP E877 optimization
  */
-export class LabelFormatter {
+export class PDFGenerator {
   /**
-   * Format label data for S-21846 PDF generation
-   * @param {Object} item - Inventory item
-   * @param {Object} enhancedData - Enhanced label data
-   * @param {string} username - Username for audit trail
-   * @returns {Object} - Formatted label data
+   * Generate PDF with labels positioned for Uline S-21846 sheets
+   * @param {Array} labelDataArray - Array of label data objects
+   * @param {Object} options - Generation options
+   * @returns {Promise<Blob>} - PDF blob
    */
-  static formatLabelData(item, enhancedData, username) {
-    const timestamp = new Date();
-    
-    return {
-      // Product information
-      productName: this.formatProductNameForS21846(item.productName),
-      sku: item.sku || '',
-      barcode: item.barcode || item.sku || '',
-      brand: item.brand || '',
-      
-      // Enhanced data with S-21846 considerations
-      labelQuantity: parseInt(enhancedData?.labelQuantity || '1'),
-      caseQuantity: enhancedData?.caseQuantity || '',
-      boxCount: parseInt(enhancedData?.boxCount || '1'),
-      harvestDate: this.formatDate(enhancedData?.harvestDate),
-      packagedDate: this.formatDate(enhancedData?.packagedDate),
-      
-      // Display formats - Enhanced for S-21846
-      barcodeDisplay: this.formatBarcodeForS21846Display(item.barcode || item.sku || ''),
-      
-      // Audit information
-      username: username || 'Unknown',
-      timestamp,
-      auditString: this.formatAuditString(timestamp, username),
-      
-      // Source information
-      source: item.source || 'Unknown',
-      displaySource: item.displaySource || '[UNK]'
-    };
-  }
+  static async generateLabels(labelDataArray, options = {}) {
+    const {
+      format = 'hp_e877_optimized', // HP E877 optimized format
+      orientation = 'portrait',
+      debug = false,
+      currentUser = 'Unknown'
+    } = options;
 
-  /**
-   * Format product name optimized for S-21846 large labels
-   * @param {string} productName - Raw product name
-   * @returns {string} - Formatted product name
-   */
-  static formatProductNameForS21846(productName) {
-    if (!productName) return 'Product Name';
-    
-    // Clean and trim
-    let formatted = productName.trim();
-    formatted = formatted.replace(/\s+/g, ' ');
-    
-    // For S-21846, we can accommodate longer names due to larger label size
-    const maxLength = 150; // Increased from 100 for S-5627
-    if (formatted.length > maxLength) {
-      formatted = formatted.substring(0, maxLength - 3) + '...';
+    // HP E877 Optimized page size (printable area: 8.17" × 10.67")
+    const pdf = new jsPDF({
+      orientation,
+      unit: 'pt',
+      format: [588, 768] // HP E877 printable area in points
+    });
+
+    let currentLabelIndex = 0;
+    let currentPage = 1;
+    const specs = LabelFormatter.getLabelSpecs();
+
+    try {
+      // Process each label data item
+      for (const labelData of labelDataArray) {
+        const formattedData = LabelFormatter.formatLabelData(
+          labelData,
+          labelData.enhancedData || {},
+          labelData.user || 'Unknown'
+        );
+
+        // Generate the number of labels specified
+        for (let labelCopy = 0; labelCopy < formattedData.labelQuantity; labelCopy++) {
+          // Check if we need a new page (S-21846 has 2 labels per sheet)
+          if (currentLabelIndex > 0 && currentLabelIndex % specs.LABELS_PER_SHEET === 0) {
+            pdf.addPage();
+            currentPage++;
+          }
+
+          // Calculate position for this label
+          const position = this.calculateUlineS21846Position(currentLabelIndex % specs.LABELS_PER_SHEET);
+
+          // Calculate which box number this label represents
+          const boxNumber = Math.floor(labelCopy / Math.max(1, Math.floor(formattedData.labelQuantity / formattedData.boxCount))) + 1;
+
+          // Draw the label with enhanced S-21846 layout
+          await this.drawEnhancedLabel(pdf, formattedData, position, boxNumber, formattedData.boxCount, debug, currentUser);
+
+          currentLabelIndex++;
+        }
+      }
+
+      // Add metadata
+      pdf.setDocumentProperties({
+        title: `Cannabis Inventory Labels - ${new Date().toISOString().slice(0, 10)}`,
+        subject: 'Uline S-21846 Format Labels (7-3/4" × 4-3/4")',
+        author: 'Cannabis Inventory Management System',
+        creator: 'Cannabis Inventory Management System v5.4.0',
+        keywords: 'cannabis, inventory, labels, uline, s-21846, large-format'
+      });
+
+      // Log generation event
+      storage.addSessionEvent(
+        EVENT_TYPES.LABEL_GENERATED,
+        `Generated ${currentLabelIndex} S-21846 labels across ${currentPage} pages`,
+        `Items: ${labelDataArray.length}, Format: Uline S-21846 (7-3/4" × 4-3/4")`
+      );
+
+      return pdf.output('blob');
+
+    } catch (error) {
+      console.error('PDF generation error:', error);
+      
+      storage.addSessionEvent(
+        EVENT_TYPES.ERROR_OCCURRED,
+        `PDF generation failed: ${error.message}`,
+        `Items attempted: ${labelDataArray.length}`
+      );
+
+      throw new Error(`PDF generation failed: ${error.message}`);
     }
-    
-    return formatted;
   }
 
   /**
-   * Format barcode for S-21846 display (spaces instead of hyphens)
-   * @param {string} barcode - Raw barcode
-   * @returns {string} - Spaced barcode for display
+   * Calculate label position for Uline S-21846 (7-3/4" × 4-3/4", 2 per sheet)
+   * Optimized for HP E877 printable area (588pt × 768pt)
+   * @param {number} labelIndex - Index of label (0-1 for 2 labels per sheet)
+   * @returns {Object} - Position coordinates in points
    */
-  static formatBarcodeForS21846Display(barcode) {
-    if (!barcode) return '';
+  static calculateUlineS21846Position(labelIndex) {
+    // S-21846: 2 labels per sheet, vertically stacked
+    const labelsPerSheet = 2;
     
-    // Remove any existing hyphens and spaces
-    const clean = barcode.replace(/[^A-Za-z0-9]/g, '');
+    // HP E877 printable area
+    const pageWidth = 588;   // 8.17" in points
+    const pageHeight = 768;  // 10.67" in points
     
-    // For S-21846, use SPACES instead of hyphens for better readability
-    if (clean.length <= 6) {
-      return clean.replace(/(.{3})/g, '$1 ').trim();
+    // Label dimensions (7-3/4" × 4-3/4")
+    const labelWidth = 558;  // 7.75" in points
+    const labelHeight = 342; // 4.75" in points
+    
+    // Calculate margins for optimal HP E877 printing
+    const horizontalMargin = (pageWidth - labelWidth) / 2; // 15pt (~0.21")
+    
+    // Vertical spacing calculations
+    const totalLabelsHeight = labelsPerSheet * labelHeight; // 684pt
+    const availableHeight = pageHeight; // 768pt
+    const remainingSpace = availableHeight - totalLabelsHeight; // 84pt
+    
+    // Distribute vertical space: top margin, gap between labels, bottom margin
+    const topMargin = remainingSpace / 3; // ~28pt
+    const labelGap = remainingSpace / 3;  // ~28pt
+    const bottomMargin = remainingSpace / 3; // ~28pt
+    
+    // Calculate Y position based on label index
+    let yPos;
+    if (labelIndex === 0) {
+      // Top label
+      yPos = topMargin;
     } else {
-      return clean.replace(/(.{4})/g, '$1 ').trim();
+      // Bottom label
+      yPos = topMargin + labelHeight + labelGap;
     }
-  }
-
-  /**
-   * Format date string for display
-   * @param {string} dateStr - Raw date string
-   * @returns {string} - Formatted date
-   */
-  static formatDate(dateStr) {
-    if (!dateStr) return '';
-    
-    const cleaned = dateStr.replace(/[^\d\/\-]/g, '');
-    
-    // Handle various input formats
-    if (cleaned.match(/^\d{1,2}\/\d{1,2}\/\d{4}$/)) {
-      return cleaned;
-    }
-    
-    if (cleaned.match(/^\d{1,2}\/\d{1,2}\/\d{2}$/)) {
-      return cleaned;
-    }
-    
-    if (cleaned.match(/^\d{1,2}-\d{1,2}-\d{4}$/)) {
-      return cleaned.replace(/-/g, '/');
-    }
-    
-    if (cleaned.match(/^\d{1,2}-\d{1,2}-\d{2}$/)) {
-      return cleaned.replace(/-/g, '/');
-    }
-    
-    return dateStr;
-  }
-
-  /**
-   * Format audit string for S-21846 labels
-   * @param {Date} timestamp - Timestamp
-   * @param {string} username - Username
-   * @returns {string} - Formatted audit string
-   */
-  static formatAuditString(timestamp, username) {
-    const month = (timestamp.getMonth() + 1).toString().padStart(2, '0');
-    const day = timestamp.getDate().toString().padStart(2, '0');
-    const year = timestamp.getFullYear().toString().slice(-2);
-    const hours = timestamp.getHours().toString().padStart(2, '0');
-    const minutes = timestamp.getMinutes().toString().padStart(2, '0');
-    
-    const dateStr = `${month}/${day}/${year}`;
-    const timeStr = `${hours}:${minutes}`;
-    const user = (username || 'Unknown').substring(0, 12); // Increased length for S-21846
-    
-    return `${dateStr} ${timeStr} (${user})`;
-  }
-
-  /**
-   * Calculate optimal font size for S-21846 product names
-   * @param {string} text - Product name text
-   * @param {number} maxWidth - Maximum width in points
-   * @param {number} maxHeight - Maximum height in points
-   * @returns {number} - Optimal font size in points
-   */
-  static calculateS21846ProductNameFontSize(text, maxWidth = 534, maxHeight = 60) {
-    if (!text) return S21846_LAYOUT.PRODUCT_NAME.MAX_FONT_SIZE;
-    
-    const length = text.length;
-    const wordCount = text.split(' ').length;
-    
-    // Start with larger base font size for S-21846
-    let fontSize = S21846_LAYOUT.PRODUCT_NAME.MAX_FONT_SIZE; // 36pt
-    
-    // Adjust based on character count
-    if (length > 80) fontSize = 22;
-    else if (length > 60) fontSize = 26;
-    else if (length > 40) fontSize = 30;
-    else if (length > 25) fontSize = 34;
-    
-    // Adjust based on word count (affects wrapping)
-    if (wordCount > 8) fontSize = Math.max(fontSize - 4, 18);
-    else if (wordCount > 6) fontSize = Math.max(fontSize - 2, 20);
-    
-    // Ensure within bounds
-    return Math.max(
-      Math.min(fontSize, S21846_LAYOUT.PRODUCT_NAME.MAX_FONT_SIZE),
-      S21846_LAYOUT.PRODUCT_NAME.MIN_FONT_SIZE
-    );
-  }
-
-  /**
-   * Enhanced text fit estimation for S-21846
-   * @param {string} text - Text to measure
-   * @param {number} fontSize - Font size in points
-   * @param {number} maxWidth - Maximum width in points
-   * @param {number} maxHeight - Maximum height in points
-   * @returns {Object} - Fit analysis
-   */
-  static estimateS21846TextFit(text, fontSize, maxWidth, maxHeight) {
-    if (!text) return { fits: true, lineCount: 0 };
-    
-    // More accurate estimation for larger fonts
-    const charWidth = fontSize * 0.55; // Slightly tighter for larger fonts
-    const lineHeight = fontSize * 1.15; // Better line spacing for readability
-    
-    const charsPerLine = Math.floor(maxWidth / charWidth);
-    const words = text.split(' ');
-    
-    let lines = 1;
-    let currentLineLength = 0;
-    
-    for (const word of words) {
-      if (currentLineLength + word.length + 1 > charsPerLine) {
-        lines++;
-        currentLineLength = word.length;
-      } else {
-        currentLineLength += word.length + 1;
-      }
-    }
-    
-    const totalHeight = lines * lineHeight;
     
     return {
-      fits: totalHeight <= maxHeight,
-      lineCount: lines,
-      estimatedHeight: totalHeight,
-      charsPerLine,
-      recommendedFontSize: fontSize
+      x: horizontalMargin,
+      y: yPos,
+      width: labelWidth,
+      height: labelHeight
     };
   }
 
   /**
-   * Auto-fit font size for S-21846 labels
-   * @param {string} text - Text to fit
-   * @param {number} maxWidth - Maximum width in points
-   * @param {number} maxHeight - Maximum height in points
-   * @param {number} startingSize - Starting font size
-   * @returns {number} - Optimal font size
+   * Legacy method - Calculate label position (for backward compatibility)
+   * @param {number} labelIndex - Index of label (0-based)
+   * @returns {Object} - Position coordinates in points
    */
-  static autoFitFontSize(text, maxWidth = 534, maxHeight = 60, startingSize = 36) {
-    if (!text) return startingSize;
-    
-    let fontSize = startingSize;
-    let attempts = 0;
-    const maxAttempts = 15; // More attempts for better optimization
-    
-    while (attempts < maxAttempts) {
-      const fit = this.estimateS21846TextFit(text, fontSize, maxWidth, maxHeight);
-      
-      if (fit.fits) {
-        return fontSize;
-      }
-      
-      // More granular reduction for better fitting
-      fontSize = Math.max(fontSize - 1, S21846_LAYOUT.PRODUCT_NAME.MIN_FONT_SIZE);
-      attempts++;
-      
-      if (fontSize <= S21846_LAYOUT.PRODUCT_NAME.MIN_FONT_SIZE) break;
-    }
-    
-    return fontSize;
+  static calculateUlineLabelPosition(labelIndex) {
+    // For backward compatibility, redirect to S-21846 method
+    return this.calculateUlineS21846Position(labelIndex % 2);
   }
 
   /**
-   * Validate label data for S-21846 format
-   * @param {Object} item - Inventory item
-   * @param {Object} enhancedData - Enhanced data
+   * Draw enhanced label with new S-21846 layout requirements
+   * @param {jsPDF} pdf - PDF document
+   * @param {Object} labelData - Formatted label data
+   * @param {Object} position - Label position and dimensions
+   * @param {number} boxNumber - Current box number
+   * @param {number} totalBoxes - Total number of boxes
+   * @param {boolean} debug - Show debug borders
+   * @param {string} currentUser - Current user generating the labels
+   */
+  static async drawEnhancedLabel(pdf, labelData, position, boxNumber = 1, totalBoxes = 1, debug = false, currentUser = 'Unknown') {
+    const { x, y, width, height } = position;
+
+    // Draw label border
+    pdf.setDrawColor(0, 0, 0);
+    pdf.setLineWidth(1);
+    pdf.rect(x, y, width, height);
+
+    // Debug border
+    if (debug) {
+      pdf.setDrawColor(255, 0, 0);
+      pdf.setLineWidth(0.5);
+      pdf.rect(x + 2, y + 2, width - 4, height - 4);
+    }
+
+    const padding = 12; // Increased padding for larger labels
+    const contentX = x + padding;
+    const contentY = y + padding;
+    const contentWidth = width - (padding * 2);
+    const contentHeight = height - (padding * 2);
+
+    try {
+      // 1. Product Name (Top section - MUCH LARGER)
+      await this.drawEnhancedProductName(pdf, labelData.productName, contentX, contentY, contentWidth, 60);
+
+      // 2. Barcode Display (ABOVE barcode with SPACES, not hyphens)
+      const spacedBarcodeDisplay = this.formatBarcodeWithSpaces(labelData.barcodeDisplay);
+      this.drawEnhancedBarcodeDisplay(pdf, spacedBarcodeDisplay, contentX, contentY + 70, contentWidth);
+
+      // 3. Scannable Barcode (Left side, larger)
+      await this.drawEnhancedBarcode(pdf, labelData.barcode, contentX, contentY + 90, 200, 80);
+
+      // 4. Large Text Box for Manual Writing (Center area)
+      this.drawManualWritingBox(pdf, contentX + 210, contentY + 90, 160, 80);
+
+      // 5. Right Side Information (Dates and boxes - LARGER)
+      this.drawEnhancedRightSideInfo(pdf, labelData, contentX + 380, contentY + 90, 150, boxNumber, totalBoxes);
+
+      // 6. Audit Trail (Bottom left with EST time)
+      this.drawEnhancedAuditTrail(pdf, currentUser, contentX, y + height - padding - 12);
+
+    } catch (error) {
+      console.error('Error drawing enhanced label components:', error);
+      // Draw error message
+      pdf.setFontSize(12);
+      pdf.setTextColor(255, 0, 0);
+      pdf.text('Label Error', contentX + 5, contentY + 40);
+    }
+  }
+
+  /**
+   * Legacy method - Draw label (for backward compatibility)
+   * @param {jsPDF} pdf - PDF document
+   * @param {Object} labelData - Formatted label data
+   * @param {Object} position - Label position and dimensions
+   * @param {number} boxNumber - Current box number
+   * @param {number} totalBoxes - Total number of boxes
+   * @param {boolean} debug - Show debug borders
+   * @param {string} currentUser - Current user generating the labels
+   */
+  static async drawLabel(pdf, labelData, position, boxNumber = 1, totalBoxes = 1, debug = false, currentUser = 'Unknown') {
+    // For backward compatibility, redirect to enhanced method
+    return this.drawEnhancedLabel(pdf, labelData, position, boxNumber, totalBoxes, debug, currentUser);
+  }
+
+  /**
+   * Draw enhanced product name for larger labels
+   * @param {jsPDF} pdf - PDF document
+   * @param {string} productName - Product name
+   * @param {number} x - X position
+   * @param {number} y - Y position
+   * @param {number} width - Available width
+   * @param {number} height - Available height
+   */
+  static async drawEnhancedProductName(pdf, productName, x, y, width, height) {
+    if (!productName) return;
+
+    // Much larger font size for S-21846
+    const fontSize = LabelFormatter.autoFitFontSize(productName, width, height, 36);
+    
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(fontSize);
+    pdf.setTextColor(0, 0, 0);
+
+    // Handle text wrapping
+    const lines = pdf.splitTextToSize(productName, width);
+    const lineHeight = fontSize * 1.15;
+    
+    // Center the text block vertically
+    const totalTextHeight = lines.length * lineHeight;
+    const startY = y + Math.max(0, (height - totalTextHeight) / 2) + fontSize * 0.8;
+
+    // Draw each line centered
+    lines.forEach((line, index) => {
+      const lineY = startY + (index * lineHeight);
+      const textWidth = pdf.getTextWidth(line);
+      const centerX = x + (width - textWidth) / 2;
+      pdf.text(line, centerX, lineY);
+    });
+  }
+
+  /**
+   * Legacy method - Draw product name (for backward compatibility)
+   * @param {jsPDF} pdf - PDF document
+   * @param {string} productName - Product name
+   * @param {number} x - X position
+   * @param {number} y - Y position
+   * @param {number} width - Available width
+   * @param {number} height - Available height
+   */
+  static async drawProductName(pdf, productName, x, y, width, height) {
+    return this.drawEnhancedProductName(pdf, productName, x, y, width, height);
+  }
+
+  /**
+   * Format barcode display with spaces instead of hyphens
+   * @param {string} barcodeDisplay - Hyphenated barcode display
+   * @returns {string} - Spaced barcode display
+   */
+  static formatBarcodeWithSpaces(barcodeDisplay) {
+    if (!barcodeDisplay) return '';
+    return barcodeDisplay.replace(/-/g, ' ');
+  }
+
+  /**
+   * Draw enhanced barcode display with larger font
+   * @param {jsPDF} pdf - PDF document
+   * @param {string} barcodeDisplay - Spaced barcode for display
+   * @param {number} x - X position
+   * @param {number} y - Y position
+   * @param {number} width - Available width
+   */
+  static drawEnhancedBarcodeDisplay(pdf, barcodeDisplay, x, y, width) {
+    if (!barcodeDisplay) return;
+
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(14); // Larger font for S-21846
+    pdf.setTextColor(102, 102, 102);
+
+    const textWidth = pdf.getTextWidth(barcodeDisplay);
+    const centerX = x + (width - textWidth) / 2;
+    pdf.text(barcodeDisplay, centerX, y + 12);
+  }
+
+  /**
+   * Legacy method - Draw barcode display (for backward compatibility)
+   * @param {jsPDF} pdf - PDF document
+   * @param {string} barcodeDisplay - Formatted barcode for display
+   * @param {number} x - X position
+   * @param {number} y - Y position
+   * @param {number} width - Available width
+   */
+  static drawBarcodeDisplay(pdf, barcodeDisplay, x, y, width) {
+    const spacedDisplay = this.formatBarcodeWithSpaces(barcodeDisplay);
+    return this.drawEnhancedBarcodeDisplay(pdf, spacedDisplay, x, y, width);
+  }
+
+  /**
+   * Draw enhanced scannable barcode (larger, still NO TEXT)
+   * @param {jsPDF} pdf - PDF document
+   * @param {string} barcodeValue - Barcode value
+   * @param {number} x - X position
+   * @param {number} y - Y position
+   * @param {number} width - Barcode width
+   * @param {number} height - Barcode height
+   */
+  static async drawEnhancedBarcode(pdf, barcodeValue, x, y, width, height) {
+    if (!barcodeValue) return;
+
+    try {
+      const cleanBarcodeValue = barcodeValue.replace(/[^A-Za-z0-9]/g, '');
+      
+      const validation = BarcodeGenerator.validateCode39(cleanBarcodeValue);
+      if (!validation.isValid) {
+        console.warn('Invalid barcode:', validation.error);
+        this.drawBarcodeError(pdf, x, y, width, height);
+        return;
+      }
+
+      // Create larger barcode for S-21846
+      const canvas = document.createElement('canvas');
+      canvas.width = width * 2;
+      canvas.height = height * 2;
+      
+      const JsBarcode = (await import('jsbarcode')).default;
+      
+      JsBarcode(canvas, validation.cleanValue, {
+        format: 'CODE39',
+        width: 4, // Thicker bars for larger label
+        height: height * 2,
+        displayValue: false, // NO TEXT EVER
+        margin: 0,
+        background: '#ffffff',
+        lineColor: '#000000'
+      });
+
+      const barcodeDataURL = canvas.toDataURL('image/png');
+      pdf.addImage(barcodeDataURL, 'PNG', x, y, width, height);
+
+    } catch (error) {
+      console.error('Enhanced barcode generation error:', error);
+      this.drawBarcodeError(pdf, x, y, width, height);
+    }
+  }
+
+  /**
+   * Legacy method - Draw barcode (for backward compatibility)
+   * @param {jsPDF} pdf - PDF document
+   * @param {string} barcodeValue - Barcode value
+   * @param {number} x - X position
+   * @param {number} y - Y position
+   * @param {number} width - Barcode width
+   * @param {number} height - Barcode height
+   */
+  static async drawBarcode(pdf, barcodeValue, x, y, width, height) {
+    return this.drawEnhancedBarcode(pdf, barcodeValue, x, y, width, height);
+  }
+
+  /**
+   * Draw large text box for manual writing
+   * @param {jsPDF} pdf - PDF document
+   * @param {number} x - X position
+   * @param {number} y - Y position
+   * @param {number} width - Box width
+   * @param {number} height - Box height
+   */
+  static drawManualWritingBox(pdf, x, y, width, height) {
+    // Draw box border
+    pdf.setDrawColor(0, 0, 0);
+    pdf.setLineWidth(1);
+    pdf.rect(x, y, width, height);
+
+    // Add light grid lines for writing
+    pdf.setDrawColor(220, 220, 220);
+    pdf.setLineWidth(0.5);
+    
+    // Horizontal lines
+    const lineSpacing = height / 4;
+    for (let i = 1; i < 4; i++) {
+      const lineY = y + (i * lineSpacing);
+      pdf.line(x, lineY, x + width, lineY);
+    }
+
+    // Label the box
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(8);
+    pdf.setTextColor(150, 150, 150);
+    pdf.text('Notes:', x + 2, y - 2);
+  }
+
+  /**
+   * Draw enhanced right side information with larger elements
+   * @param {jsPDF} pdf - PDF document
+   * @param {Object} labelData - Label data
+   * @param {number} x - X position
+   * @param {number} y - Y position
+   * @param {number} width - Available width
+   * @param {number} boxNumber - Current box number
+   * @param {number} totalBoxes - Total boxes
+   */
+  static drawEnhancedRightSideInfo(pdf, labelData, x, y, width, boxNumber, totalBoxes) {
+    let currentY = y;
+
+    // Harvest Date - Larger font
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(12);
+    pdf.setTextColor(0, 0, 0);
+    const harvestText = `Harvest: ${labelData.harvestDate || 'MM/DD/YYYY'}`;
+    pdf.text(harvestText, x, currentY + 12);
+
+    currentY += 22;
+
+    // Packaged Date - Larger font
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(12);
+    const packagedText = `Packaged: ${labelData.packagedDate || 'MM/DD/YYYY'}`;
+    pdf.text(packagedText, x, currentY + 12);
+
+    // MUCH LARGER BOXES for S-21846
+    const largeBoxWidth = 70;
+    const largeBoxHeight = 25;
+    const boxGap = 5;
+    
+    const box1X = x;
+    const box2X = x + largeBoxWidth + boxGap;
+    const boxY = y + 40;
+
+    // Case Qty Box - MUCH LARGER
+    pdf.setDrawColor(0, 0, 0);
+    pdf.setLineWidth(1);
+    pdf.rect(box1X, boxY, largeBoxWidth, largeBoxHeight);
+    
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(11);
+    const caseQtyValue = labelData.caseQuantity || '___';
+    const caseQtyText = `Case: ${caseQtyValue}`;
+    const caseQtyWidth = pdf.getTextWidth(caseQtyText);
+    pdf.text(caseQtyText, box1X + (largeBoxWidth - caseQtyWidth) / 2, boxY + (largeBoxHeight / 2) + 4);
+
+    // Box Number Box - MUCH LARGER
+    pdf.rect(box2X, boxY, largeBoxWidth, largeBoxHeight);
+    
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(11);
+    const boxText = `Box ${boxNumber}/${totalBoxes}`;
+    const boxTextWidth = pdf.getTextWidth(boxText);
+    pdf.text(boxText, box2X + (largeBoxWidth - boxTextWidth) / 2, boxY + (largeBoxHeight / 2) + 4);
+  }
+
+  /**
+   * Legacy method - Draw right side info (for backward compatibility)
+   * @param {jsPDF} pdf - PDF document
+   * @param {Object} labelData - Label data
+   * @param {number} x - X position
+   * @param {number} y - Y position
+   * @param {number} width - Available width
+   * @param {number} boxNumber - Current box number
+   * @param {number} totalBoxes - Total boxes
+   */
+  static drawRightSideInfo(pdf, labelData, x, y, width, boxNumber, totalBoxes) {
+    return this.drawEnhancedRightSideInfo(pdf, labelData, x, y, width, boxNumber, totalBoxes);
+  }
+
+  /**
+   * Draw enhanced audit trail with larger font
+   * @param {jsPDF} pdf - PDF document
+   * @param {string} currentUser - Current user
+   * @param {number} x - X position
+   * @param {number} y - Y position
+   */
+  static drawEnhancedAuditTrail(pdf, currentUser, x, y) {
+    const now = new Date();
+    const estOffset = -5;
+    const estTime = new Date(now.getTime() + (estOffset * 60 * 60 * 1000));
+    
+    const month = (estTime.getMonth() + 1).toString().padStart(2, '0');
+    const day = estTime.getDate().toString().padStart(2, '0');
+    const year = estTime.getFullYear().toString().slice(-2);
+    
+    let hours = estTime.getHours();
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+    const hoursStr = hours.toString();
+    
+    const minutes = estTime.getMinutes().toString().padStart(2, '0');
+    
+    const auditString = `${month}/${day}/${year} ${hoursStr}:${minutes} ${ampm} EST (${currentUser})`;
+    
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(8); // Slightly larger for S-21846
+    pdf.setTextColor(102, 102, 102);
+    pdf.text(auditString, x, y);
+  }
+
+  /**
+   * Legacy method - Draw audit trail (for backward compatibility)
+   * @param {jsPDF} pdf - PDF document
+   * @param {string} currentUser - Current user
+   * @param {number} x - X position
+   * @param {number} y - Y position
+   */
+  static drawAuditTrail(pdf, currentUser, x, y) {
+    return this.drawEnhancedAuditTrail(pdf, currentUser, x, y);
+  }
+
+  /**
+   * Draw barcode error placeholder
+   */
+  static drawBarcodeError(pdf, x, y, width, height) {
+    pdf.setDrawColor(255, 0, 0);
+    pdf.setLineWidth(1);
+    pdf.rect(x, y, width, height);
+    
+    pdf.setFontSize(10);
+    pdf.setTextColor(255, 0, 0);
+    pdf.text('Barcode Error', x + 5, y + height / 2);
+  }
+
+  /**
+   * Generate test PDF for S-21846 verification
+   * @returns {Promise<Blob>} - Test PDF blob
+   */
+  static async generateTestPDF() {
+    const testData = [{
+      sku: 'TEST-S21846',
+      barcode: 'TEST123456',
+      productName: 'Test Cannabis Product for S-21846 Large Label Verification and Layout Testing',
+      brand: 'Test Brand',
+      enhancedData: {
+        labelQuantity: 2,
+        caseQuantity: '48',
+        boxCount: '2',
+        harvestDate: '01/15/2025',
+        packagedDate: '02/20/2025'
+      },
+      user: 'TestUser'
+    }];
+
+    return this.generateLabels(testData, { debug: true, currentUser: 'TestUser' });
+  }
+
+  /**
+   * Validate PDF generation requirements (REQUIRED METHOD)
+   * @param {Array} labelDataArray - Label data to validate
    * @returns {Object} - Validation result
    */
-  static validateS21846LabelData(item, enhancedData) {
+  static validateGenerationData(labelDataArray) {
     const errors = [];
     const warnings = [];
-    
-    // Required fields
-    if (!item.sku && !item.barcode) {
-      errors.push('Either SKU or Barcode is required');
+
+    if (!Array.isArray(labelDataArray) || labelDataArray.length === 0) {
+      errors.push('No label data provided');
+      return { isValid: false, errors, warnings };
     }
-    
-    if (!item.productName) {
-      warnings.push('Product name is missing');
-    } else if (item.productName.length > 150) {
-      warnings.push('Product name is very long and may not display optimally');
-    }
-    
-    // Enhanced data validation for S-21846
-    if (enhancedData?.labelQuantity) {
-      const qty = parseInt(enhancedData.labelQuantity);
-      if (isNaN(qty) || qty < 1 || qty > VALIDATION.LABEL_QUANTITY.max) {
-        errors.push(`Label quantity must be between 1 and ${VALIDATION.LABEL_QUANTITY.max}`);
-      }
+
+    let totalLabels = 0;
+
+    labelDataArray.forEach((item, index) => {
+      const validation = LabelFormatter.validateLabelData(item, item.enhancedData);
       
-      // Warning for large quantities with big labels
-      if (qty > 10) {
-        warnings.push('Large label quantities may require significant printing time with S-21846 format');
+      if (!validation.isValid) {
+        errors.push(`Item ${index + 1}: ${validation.errors.join(', ')}`);
       }
-    }
-    
-    if (enhancedData?.caseQuantity) {
-      const qty = parseInt(enhancedData.caseQuantity);
-      if (isNaN(qty) || qty < 1 || qty > VALIDATION.CASE_QUANTITY.max) {
-        errors.push(`Case quantity must be between 1 and ${VALIDATION.CASE_QUANTITY.max}`);
+
+      if (validation.warnings && validation.warnings.length > 0) {
+        warnings.push(`Item ${index + 1}: ${validation.warnings.join(', ')}`);
       }
+
+      const qty = parseInt(item.enhancedData?.labelQuantity || '1');
+      totalLabels += qty;
+    });
+
+    // Adjusted for S-21846 (fewer labels per sheet)
+    if (totalLabels > 100) {
+      warnings.push(`Large number of labels (${totalLabels}) may take significant time with S-21846 format`);
     }
-    
-    if (enhancedData?.boxCount) {
-      const count = parseInt(enhancedData.boxCount);
-      if (isNaN(count) || count < 1 || count > VALIDATION.BOX_COUNT.max) {
-        errors.push(`Box count must be between 1 and ${VALIDATION.BOX_COUNT.max}`);
-      }
-    }
-    
-    // Date validation
-    if (enhancedData?.harvestDate && !this.isValidDate(enhancedData.harvestDate)) {
-      warnings.push('Harvest date format may not be valid');
-    }
-    
-    if (enhancedData?.packagedDate && !this.isValidDate(enhancedData.packagedDate)) {
-      warnings.push('Packaged date format may not be valid');
-    }
-    
+
     return {
       isValid: errors.length === 0,
       errors,
       warnings,
+      totalLabels,
+      estimatedPages: LabelFormatter.calculatePagesNeeded(totalLabels),
       labelFormat: 'S-21846'
     };
   }
 
   /**
-   * Check if date string is valid
-   * @param {string} dateStr - Date string to validate
-   * @returns {boolean} - Is valid
+   * Get debug information for S-21846
+   * @returns {Object} - Debug information
    */
-  static isValidDate(dateStr) {
-    if (!dateStr) return false;
-    return VALIDATION.DATE_FORMATS.some(pattern => pattern.test(dateStr.trim()));
-  }
+  static getDebugInfo() {
+    const specs = LabelFormatter.getLabelSpecs();
+    const positions = [];
 
-  /**
-   * Format multiple labels for S-21846
-   * @param {Array} items - Array of inventory items
-   * @param {Object} globalEnhancedData - Global enhanced data settings
-   * @param {string} username - Username for audit
-   * @returns {Array} - Array of formatted label data
-   */
-  static formatMultipleS21846Labels(items, globalEnhancedData, username) {
-    return items.map(item => this.formatLabelData(item, globalEnhancedData, username));
-  }
+    for (let i = 0; i < specs.LABELS_PER_SHEET; i++) {
+      positions.push(this.calculateUlineS21846Position(i));
+    }
 
-  /**
-   * Get S-21846 label specifications
-   * @returns {Object} - Label specifications
-   */
-  static getLabelSpecs() {
     return {
-      ...LABEL_SPECS,
-      dimensionsPoints: {
-        width: LABEL_SPECS.WIDTH_INCHES * 72, // 558pt
-        height: LABEL_SPECS.HEIGHT_INCHES * 72 // 342pt
-      },
-      printableArea: {
-        width: (LABEL_SPECS.WIDTH_INCHES * 72) - 24, // 534pt (12pt margin each side)
-        height: (LABEL_SPECS.HEIGHT_INCHES * 72) - 24 // 318pt
-      },
-      layout: S21846_LAYOUT,
-      migration: {
-        from: 'S-5627',
-        improvements: [
-          'Much larger readable fonts',
-          'Dedicated manual writing area',
-          'Spaced barcode display',
-          'Enhanced date/box information',
-          'Better overall readability'
+      migration: "S-5627 → S-21846",
+      pageSize: { width: 588, height: 768 }, // HP E877 optimized
+      labelSpecs: specs,
+      labelPositions: positions,
+      totalLabelsPerSheet: specs.LABELS_PER_SHEET,
+      changes: {
+        labelSize: "4″×1.5″ → 7.75″×4.75″",
+        labelsPerSheet: "12 → 2", 
+        layout: "2×6 grid → 2×1 vertical stack",
+        features: [
+          "Much larger product name",
+          "Spaced barcode display (not hyphens)",
+          "Large manual writing text box",
+          "Bigger date/box information",
+          "Enhanced readability for all elements"
         ]
+      },
+      hpE877Optimization: {
+        printableArea: "8.17″ × 10.67″ (588×768pt)",
+        margins: "Auto-calculated for perfect centering",
+        scalingFactor: "Not needed - labels fit naturally"
       }
     };
   }
 
   /**
-   * Calculate pages needed for S-21846 labels
-   * @param {number} totalLabels - Total number of labels
-   * @returns {number} - Number of pages needed
+   * Calculate PDF dimensions and positions for debugging (legacy method)
+   * @returns {Object} - Debug information
    */
-  static calculateS21846PagesNeeded(totalLabels) {
-    const specs = this.getLabelSpecs();
-    return Math.ceil(totalLabels / specs.LABELS_PER_SHEET);
-  }
-
-  /**
-   * Get S-21846 layout recommendations
-   * @param {Object} labelData - Label data to analyze
-   * @returns {Object} - Layout recommendations
-   */
-  static getS21846LayoutRecommendations(labelData) {
-    const recommendations = {
-      productName: {
-        estimatedFontSize: this.calculateS21846ProductNameFontSize(labelData.productName),
-        willWrap: false,
-        recommendations: []
-      },
-      barcodeDisplay: {
-        format: 'spaced',
-        example: this.formatBarcodeForS21846Display(labelData.barcode)
-      },
-      writingBox: {
-        available: true,
-        size: `${S21846_LAYOUT.WRITING_BOX.WIDTH}pt × ${S21846_LAYOUT.WRITING_BOX.HEIGHT}pt`,
-        gridLines: S21846_LAYOUT.WRITING_BOX.GRID_LINES
-      },
-      overall: {
-        format: 'S-21846',
-        sizeInches: `${LABEL_SPECS.WIDTH_INCHES}" × ${LABEL_SPECS.HEIGHT_INCHES}"`,
-        labelsPerSheet: LABEL_SPECS.LABELS_PER_SHEET
-      }
-    };
-
-    // Analyze product name
-    const nameLength = labelData.productName?.length || 0;
-    if (nameLength > 60) {
-      recommendations.productName.recommendations.push('Consider shortening product name for optimal display');
-    }
-    if (nameLength > 100) {
-      recommendations.productName.willWrap = true;
-      recommendations.productName.recommendations.push('Product name will wrap to multiple lines');
-    }
-
-    return recommendations;
-  }
-
-  /**
-   * Compare S-21846 vs S-5627 capacity
-   * @param {number} labelQuantity - Number of labels needed
-   * @returns {Object} - Comparison data
-   */
-  static compareFormats(labelQuantity) {
-    const s5627Pages = Math.ceil(labelQuantity / 12); // Old format
-    const s21846Pages = Math.ceil(labelQuantity / 2);  // New format
-    
-    return {
-      labelQuantity,
-      s5627: {
-        format: 'S-5627 (4" × 1.5")',
-        labelsPerSheet: 12,
-        pagesNeeded: s5627Pages,
-        sheetsNeeded: s5627Pages
-      },
-      s21846: {
-        format: 'S-21846 (7-3/4" × 4-3/4")',
-        labelsPerSheet: 2,
-        pagesNeeded: s21846Pages,
-        sheetsNeeded: s21846Pages
-      },
-      comparison: {
-        morePages: s21846Pages - s5627Pages,
-        benefitTradeoff: 'More sheets required, but much larger and more readable labels with writing space'
-      }
-    };
-  }
-
-  /**
-   * Legacy method for backward compatibility
-   * @deprecated Use validateS21846LabelData instead
-   */
-  static validateLabelData(item, enhancedData) {
-    console.warn('validateLabelData is deprecated. Use validateS21846LabelData for new S-21846 format.');
-    return this.validateS21846LabelData(item, enhancedData);
-  }
-
-  /**
-   * Main validation method (used by PDFGenerator)
-   * @param {Object} item - Inventory item
-   * @param {Object} enhancedData - Enhanced data
-   * @returns {Object} - Validation result
-   */
-  static validateLabelData(item, enhancedData) {
-    return this.validateS21846LabelData(item, enhancedData);
-  }
-
-  /**
-   * Legacy method for backward compatibility
-   * @deprecated Use calculateS21846PagesNeeded instead
-   */
-  static calculatePagesNeeded(totalLabels) {
-    console.warn('calculatePagesNeeded is deprecated. Use calculateS21846PagesNeeded for new S-21846 format.');
-    return this.calculateS21846PagesNeeded(totalLabels);
-  }
-
-  /**
-   * Main pages calculation method (used by PDFGenerator)
-   * @param {number} totalLabels - Total number of labels
-   * @returns {number} - Number of pages needed
-   */
-  static calculatePagesNeeded(totalLabels) {
-    return this.calculateS21846PagesNeeded(totalLabels);
+  static getS21846DebugInfo() {
+    return this.getDebugInfo();
   }
 }
