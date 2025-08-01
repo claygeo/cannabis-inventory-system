@@ -6,8 +6,8 @@ import storage from './storage.js';
 
 /**
  * PDF Generation utilities for Uline S-12212 label sheets (4" × 6")
- * ROTATED TEXT OPTIMIZATION: All text rotated 90° clockwise for maximum space utilization
- * Larger fonts possible, especially for product names readable from far away
+ * LANDSCAPE CONTENT OPTIMIZATION: Content designed for 6" wide × 4" tall, then rotated as complete unit
+ * When paper is rotated, content reads like a postcard with optimal space utilization
  */
 export class PDFGenerator {
   /**
@@ -52,14 +52,14 @@ export class PDFGenerator {
             currentPage++;
           }
 
-          // Calculate position for this label
-          const position = this.calculateUlineS12212Position(currentLabelIndex % specs.LABELS_PER_SHEET);
+          // Calculate position for this label (labels touching on all sides)
+          const position = this.calculateUlineS12212PositionConnected(currentLabelIndex % specs.LABELS_PER_SHEET);
 
           // Calculate which box number this label represents
           const boxNumber = Math.floor(labelCopy / Math.max(1, Math.floor(formattedData.labelQuantity / formattedData.boxCount))) + 1;
 
-          // Draw the label with ALL TEXT ROTATED 90° CLOCKWISE
-          await this.drawRotatedTextLabel(pdf, formattedData, position, boxNumber, formattedData.boxCount, debug, currentUser);
+          // Draw the label with LANDSCAPE CONTENT ROTATED AS COMPLETE UNIT
+          await this.drawLandscapeContentLabel(pdf, formattedData, position, boxNumber, formattedData.boxCount, debug, currentUser);
 
           currentLabelIndex++;
         }
@@ -68,17 +68,17 @@ export class PDFGenerator {
       // Add metadata
       pdf.setDocumentProperties({
         title: `Cannabis Inventory Labels - ${new Date().toISOString().slice(0, 10)}`,
-        subject: 'Uline S-12212 Format Labels (All Text Rotated 90° for Space Optimization)',
+        subject: 'Uline S-12212 Format Labels (Landscape Content Rotated as Complete Unit)',
         author: 'Cannabis Inventory Management System',
-        creator: 'Cannabis Inventory Management System v7.2.0',
-        keywords: 'cannabis, inventory, labels, uline, s-12212, rotated-text, optimized'
+        creator: 'Cannabis Inventory Management System v8.0.0',
+        keywords: 'cannabis, inventory, labels, uline, s-12212, landscape-content, rotated-layout, postcard-style'
       });
 
       // Log generation event
       storage.addSessionEvent(
         EVENT_TYPES.LABEL_GENERATED,
-        `Generated ${currentLabelIndex} S-12212 labels with rotated text optimization across ${currentPage} pages`,
-        `Items: ${labelDataArray.length}, Format: Uline S-12212 (All Text Rotated 90° for Optimization)`
+        `Generated ${currentLabelIndex} S-12212 labels with landscape content optimization across ${currentPage} pages`,
+        `Items: ${labelDataArray.length}, Format: Uline S-12212 (Landscape Content, Complete Unit Rotation)`
       );
 
       return pdf.output('blob');
@@ -97,39 +97,37 @@ export class PDFGenerator {
   }
 
   /**
-   * Calculate label position for Uline S-12212 on legal paper
+   * Calculate label position for Uline S-12212 on legal paper - LABELS CONNECTED ON ALL SIDES
    * @param {number} labelIndex - Index of label (0-3 for 4 labels per sheet)
    * @returns {Object} - Position coordinates in points
    */
-  static calculateUlineS12212Position(labelIndex) {
+  static calculateUlineS12212PositionConnected(labelIndex) {
     // Legal size sheet dimensions (8.5" × 14")
     const pageWidth = 612;   // 8.5" in points  
     const pageHeight = 1008; // 14" in points
     
     // HP E877 printer margins: 0.167" on all sides
     const printerMargin = 12; // 0.167" = 12pt
-    const printableWidth = pageWidth - (printerMargin * 2);   // 588pt
-    const printableHeight = pageHeight - (printerMargin * 2); // 984pt
     
     // S-12212 labels: 4" × 6" 
     const labelWidth = 288;  // 4" in points
     const labelHeight = 432; // 6" in points
     
-    // Grid layout: 2 columns × 2 rows
+    // Grid layout: 2 columns × 2 rows - LABELS TOUCHING (NO GAPS)
     const cols = 2;
     const rows = 2;
     const row = Math.floor(labelIndex / cols);
     const col = labelIndex % cols;
     
-    // Calculate spacing
-    const totalLabelsWidth = cols * labelWidth;   // 576pt
-    const totalLabelsHeight = rows * labelHeight; // 864pt
+    // Calculate total area needed
+    const totalLabelsWidth = cols * labelWidth;   // 576pt (8")
+    const totalLabelsHeight = rows * labelHeight; // 864pt (12")
     
-    // Center on page
-    const startX = printerMargin + (printableWidth - totalLabelsWidth) / 2;
-    const startY = printerMargin + (printableHeight - totalLabelsHeight) / 2;
+    // Center the connected label block on page
+    const startX = (pageWidth - totalLabelsWidth) / 2;
+    const startY = (pageHeight - totalLabelsHeight) / 2;
     
-    // Individual label position
+    // Individual label position - CONNECTED (no spacing between labels)
     const xPos = startX + (col * labelWidth);
     const yPos = startY + (row * labelHeight);
     
@@ -139,20 +137,55 @@ export class PDFGenerator {
       width: labelWidth,   // 288pt (4")
       height: labelHeight, // 432pt (6")
       
+      // Content design dimensions (landscape orientation before rotation)
+      contentDesignWidth: labelHeight,  // 432pt (6" wide in landscape)
+      contentDesignHeight: labelWidth,  // 288pt (4" tall in landscape)
+      
       // Layout information
       row: row,
       col: col,
       labelIndex: labelIndex,
       
-      // Optimization info
-      textRotation: 90, // All text rotated 90° clockwise
-      spaceOptimization: true,
-      readableFromDistance: true
+      // Connection info
+      connected: true,
+      connectedSides: this.getConnectedSides(labelIndex),
+      
+      // Content optimization info
+      landscapeContent: true,
+      contentRotation: 90, // Entire content rotated 90° clockwise
+      postcardStyle: true,
+      optimalSpaceUsage: true
     };
   }
 
   /**
-   * Draw label with ALL TEXT ROTATED 90° CLOCKWISE for space optimization
+   * Get which sides of the label are connected to other labels
+   * @param {number} labelIndex - Label index (0-3)
+   * @returns {Array} - Array of connected sides
+   */
+  static getConnectedSides(labelIndex) {
+    const connected = [];
+    
+    switch (labelIndex) {
+      case 0: // Top-left
+        connected.push('right', 'bottom');
+        break;
+      case 1: // Top-right
+        connected.push('left', 'bottom');
+        break;
+      case 2: // Bottom-left
+        connected.push('right', 'top');
+        break;
+      case 3: // Bottom-right
+        connected.push('left', 'top');
+        break;
+    }
+    
+    return connected;
+  }
+
+  /**
+   * Draw label with LANDSCAPE CONTENT designed for 6" wide × 4" tall, rotated as complete unit
    * @param {jsPDF} pdf - PDF document
    * @param {Object} labelData - Formatted label data
    * @param {Object} position - Label position and dimensions
@@ -161,11 +194,11 @@ export class PDFGenerator {
    * @param {boolean} debug - Show debug borders
    * @param {string} currentUser - Current user
    */
-  static async drawRotatedTextLabel(pdf, labelData, position, boxNumber = 1, totalBoxes = 1, debug = false, currentUser = 'Unknown') {
-    const { x, y, width, height } = position;
+  static async drawLandscapeContentLabel(pdf, labelData, position, boxNumber = 1, totalBoxes = 1, debug = false, currentUser = 'Unknown') {
+    const { x, y, width, height, contentDesignWidth, contentDesignHeight } = position;
 
     try {
-      // Draw label border
+      // Draw label border (connected labels)
       pdf.setDrawColor(0, 0, 0);
       pdf.setLineWidth(1);
       pdf.rect(x, y, width, height);
@@ -176,41 +209,53 @@ export class PDFGenerator {
         pdf.setLineWidth(0.5);
         pdf.rect(x + 2, y + 2, width - 4, height - 4);
         
+        // Show connected sides
+        pdf.setDrawColor(0, 255, 0);
+        pdf.setLineWidth(2);
+        position.connectedSides.forEach(side => {
+          switch (side) {
+            case 'top':
+              pdf.line(x, y, x + width, y);
+              break;
+            case 'right':
+              pdf.line(x + width, y, x + width, y + height);
+              break;
+            case 'bottom':
+              pdf.line(x, y + height, x + width, y + height);
+              break;
+            case 'left':
+              pdf.line(x, y, x, y + height);
+              break;
+          }
+        });
+        
         pdf.setFontSize(8);
         pdf.setTextColor(255, 0, 0);
-        pdf.text(`L${position.labelIndex + 1} ROT-TXT`, x + 5, y + 15, { angle: 90 });
+        pdf.text(`L${position.labelIndex + 1} LANDSCAPE`, x + 5, y + 20);
       }
 
-      const padding = 10;
-      const contentX = x + padding;
-      const contentY = y + padding;
-      const contentWidth = width - (padding * 2);    // 268pt
-      const contentHeight = height - (padding * 2);  // 412pt
+      // Save current state before rotation
+      pdf.save();
 
-      const brandInfo = this.extractBrandFromProductName(labelData.productName);
+      // Transform coordinate system for landscape content
+      // Move to center of label, rotate 90° clockwise, then translate for content positioning
+      const centerX = x + width / 2;
+      const centerY = y + height / 2;
+      
+      pdf.translate(centerX, centerY);
+      pdf.rotate(90 * Math.PI / 180); // 90° clockwise rotation
+      pdf.translate(-contentDesignWidth / 2, -contentDesignHeight / 2);
 
-      // Layout sections (all text will be rotated 90° clockwise)
-      // Section 1: Brand + Product Name (40% of height)
-      const section1Height = Math.floor(contentHeight * 0.40); // 165pt
-      await this.drawBrandProductRotated(pdf, brandInfo, contentX, contentY, contentWidth, section1Height);
+      // Now draw content in landscape orientation (6" wide × 4" tall)
+      await this.drawLandscapeContent(pdf, labelData, contentDesignWidth, contentDesignHeight, boxNumber, totalBoxes, currentUser, debug);
 
-      // Section 2: Store (25% of height)
-      const section2Y = contentY + section1Height;
-      const section2Height = Math.floor(contentHeight * 0.25); // 103pt
-      this.drawStoreRotated(pdf, contentX, section2Y, contentWidth, section2Height);
-
-      // Section 3: Bottom info (30% of height)
-      const section3Y = section2Y + section2Height;
-      const section3Height = Math.floor(contentHeight * 0.30); // 124pt
-      await this.drawBottomInfoRotated(pdf, labelData, contentX, section3Y, contentWidth, section3Height, boxNumber, totalBoxes);
-
-      // Section 4: Audit Trail (5% of height)
-      const section4Y = section3Y + section3Height;
-      const section4Height = contentHeight - section1Height - section2Height - section3Height;
-      this.drawAuditRotated(pdf, currentUser, contentX, section4Y, contentWidth, section4Height);
+      // Restore coordinate system
+      pdf.restore();
 
     } catch (error) {
-      console.error('Error drawing rotated text label:', error);
+      console.error('Error drawing landscape content label:', error);
+      pdf.restore(); // Ensure we restore even on error
+      
       pdf.setFontSize(10);
       pdf.setTextColor(255, 0, 0);
       pdf.text('Label Error', x + 5, y + 20);
@@ -218,221 +263,222 @@ export class PDFGenerator {
   }
 
   /**
-   * Draw brand and product section with rotated text (90° clockwise)
+   * Draw content in landscape orientation (6" wide × 4" tall)
+   * This content will be rotated 90° clockwise as a complete unit
+   * @param {jsPDF} pdf - PDF document
+   * @param {Object} labelData - Label data
+   * @param {number} width - Content width (432pt = 6")
+   * @param {number} height - Content height (288pt = 4")
+   * @param {number} boxNumber - Box number
+   * @param {number} totalBoxes - Total boxes
+   * @param {string} currentUser - Current user
+   * @param {boolean} debug - Debug mode
    */
-  static async drawBrandProductRotated(pdf, brandInfo, x, y, width, height) {
-    // For 90° rotated text, we position from left side and text flows to the right
-    let currentX = x + 20; // Start position for rotated text
-    const textY = y + height - 20; // Y position for rotated text baseline
+  static async drawLandscapeContent(pdf, labelData, width, height, boxNumber, totalBoxes, currentUser, debug) {
+    const padding = 15;
+    const contentWidth = width - (padding * 2);    // 402pt
+    const contentHeight = height - (padding * 2);  // 258pt
 
-    // Brand name (large, rotated 90° clockwise)
+    // Extract brand info
+    const brandInfo = this.extractBrandFromProductName(labelData.productName);
+
+    // Layout sections for landscape content (percentages from labelFormatter.js)
+    const topSectionHeight = Math.floor(contentHeight * 0.35);     // ~90pt
+    const middleSectionHeight = Math.floor(contentHeight * 0.35);  // ~90pt  
+    const bottomSectionHeight = contentHeight - topSectionHeight - middleSectionHeight; // ~78pt
+
+    // Section 1: Brand + Product Name (Top - 35%)
+    await this.drawLandscapeTopSection(pdf, brandInfo, padding, padding, contentWidth, topSectionHeight);
+
+    // Section 2: Store Box (Middle - 35%)
+    this.drawLandscapeStoreSection(pdf, padding, padding + topSectionHeight, contentWidth, middleSectionHeight);
+
+    // Section 3: Bottom Info - Barcode, Dates, Case (Bottom - 30%)
+    await this.drawLandscapeBottomSection(pdf, labelData, padding, padding + topSectionHeight + middleSectionHeight, contentWidth, bottomSectionHeight, boxNumber, totalBoxes);
+
+    // Audit trail (bottom-left corner)
+    this.drawLandscapeAuditTrail(pdf, currentUser, padding, padding + contentHeight - 15);
+
+    if (debug) {
+      // Debug sections
+      pdf.setDrawColor(0, 0, 255);
+      pdf.setLineWidth(0.5);
+      pdf.rect(padding, padding, contentWidth, topSectionHeight); // Top
+      pdf.rect(padding, padding + topSectionHeight, contentWidth, middleSectionHeight); // Middle
+      pdf.rect(padding, padding + topSectionHeight + middleSectionHeight, contentWidth, bottomSectionHeight); // Bottom
+    }
+  }
+
+  /**
+   * Draw top section in landscape layout - Brand and Product Name
+   */
+  static async drawLandscapeTopSection(pdf, brandInfo, x, y, width, height) {
+    let currentY = y + 20;
+    
+    // Brand name (if detected)
     if (brandInfo.brand) {
-      const brandFontSize = Math.min(36, Math.max(20, 40 - Math.floor(brandInfo.brand.length / 3)));
+      const brandFontSize = Math.min(28, Math.max(16, 32 - Math.floor(brandInfo.brand.length / 4)));
       
       pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(brandFontSize);
-      pdf.setTextColor(0, 0, 0);
+      pdf.setTextColor(44, 85, 48); // Dark green
       
-      pdf.text(brandInfo.brand, currentX, textY, { angle: 90 });
-      currentX += brandFontSize + 20; // Move right for next text
+      pdf.text(brandInfo.brand, x, currentY);
+      currentY += brandFontSize + 10;
     }
 
-    // Product name (large, rotated 90° clockwise, may wrap)
-    const remainingWidth = width - (currentX - x) - 20;
-    const maxProductFontSize = brandInfo.brand ? 30 : 36;
+    // Product name - can use much larger fonts in landscape
+    const availableWidth = width - 20;
+    const availableHeight = height - (currentY - y) - 10;
     
-    // Calculate optimal font size based on available space
-    let productFontSize = maxProductFontSize;
-    let productLines = [];
-    
-    // For rotated text, we need to consider how much vertical space each line takes
-    const maxLines = Math.floor(remainingWidth / (maxProductFontSize + 5));
-    
-    // Try different font sizes to find best fit
-    for (let fontSize = maxProductFontSize; fontSize >= 16; fontSize -= 2) {
-      const words = brandInfo.productName.split(' ');
-      let currentLine = '';
-      let lines = [];
-      
-      words.forEach(word => {
-        const testLine = currentLine + (currentLine ? ' ' : '') + word;
-        // For rotated text, we check against available height
-        if (testLine.length * fontSize * 0.6 <= height - 40 || currentLine === '') {
-          currentLine = testLine;
-        } else {
-          lines.push(currentLine);
-          currentLine = word;
-        }
-      });
-      if (currentLine) lines.push(currentLine);
-      
-      if (lines.length <= maxLines) {
-        productFontSize = fontSize;
-        productLines = lines;
-        break;
-      }
-    }
+    const productFontSize = this.calculateLandscapeProductFontSize(brandInfo.productName, availableWidth, availableHeight);
     
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(productFontSize);
     pdf.setTextColor(0, 0, 0);
     
-    // Draw each line rotated
-    productLines.forEach((line, index) => {
-      if (currentX + (productFontSize + 5) < x + width - 10) {
-        pdf.text(line, currentX, textY, { angle: 90 });
-        currentX += productFontSize + 8;
+    // Handle line wrapping for long product names
+    const lines = this.wrapTextForLandscape(brandInfo.productName, availableWidth, productFontSize);
+    
+    lines.forEach((line, index) => {
+      if (currentY + (productFontSize * (index + 1)) <= y + height - 5) {
+        pdf.text(line, x, currentY);
+        currentY += productFontSize + 4;
       }
     });
   }
 
   /**
-   * Draw store section with rotated text
+   * Draw store section in landscape layout
    */
-  static drawStoreRotated(pdf, x, y, width, height) {
-    const textX = x + 20;
-    const textY = y + height - 20;
-    
-    // "Store:" label rotated 90° clockwise
+  static drawLandscapeStoreSection(pdf, x, y, width, height) {
+    // "Store:" label
     pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(18); // Larger for better visibility
+    pdf.setFontSize(16);
     pdf.setTextColor(0, 0, 0);
-    pdf.text('Store:', textX, textY, { angle: 90 });
+    pdf.text('Store:', x, y + 20);
     
-    // Store text box
-    const boxWidth = width - 60;
-    const boxHeight = 60;
-    const boxX = x + 50;
-    const boxY = y + (height - boxHeight) / 2;
+    // Store text boxes - two lines for landscape layout
+    const boxHeight = 25;
+    const boxWidth = width - 80;
+    const startX = x + 60;
     
-    // Main box
+    // First line
     pdf.setDrawColor(0, 0, 0);
     pdf.setLineWidth(1);
-    pdf.rect(boxX, boxY, boxWidth, boxHeight);
-
+    pdf.rect(startX, y + 5, boxWidth, boxHeight);
+    
+    // Second line  
+    pdf.rect(startX, y + 35, boxWidth, boxHeight);
+    
     // Writing lines
-    pdf.setDrawColor(220, 220, 220);
+    pdf.setDrawColor(200, 200, 200);
     pdf.setLineWidth(0.5);
     
-    const numLines = 4;
-    for (let i = 1; i < numLines; i++) {
-      const lineY = boxY + (i * (boxHeight / numLines));
-      pdf.line(boxX + 5, lineY, boxX + boxWidth - 5, lineY);
+    for (let i = 0; i < 2; i++) {
+      const boxY = y + 5 + (i * 30);
+      const numLines = 3;
+      for (let j = 1; j < numLines; j++) {
+        const lineY = boxY + (j * (boxHeight / numLines));
+        pdf.line(startX + 5, lineY, startX + boxWidth - 5, lineY);
+      }
     }
   }
 
   /**
-   * Draw bottom info section with rotated text
+   * Draw bottom section in landscape layout - 3 columns: Barcode | Dates | Case/Box
    */
-  static async drawBottomInfoRotated(pdf, labelData, x, y, width, height, boxNumber, totalBoxes) {
-    // Divide into 3 columns for: Barcode | Dates | Case/Box
+  static async drawLandscapeBottomSection(pdf, labelData, x, y, width, height, boxNumber, totalBoxes) {
     const colWidth = width / 3;
 
-    // Column 1: Barcode with rotated text
-    await this.drawBarcodeColumnRotated(pdf, labelData, x, y, colWidth, height);
+    // Column 1: Barcode
+    await this.drawLandscapeBarcodeColumn(pdf, labelData, x, y, colWidth, height);
     
-    // Column 2: Dates with rotated text
-    this.drawDatesColumnRotated(pdf, labelData, x + colWidth, y, colWidth, height);
+    // Column 2: Dates  
+    this.drawLandscapeDatesColumn(pdf, labelData, x + colWidth, y, colWidth, height);
     
-    // Column 3: Case/Box with rotated text
-    this.drawCaseColumnRotated(pdf, labelData, x + (colWidth * 2), y, colWidth, height, boxNumber, totalBoxes);
+    // Column 3: Case/Box
+    this.drawLandscapeCaseColumn(pdf, labelData, x + (colWidth * 2), y, colWidth, height, boxNumber, totalBoxes);
   }
 
   /**
-   * Draw barcode column with rotated text
+   * Draw barcode column in landscape layout
    */
-  static async drawBarcodeColumnRotated(pdf, labelData, x, y, width, height) {
-    const textX = x + 15;
-    const textY = y + height - 15;
-    
-    // Barcode numeric display (rotated 90° clockwise)
+  static async drawLandscapeBarcodeColumn(pdf, labelData, x, y, width, height) {
+    // Barcode numeric display
     const spacedBarcodeDisplay = this.formatBarcodeWithSpaces(labelData.barcodeDisplay);
     
     pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(11); // Larger for better visibility
+    pdf.setFontSize(12);
     pdf.setTextColor(102, 102, 102);
-    pdf.text(spacedBarcodeDisplay, textX, textY, { angle: 90 });
+    pdf.text(spacedBarcodeDisplay, x + 5, y + height - 5);
     
-    // Barcode image
-    const barcodeWidth = Math.min(width - 30, 80);
-    const barcodeHeight = Math.min(height - 40, 60);
+    // Barcode image - larger in landscape
+    const barcodeWidth = Math.min(width - 20, 100);
+    const barcodeHeight = Math.min(height - 25, 45);
     const barcodeX = x + (width - barcodeWidth) / 2;
-    const barcodeY = y + 15;
+    const barcodeY = y + 10;
     
     await this.drawEnhancedBarcode(pdf, labelData.barcode, barcodeX, barcodeY, barcodeWidth, barcodeHeight);
   }
 
   /**
-   * Draw dates column with rotated text
+   * Draw dates column in landscape layout
    */
-  static drawDatesColumnRotated(pdf, labelData, x, y, width, height) {
-    let currentX = x + 15;
-    const textY = y + height - 15;
+  static drawLandscapeDatesColumn(pdf, labelData, x, y, width, height) {
+    const centerX = x + width / 2;
+    let currentY = y + 20;
     
-    // Harvest date (rotated 90° clockwise)
+    // Harvest date
     pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(13); // Larger fonts
+    pdf.setFontSize(14);
     pdf.setTextColor(0, 0, 0);
-    pdf.text('Harvest:', currentX, textY, { angle: 90 });
-    currentX += 20;
+    pdf.text('Harvest:', centerX - 30, currentY, { align: 'left' });
     
     pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(12);
-    const harvestDate = labelData.harvestDate || 'MM/DD/YY';
-    pdf.text(harvestDate, currentX, textY, { angle: 90 });
-    currentX += 35;
-    
-    // Package date (rotated 90° clockwise)
-    pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(13);
-    pdf.text('Package:', currentX, textY, { angle: 90 });
-    currentX += 20;
+    const harvestDate = labelData.harvestDate || 'MM/DD/YY';
+    pdf.text(harvestDate, centerX + 15, currentY);
+    
+    currentY += 25;
+    
+    // Package date
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(14);
+    pdf.text('Package:', centerX - 30, currentY, { align: 'left' });
     
     pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(12);
+    pdf.setFontSize(13);
     const packageDate = labelData.packagedDate || 'MM/DD/YY';
-    pdf.text(packageDate, currentX, textY, { angle: 90 });
+    pdf.text(packageDate, centerX + 15, currentY);
   }
 
   /**
-   * Draw case/box column with rotated text
+   * Draw case/box column in landscape layout
    */
-  static drawCaseColumnRotated(pdf, labelData, x, y, width, height, boxNumber, totalBoxes) {
-    let currentX = x + 15;
-    const centerY = y + height / 2;
+  static drawLandscapeCaseColumn(pdf, labelData, x, y, width, height, boxNumber, totalBoxes) {
+    const centerX = x + width / 2;
+    let currentY = y + 20;
     
-    // Case quantity box
-    const boxWidth = 20;
-    const boxHeight = Math.min(height - 30, 80);
-    const boxX = currentX;
-    const boxY = y + (height - boxHeight) / 2;
-    
-    pdf.setDrawColor(0, 0, 0);
-    pdf.setLineWidth(1);
-    pdf.rect(boxX, boxY, boxWidth, boxHeight);
-    
-    // Case text (rotated 90° clockwise)
+    // Case quantity
     pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(12); // Larger font
+    pdf.setFontSize(14);
     pdf.setTextColor(0, 0, 0);
+    
     const caseQtyValue = labelData.caseQuantity || '___';
-    const caseQtyText = `Case: ${caseQtyValue}`;
-    pdf.text(caseQtyText, currentX + 5, boxY + boxHeight - 10, { angle: 90 });
+    pdf.text(`Case: ${caseQtyValue}`, centerX, currentY, { align: 'center' });
     
-    currentX += boxWidth + 15;
+    currentY += 25;
     
-    // Box number box
-    pdf.rect(currentX, boxY, boxWidth, boxHeight);
-    
-    // Box text (rotated 90° clockwise)
+    // Box info
     const boxText = `Box ${boxNumber}/${totalBoxes}`;
-    pdf.text(boxText, currentX + 5, boxY + boxHeight - 10, { angle: 90 });
+    pdf.text(boxText, centerX, currentY, { align: 'center' });
   }
 
   /**
-   * Draw audit section with rotated text
+   * Draw audit trail in landscape layout (bottom-left)
    */
-  static drawAuditRotated(pdf, currentUser, x, y, width, height) {
+  static drawLandscapeAuditTrail(pdf, currentUser, x, y) {
     const now = new Date();
     const month = (now.getMonth() + 1).toString().padStart(2, '0');
     const day = now.getDate().toString().padStart(2, '0');
@@ -449,15 +495,67 @@ export class PDFGenerator {
     const auditLine = `${month}/${day}/${year} ${hoursStr}:${minutes}${ampm} EST (${(currentUser || 'Unknown').substring(0, 8)})`;
     
     pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(8);
+    pdf.setFontSize(9);
     pdf.setTextColor(102, 102, 102);
     
-    // Audit trail rotated 90° clockwise
-    pdf.text(auditLine, x + 10, y + height - 5, { angle: 90 });
+    pdf.text(auditLine, x, y);
   }
 
   /**
-   * Enhanced barcode generation
+   * Calculate optimal font size for landscape product names
+   */
+  static calculateLandscapeProductFontSize(text, availableWidth, availableHeight) {
+    if (!text) return 24;
+    
+    const length = text.length;
+    let fontSize = 28; // Start larger for landscape
+    
+    // Adjust based on text length
+    if (length > 80) fontSize = 18;
+    else if (length > 60) fontSize = 20;
+    else if (length > 40) fontSize = 22;
+    else if (length > 25) fontSize = 24;
+    else if (length > 15) fontSize = 26;
+    
+    // Check if it fits in available space
+    const estimatedWidth = length * (fontSize * 0.6);
+    if (estimatedWidth > availableWidth) {
+      fontSize = Math.max(16, Math.floor((availableWidth / length) * 1.4));
+    }
+    
+    return Math.min(fontSize, 28);
+  }
+
+  /**
+   * Wrap text for landscape layout
+   */
+  static wrapTextForLandscape(text, maxWidth, fontSize) {
+    if (!text) return [''];
+    
+    const words = text.split(' ');
+    const lines = [];
+    let currentLine = '';
+    
+    const charWidth = fontSize * 0.6; // Approximate character width
+    const maxCharsPerLine = Math.floor(maxWidth / charWidth);
+    
+    words.forEach(word => {
+      const testLine = currentLine + (currentLine ? ' ' : '') + word;
+      if (testLine.length <= maxCharsPerLine || currentLine === '') {
+        currentLine = testLine;
+      } else {
+        lines.push(currentLine);
+        currentLine = word;
+      }
+    });
+    
+    if (currentLine) lines.push(currentLine);
+    
+    return lines.length > 0 ? lines : [''];
+  }
+
+  /**
+   * Enhanced barcode generation for landscape layout
    */
   static async drawEnhancedBarcode(pdf, barcodeValue, x, y, width, height) {
     if (!barcodeValue) return;
@@ -480,7 +578,7 @@ export class PDFGenerator {
       
       JsBarcode(canvas, validation.cleanValue, {
         format: 'CODE39',
-        width: Math.max(2, Math.floor(width / 35)),
+        width: Math.max(2, Math.floor(width / 40)),
         height: height * 2,
         displayValue: false,
         margin: 0,
@@ -505,9 +603,9 @@ export class PDFGenerator {
     pdf.setLineWidth(1);
     pdf.rect(x, y, width, height);
     
-    pdf.setFontSize(8);
+    pdf.setFontSize(10);
     pdf.setTextColor(255, 0, 0);
-    pdf.text('Barcode Error', x + 5, y + height / 2, { angle: 90 });
+    pdf.text('Barcode Error', x + 5, y + height / 2);
   }
 
   /**
@@ -556,7 +654,7 @@ export class PDFGenerator {
    */
   static async generateTestPDF() {
     const testData = [{
-      sku: 'TEST-S12212-ROTATED-TEXT',
+      sku: 'TEST-S12212-LANDSCAPE-CONTENT',
       barcode: 'TEST123456',
       productName: 'Curaleaf Pink Champagne Premium Cannabis Capsules [10mg THC] 30-Count',
       brand: 'Test Brand',
@@ -607,12 +705,13 @@ export class PDFGenerator {
       warnings,
       totalLabels,
       estimatedPages: Math.ceil(totalLabels / 4),
-      labelFormat: 'Uline S-12212 (All Text Rotated 90° for Space Optimization)',
+      labelFormat: 'Uline S-12212 (Landscape Content with Complete Unit Rotation)',
       pageSize: 'Legal (8.5" × 14")',
       labelsPerPage: 4,
-      contentLayout: 'All text rotated 90° clockwise for maximum space utilization',
-      optimization: 'Larger fonts possible, especially for product names readable from distance',
-      textRotation: 'All text elements rotated 90° clockwise'
+      contentLayout: 'Landscape content (6" wide × 4" tall) rotated 90° clockwise as complete unit',
+      optimization: 'Postcard-style reading when labels are applied sideways',
+      contentDesign: 'Designed for 6" width utilization with larger fonts and better spacing',
+      labelsConnected: 'All labels connected on adjacent sides (no gaps)'
     };
   }
 
@@ -622,39 +721,61 @@ export class PDFGenerator {
   static getDebugInfo() {
     const positions = [];
     for (let i = 0; i < 4; i++) {
-      positions.push(this.calculateUlineS12212Position(i));
+      positions.push(this.calculateUlineS12212PositionConnected(i));
     }
 
     return {
-      migration: 'Uline S-12212 All Text Rotated 90° for Space Optimization',
-      version: '7.2.0',
+      migration: 'Uline S-12212 Landscape Content with Complete Rotation',
+      version: '8.0.0',
       approach: {
-        concept: 'All text rotated 90° clockwise to optimize label space',
-        method: 'pdf.text(text, x, y, { angle: 90 }) for all text elements',
+        concept: 'Content designed for landscape (6" wide × 4" tall), rotated as complete unit',
+        method: 'PDF coordinate transformation with save/restore for entire content area rotation',
         benefits: [
-          'Much larger font sizes possible (up to 36pt)',
-          'Product names readable from far away',
-          'Optimal use of available label dimensions',
-          'Professional appearance with space efficiency'
+          'Content designed for optimal 6" width utilization',
+          'Larger fonts possible across all elements',
+          'Postcard-style reading when labels applied sideways',
+          'Professional landscape layout when paper is rotated',
+          'Labels connected on all sides matching Uline template'
         ]
       },
-      textRotation: {
-        angle: '90° clockwise',
-        elements: [
-          'Brand names (up to 36pt)',
-          'Product names (up to 36pt, multi-line)',
-          'Store label (18pt)',
-          'Barcode numeric display (11pt)',
-          'Date labels and values (13pt/12pt)',
-          'Case and box info (12pt)',
-          'Audit trail (8pt)'
+      contentRotation: {
+        method: 'Complete unit transformation',
+        steps: [
+          'Save PDF state',
+          'Translate to label center',
+          'Rotate coordinate system 90° clockwise', 
+          'Draw content in landscape orientation',  
+          'Restore PDF state'
+        ],
+        advantages: [
+          'Entire content area rotated together',
+          'Content designed specifically for landscape layout',
+          'Better space utilization than individual text rotation',
+          'Maintains professional appearance'
         ]
       },
-      spaceOptimization: {
-        primary: 'Product names can be much larger',
-        secondary: 'All text benefits from increased space',
-        result: 'Labels readable from greater distances',
-        usability: 'Turn head or label to read - natural motion'
+      landscapeLayout: {
+        designDimensions: '6" wide × 4" tall (432pt × 288pt)',
+        sections: {
+          top: 'Brand + Product Name (35% height, larger fonts)',
+          middle: 'Store section with dual text boxes (35% height)',
+          bottom: 'Barcode | Dates | Case/Box in 3 columns (30% height)'
+        },
+        fontSizes: {
+          brand: 'Up to 28pt',
+          productName: 'Up to 28pt with line wrapping',
+          storeLabel: '16pt',
+          dates: '14pt labels, 13pt values',
+          case: '14pt',
+          audit: '9pt',
+          barcodeNumeric: '12pt'
+        }
+      },
+      labelConnection: {
+        connected: true,
+        method: 'No gaps between labels',
+        gridLayout: '2×2 with touching edges',
+        matchesUlineTemplate: true
       },
       positions: positions
     };
@@ -662,14 +783,18 @@ export class PDFGenerator {
 
   // Legacy compatibility methods
   static calculateUlineLabelPosition(labelIndex) {
-    return this.calculateUlineS12212Position(labelIndex % 4);
+    return this.calculateUlineS12212PositionConnected(labelIndex % 4);
   }
 
   static async drawSidewaysLabel(pdf, labelData, position, boxNumber, totalBoxes, debug, currentUser) {
-    return this.drawRotatedTextLabel(pdf, labelData, position, boxNumber, totalBoxes, debug, currentUser);
+    return this.drawLandscapeContentLabel(pdf, labelData, position, boxNumber, totalBoxes, debug, currentUser);
   }
 
   static async draw4LayerOptimizedLabel(pdf, labelData, position, boxNumber, totalBoxes, debug, currentUser) {
-    return this.drawRotatedTextLabel(pdf, labelData, position, boxNumber, totalBoxes, debug, currentUser);
+    return this.drawLandscapeContentLabel(pdf, labelData, position, boxNumber, totalBoxes, debug, currentUser);
+  }
+
+  static async drawRotatedTextLabel(pdf, labelData, position, boxNumber, totalBoxes, debug, currentUser) {
+    return this.drawLandscapeContentLabel(pdf, labelData, position, boxNumber, totalBoxes, debug, currentUser);
   }
 }
