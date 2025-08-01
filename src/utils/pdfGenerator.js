@@ -1,6 +1,5 @@
-// COMPREHENSIVE IMPORT STRATEGY - Try multiple approaches
+// FIXED PDF GENERATION with Working Landscape Content Layout
 import { jsPDF } from 'jspdf';
-// Try to import additional modules that might contain transformations
 import 'jspdf/dist/jspdf.es.min.js';
 
 import { BarcodeGenerator } from './barcodeGenerator.js';
@@ -10,472 +9,15 @@ import storage from './storage.js';
 
 /**
  * PDF Generation utilities for Uline S-12212 label sheets (4" × 6")
- * LANDSCAPE CONTENT OPTIMIZATION: Content designed for 6" wide × 4" tall, then rotated as complete unit
- * COMPREHENSIVE TRANSFORMATION APPROACH: Multiple methods to achieve rotation
+ * FIXED LANDSCAPE CONTENT LAYOUT: 6" wide × 4" tall when rotated 90° clockwise
+ * Content is drawn in landscape orientation, then rotated as a complete unit
  */
 export class PDFGenerator {
-  /**
-   * COMPREHENSIVE DEBUG: Test all possible transformation approaches
-   */
-  static debugAllTransformationApproaches() {
-    console.log('🔍 COMPREHENSIVE TRANSFORMATION DEBUG...');
-    
-    const pdf = new jsPDF({
-      orientation: 'portrait',
-      unit: 'pt',
-      format: [612, 1008]
-    });
-    
-    console.log('📋 PDF instance:', pdf);
-    console.log('📋 PDF constructor:', pdf.constructor);
-    console.log('📋 PDF prototype:', Object.getPrototypeOf(pdf));
-    
-    // Method 1: Check standard transformation methods
-    const standardMethods = ['save', 'restore', 'translate', 'rotate'];
-    console.log('🔄 Standard transformation methods:');
-    standardMethods.forEach(method => {
-      const exists = typeof pdf[method] === 'function';
-      console.log(`  - ${method}: ${typeof pdf[method]} ${exists ? '✅' : '❌'}`);
-      if (exists) {
-        console.log(`    Function source: ${pdf[method].toString().substring(0, 150)}...`);
-      }
-    });
-    
-    // Method 2: Check alternative method names
-    const altMethods = [
-      'saveState', 'restoreState', 'saveGraphicsState', 'restoreGraphicsState',
-      'translatePage', 'rotatePage', 'transformPage', 'setCurrentTransformationMatrix',
-      'saveGState', 'restoreGState', 'cm', 'q', 'Q'
-    ];
-    console.log('🔄 Alternative method names:');
-    altMethods.forEach(method => {
-      if (pdf[method]) {
-        console.log(`  - ${method}: ${typeof pdf[method]} ✅`);
-        console.log(`    Function source: ${pdf[method].toString().substring(0, 150)}...`);
-      }
-    });
-    
-    // Method 3: Check internal properties
-    console.log('🔄 Internal properties:');
-    if (pdf.internal) {
-      console.log('  - pdf.internal exists ✅');
-      console.log('  - pdf.internal keys:', Object.keys(pdf.internal));
-      
-      if (pdf.internal.write) {
-        console.log('  - pdf.internal.write exists ✅ (raw PDF commands)');
-      }
-      
-      if (pdf.internal.getCurrentPageInfo) {
-        console.log('  - pdf.internal.getCurrentPageInfo exists ✅');
-      }
-    }
-    
-    // Method 4: Check for transformation matrix support
-    if (pdf.setCurrentTransformationMatrix || pdf.internal?.write) {
-      console.log('✅ Matrix transformation approach available');
-    }
-    
-    // Method 5: Check window global
-    if (typeof window !== 'undefined' && window.jspdf) {
-      console.log('🌐 Window global jsPDF:', window.jspdf);
-    }
-    
-    return pdf;
-  }
-
-  /**
-   * ATTEMPT: Use raw PDF commands for transformation
-   */
-  static async testRawPDFCommands() {
-    console.log('🧪 Testing raw PDF transformation commands...');
-    
-    const pdf = new jsPDF({
-      orientation: 'portrait',
-      unit: 'pt',
-      format: [612, 1008]
-    });
-    
-    try {
-      // Method 1: Try using internal write to add raw PDF commands
-      if (pdf.internal && pdf.internal.write) {
-        console.log('✅ Using raw PDF commands');
-        
-        // Raw PDF commands for transformation
-        // q = save graphics state, Q = restore graphics state
-        // cm = concatenate matrix (for transformations)
-        
-        // Save graphics state
-        pdf.internal.write('q');
-        
-        // Move coordinates and rotate (translate to center, rotate 90°, translate back)
-        const centerX = 144; // 2" from left
-        const centerY = 216; // 3" from top
-        
-        // Transformation matrix for 90° rotation around center point
-        // Format: a b c d e f cm (where matrix = [a b c d e f])
-        // For 90° rotation: [0 1 -1 0 tx ty]
-        const a = 0, b = 1, c = -1, d = 0;
-        const e = centerX + centerY; // tx
-        const f = centerY - centerX; // ty
-        
-        pdf.internal.write(`${a} ${b} ${c} ${d} ${e} ${f} cm`);
-        
-        // Draw some test content
-        pdf.setFontSize(20);
-        pdf.text('ROTATED TEST', 0, 20);
-        
-        // Restore graphics state
-        pdf.internal.write('Q');
-        
-        console.log('✅ Raw PDF commands executed successfully');
-        return pdf.output('blob');
-      }
-      
-      // Method 2: Try matrix transformation if available
-      if (pdf.setCurrentTransformationMatrix) {
-        console.log('✅ Using setCurrentTransformationMatrix');
-        
-        // Create transformation matrix for 90° rotation
-        const matrix = [0, 1, -1, 0, 300, 200]; // [a, b, c, d, e, f]
-        pdf.setCurrentTransformationMatrix(matrix);
-        
-        pdf.setFontSize(20);
-        pdf.text('MATRIX ROTATED TEST', 0, 20);
-        
-        console.log('✅ Matrix transformation executed successfully');
-        return pdf.output('blob');
-      }
-      
-      console.log('❌ No transformation methods available');
-      return null;
-      
-    } catch (error) {
-      console.error('❌ Raw PDF commands failed:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * ENHANCED: Manual coordinate calculation for perfect landscape positioning
-   */
-  static calculateManualLandscapePositions(labelIndex, contentType, x, y, width, height) {
-    console.log(`🧮 Calculating manual landscape positions for label ${labelIndex}, content: ${contentType}`);
-    
-    // Simulate rotating the content area 90° clockwise
-    // Original: 4" wide × 6" tall (288pt × 432pt)
-    // Rotated: 6" wide × 4" tall (432pt × 288pt)
-    
-    const centerX = x + width / 2;
-    const centerY = y + height / 2;
-    
-    // Content dimensions when "rotated"
-    const contentWidth = height; // 432pt (6" wide in landscape)
-    const contentHeight = width;  // 288pt (4" tall in landscape)
-    
-    const padding = 15;
-    const usableWidth = contentWidth - (padding * 2);   // 402pt
-    const usableHeight = contentHeight - (padding * 2); // 258pt
-    
-    // Section heights (landscape orientation)
-    const topSectionHeight = Math.floor(usableHeight * 0.35);     // ~90pt
-    const middleSectionHeight = Math.floor(usableHeight * 0.35);  // ~90pt
-    const bottomSectionHeight = usableHeight - topSectionHeight - middleSectionHeight; // ~78pt
-    
-    // Calculate positions as if content is landscape, then position in portrait label
-    const positions = {};
-    
-    switch (contentType) {
-      case 'brand':
-        // Brand at top-center of landscape layout
-        positions.x = centerX;
-        positions.y = y + padding + 30;
-        positions.align = 'center';
-        positions.maxWidth = usableWidth * 0.8;
-        break;
-        
-      case 'product':
-        // Product name centered in top section
-        positions.x = centerX;
-        positions.y = y + padding + 60;
-        positions.align = 'center';
-        positions.maxWidth = usableWidth * 0.9;
-        positions.maxLines = 3;
-        break;
-        
-      case 'store-label':
-        // "Store:" label positioned above textbox
-        positions.x = x + padding + 20;
-        positions.y = y + padding + topSectionHeight + 25;
-        positions.align = 'left';
-        break;
-        
-      case 'store-box':
-        // Store textbox centered in middle section
-        positions.x = centerX - (Math.min(usableWidth * 0.7, 280) / 2);
-        positions.y = y + padding + topSectionHeight + 35;
-        positions.width = Math.min(usableWidth * 0.7, 280);
-        positions.height = 50;
-        break;
-        
-      case 'barcode-numeric':
-        // Barcode numeric above barcode in left column
-        const col1X = x + padding + (usableWidth / 6);
-        positions.x = col1X;
-        positions.y = y + padding + topSectionHeight + middleSectionHeight + 15;
-        positions.align = 'center';
-        break;
-        
-      case 'barcode':
-        // Barcode image in left column
-        positions.x = col1X - 55; // Center 110px wide barcode
-        positions.y = y + padding + topSectionHeight + middleSectionHeight + 20;
-        positions.width = 110;
-        positions.height = 50;
-        break;
-        
-      case 'dates':
-        // Dates in center column
-        const col2X = x + padding + (usableWidth / 2);
-        positions.x = col2X;
-        positions.y = y + padding + topSectionHeight + middleSectionHeight + 20;
-        positions.align = 'center';
-        positions.spacing = 18;
-        break;
-        
-      case 'case-box':
-        // Case/Box in right column with textboxes
-        const col3X = x + padding + (usableWidth * 5/6);
-        positions.x = col3X - 40; // Center 80px wide boxes
-        positions.y = y + padding + topSectionHeight + middleSectionHeight + 15;
-        positions.width = 80;
-        positions.height = 20;
-        positions.spacing = 25;
-        break;
-        
-      case 'audit':
-        // Audit trail at bottom-left
-        positions.x = x + padding;
-        positions.y = y + height - 15;
-        positions.align = 'left';
-        break;
-        
-      default:
-        positions.x = centerX;
-        positions.y = centerY;
-        positions.align = 'center';
-    }
-    
-    console.log(`📍 ${contentType} positions:`, positions);
-    return positions;
-  }
-
-  /**
-   * PERFECT LANDSCAPE CONTENT: Manual positioning approach
-   */
-  static async drawPerfectLandscapeContent(pdf, labelData, x, y, width, height, boxNumber, totalBoxes, currentUser, debug) {
-    console.log('🎨 Drawing PERFECT landscape content with manual positioning...');
-    
-    // Extract brand info
-    const brandInfo = this.extractBrandFromProductName(labelData.productName);
-    
-    // Brand name - perfectly positioned for landscape feel
-    if (brandInfo.brand) {
-      const brandPos = this.calculateManualLandscapePositions(0, 'brand', x, y, width, height);
-      const brandFontSize = Math.min(24, Math.max(16, 28 - Math.floor(brandInfo.brand.length / 4)));
-      
-      pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(brandFontSize);
-      pdf.setTextColor(44, 85, 48);
-      pdf.text(brandInfo.brand, brandPos.x, brandPos.y, { align: brandPos.align });
-    }
-    
-    // Product name - centered with optimal spacing
-    const productPos = this.calculateManualLandscapePositions(0, 'product', x, y, width, height);
-    const productFontSize = this.calculateOptimalProductFontSize(brandInfo.productName, productPos.maxWidth);
-    
-    pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(productFontSize);
-    pdf.setTextColor(0, 0, 0);
-    
-    const productLines = this.wrapTextOptimal(brandInfo.productName, productPos.maxWidth, productFontSize);
-    productLines.forEach((line, index) => {
-      if (index < productPos.maxLines) {
-        pdf.text(line, productPos.x, productPos.y + (index * (productFontSize + 4)), { align: productPos.align });
-      }
-    });
-    
-    // Store section - "Store:" label above centered textbox
-    const storeLabelPos = this.calculateManualLandscapePositions(0, 'store-label', x, y, width, height);
-    pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(16);
-    pdf.setTextColor(0, 0, 0);
-    pdf.text('Store:', storeLabelPos.x, storeLabelPos.y, { align: storeLabelPos.align });
-    
-    const storeBoxPos = this.calculateManualLandscapePositions(0, 'store-box', x, y, width, height);
-    pdf.setDrawColor(0, 0, 0);
-    pdf.setLineWidth(2);
-    pdf.rect(storeBoxPos.x, storeBoxPos.y, storeBoxPos.width, storeBoxPos.height);
-    
-    // Writing lines in store box
-    pdf.setDrawColor(200, 200, 200);
-    pdf.setLineWidth(0.5);
-    for (let i = 1; i < 3; i++) {
-      const lineY = storeBoxPos.y + (i * (storeBoxPos.height / 3));
-      pdf.line(storeBoxPos.x + 8, lineY, storeBoxPos.x + storeBoxPos.width - 8, lineY);
-    }
-    
-    // Bottom section - 3 columns with perfect landscape spacing
-    
-    // Column 1: Barcode with numeric above (larger)
-    const barcodeNumericPos = this.calculateManualLandscapePositions(0, 'barcode-numeric', x, y, width, height);
-    const spacedBarcodeDisplay = this.formatBarcodeWithSpaces(labelData.barcodeDisplay);
-    
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(12);
-    pdf.setTextColor(102, 102, 102);
-    pdf.text(spacedBarcodeDisplay, barcodeNumericPos.x, barcodeNumericPos.y, { align: barcodeNumericPos.align });
-    
-    const barcodePos = this.calculateManualLandscapePositions(0, 'barcode', x, y, width, height);
-    await this.drawEnhancedBarcode(pdf, labelData.barcode, barcodePos.x, barcodePos.y, barcodePos.width, barcodePos.height);
-    
-    // Column 2: Dates - perfectly centered
-    const datesPos = this.calculateManualLandscapePositions(0, 'dates', x, y, width, height);
-    
-    pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(14);
-    pdf.setTextColor(0, 0, 0);
-    pdf.text('Harvest:', datesPos.x, datesPos.y, { align: datesPos.align });
-    
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(13);
-    const harvestDate = labelData.harvestDate || 'MM/DD/YY';
-    pdf.text(harvestDate, datesPos.x, datesPos.y + datesPos.spacing, { align: datesPos.align });
-    
-    pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(14);
-    pdf.text('Package:', datesPos.x, datesPos.y + (datesPos.spacing * 2), { align: datesPos.align });
-    
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(13);
-    const packageDate = labelData.packagedDate || 'MM/DD/YY';
-    pdf.text(packageDate, datesPos.x, datesPos.y + (datesPos.spacing * 3), { align: datesPos.align });
-    
-    // Column 3: Case/Box with textboxes
-    const casePos = this.calculateManualLandscapePositions(0, 'case-box', x, y, width, height);
-    
-    // Case textbox
-    pdf.setDrawColor(0, 0, 0);
-    pdf.setLineWidth(1);
-    pdf.rect(casePos.x, casePos.y, casePos.width, casePos.height);
-    
-    pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(12);
-    pdf.setTextColor(0, 0, 0);
-    const caseQtyValue = labelData.caseQuantity || '___';
-    pdf.text(`Case: ${caseQtyValue}`, casePos.x + casePos.width/2, casePos.y + 14, { align: 'center' });
-    
-    // Box textbox
-    pdf.rect(casePos.x, casePos.y + casePos.spacing, casePos.width, casePos.height);
-    const boxText = `Box ${boxNumber}/${totalBoxes}`;
-    pdf.text(boxText, casePos.x + casePos.width/2, casePos.y + casePos.spacing + 14, { align: 'center' });
-    
-    // Audit trail - bottom left
-    const auditPos = this.calculateManualLandscapePositions(0, 'audit', x, y, width, height);
-    const auditLine = this.generateAuditLine(currentUser);
-    
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(9);
-    pdf.setTextColor(102, 102, 102);
-    pdf.text(auditLine, auditPos.x, auditPos.y, { align: auditPos.align });
-    
-    if (debug) {
-      // Debug: Show the "landscape" content area
-      pdf.setDrawColor(0, 255, 0);
-      pdf.setLineWidth(1);
-      pdf.rect(x + 15, y + 15, height - 30, width - 30); // Swapped dimensions to show landscape area
-    }
-    
-    console.log('✅ Perfect landscape content completed');
-  }
-
-  /**
-   * Calculate optimal product font size for available space
-   */
-  static calculateOptimalProductFontSize(text, availableWidth) {
-    if (!text) return 20;
-    
-    const length = text.length;
-    let fontSize = 22; // Larger starting size for landscape feel
-    
-    // Adjust based on text length
-    if (length > 80) fontSize = 16;
-    else if (length > 60) fontSize = 17;
-    else if (length > 40) fontSize = 18;
-    else if (length > 25) fontSize = 19;
-    else if (length > 15) fontSize = 21;
-    
-    // Check if it fits in available space
-    const estimatedWidth = length * (fontSize * 0.6);
-    if (estimatedWidth > availableWidth) {
-      fontSize = Math.max(14, Math.floor((availableWidth / length) * 1.4));
-    }
-    
-    return Math.min(fontSize, 22);
-  }
-
-  /**
-   * Optimal text wrapping for landscape layout
-   */
-  static wrapTextOptimal(text, maxWidth, fontSize) {
-    if (!text) return [''];
-    
-    const words = text.split(' ');
-    const lines = [];
-    let currentLine = '';
-    
-    const charWidth = fontSize * 0.6;
-    const maxCharsPerLine = Math.floor(maxWidth / charWidth);
-    
-    words.forEach(word => {
-      const testLine = currentLine + (currentLine ? ' ' : '') + word;
-      if (testLine.length <= maxCharsPerLine || currentLine === '') {
-        currentLine = testLine;
-      } else {
-        lines.push(currentLine);
-        currentLine = word;
-      }
-    });
-    
-    if (currentLine) lines.push(currentLine);
-    
-    return lines.length > 0 ? lines : [''];
-  }
-
-  /**
-   * Generate audit line
-   */
-  static generateAuditLine(currentUser) {
-    const now = new Date();
-    const month = (now.getMonth() + 1).toString().padStart(2, '0');
-    const day = now.getDate().toString().padStart(2, '0');
-    const year = now.getFullYear().toString().slice(-2);
-    
-    let hours = now.getHours();
-    const ampm = hours >= 12 ? 'PM' : 'AM';
-    hours = hours % 12;
-    hours = hours ? hours : 12;
-    const hoursStr = hours.toString();
-    
-    const minutes = now.getMinutes().toString().padStart(2, '0');
-    
-    return `${month}/${day}/${year} ${hoursStr}:${minutes}${ampm} EST (${(currentUser || 'Unknown').substring(0, 8)})`;
-  }
-
   /**
    * Generate PDF with labels positioned for Uline S-12212 sheets
    */
   static async generateLabels(labelDataArray, options = {}) {
-    console.log('🏷️ Starting COMPREHENSIVE PDF generation with multiple approaches...');
+    console.log('🏷️ Starting FIXED PDF generation with working landscape layout...');
     console.log('📋 Label data array length:', labelDataArray.length);
     
     const {
@@ -484,12 +26,6 @@ export class PDFGenerator {
       debug = false,
       currentUser = 'Unknown'
     } = options;
-
-    // Comprehensive debugging first
-    if (debug) {
-      this.debugAllTransformationApproaches();
-      await this.testRawPDFCommands();
-    }
 
     // Create PDF instance
     const pdf = new jsPDF({
@@ -533,8 +69,8 @@ export class PDFGenerator {
           // Calculate which box number this label represents
           const boxNumber = Math.floor(labelCopy / Math.max(1, Math.floor(formattedData.labelQuantity / formattedData.boxCount))) + 1;
 
-          // Draw the label using the BEST available method
-          await this.drawLabelWithBestMethod(pdf, formattedData, position, boxNumber, formattedData.boxCount, debug, currentUser);
+          // Draw the label using FIXED method
+          await this.drawLabelWithFixedLandscapeLayout(pdf, formattedData, position, boxNumber, formattedData.boxCount, debug, currentUser);
 
           currentLabelIndex++;
         }
@@ -545,10 +81,10 @@ export class PDFGenerator {
       // Add metadata
       pdf.setDocumentProperties({
         title: `Cannabis Inventory Labels - ${new Date().toISOString().slice(0, 10)}`,
-        subject: 'Uline S-12212 Format Labels (Perfect Landscape Content)',
+        subject: 'Uline S-12212 Format Labels (Fixed Landscape Content)',
         author: 'Cannabis Inventory Management System',
         creator: 'Cannabis Inventory Management System v8.5.0',
-        keywords: 'cannabis, inventory, labels, uline, s-12212, perfect-landscape, comprehensive-approach'
+        keywords: 'cannabis, inventory, labels, uline, s-12212, fixed-landscape, working-transformation'
       });
 
       return pdf.output('blob');
@@ -560,171 +96,153 @@ export class PDFGenerator {
   }
 
   /**
-   * Draw label using the best available transformation method
+   * FIXED: Draw label with working landscape content layout
    */
-  static async drawLabelWithBestMethod(pdf, labelData, position, boxNumber, totalBoxes, debug, currentUser) {
-    console.log(`🎨 Drawing label using BEST available method...`);
+  static async drawLabelWithFixedLandscapeLayout(pdf, labelData, position, boxNumber, totalBoxes, debug, currentUser) {
+    console.log(`🎨 Drawing label with FIXED landscape layout method...`);
     
     const { x, y, width, height } = position;
 
     try {
-      // Draw label border
+      // Draw label border first (outside transformation)
       pdf.setDrawColor(0, 0, 0);
       pdf.setLineWidth(1);
       pdf.rect(x, y, width, height);
 
-      // Debug connected sides
+      // Debug border if requested
       if (debug) {
-        pdf.setDrawColor(0, 255, 0);
-        pdf.setLineWidth(2);
-        position.connectedSides.forEach(side => {
-          switch (side) {
-            case 'top': pdf.line(x, y, x + width, y); break;
-            case 'right': pdf.line(x + width, y, x + width, y + height); break;
-            case 'bottom': pdf.line(x, y + height, x + width, y + height); break;
-            case 'left': pdf.line(x, y, x, y + height); break;
-          }
-        });
+        pdf.setDrawColor(255, 0, 0);
+        pdf.setLineWidth(0.5);
+        pdf.rect(x + 1, y + 1, width - 2, height - 2);
       }
 
-      // Try Method 1: Raw PDF commands - FIXED VERSION
-      if (pdf.internal && pdf.internal.write) {
-        console.log('🔄 Attempting Method 1: FIXED Raw PDF commands');
-        
-        try {
-          await this.drawWithFixedRawPDFCommands(pdf, labelData, position, boxNumber, totalBoxes, currentUser, debug);
-          console.log('✅ Method 1 successful: FIXED Raw PDF commands');
-          return;
-        } catch (error) {
-          console.log('❌ Method 1 failed:', error.message);
-        }
-      }
-
-      // Try Method 2: Matrix transformations
-      if (pdf.setCurrentTransformationMatrix) {
-        console.log('🔄 Attempting Method 2: Matrix transformations');
-        
-        try {
-          await this.drawWithMatrixTransform(pdf, labelData, position, boxNumber, totalBoxes, currentUser, debug);
-          console.log('✅ Method 2 successful: Matrix transformations');
-          return;
-        } catch (error) {
-          console.log('❌ Method 2 failed:', error.message);
-        }
-      }
-
-      // Method 3: Perfect manual positioning (our best fallback)
-      console.log('🔄 Using Method 3: Perfect manual landscape positioning');
-      await this.drawPerfectLandscapeContent(pdf, labelData, x, y, width, height, boxNumber, totalBoxes, currentUser, debug);
-      console.log('✅ Method 3 successful: Perfect manual positioning');
+      // Use FIXED transformation method
+      await this.drawWithFixedTransformation(pdf, labelData, position, boxNumber, totalBoxes, currentUser, debug);
+      console.log('✅ Fixed transformation successful');
 
     } catch (error) {
-      console.error('❌ All methods failed:', error);
+      console.error('❌ Fixed transformation failed:', error);
       
-      // Emergency fallback
-      pdf.setFontSize(10);
+      // Emergency fallback - draw basic content without transformation
+      pdf.setFontSize(12);
       pdf.setTextColor(255, 0, 0);
-      pdf.text('Label Error', x + 5, y + 20);
+      pdf.text('Label Error - Using Fallback', x + 5, y + 20);
+      
+      // Extract brand info
+      const brandInfo = this.extractBrandFromProductName(labelData.productName);
+      
+      // Simple product name
+      pdf.setFontSize(14);
+      pdf.setTextColor(0, 0, 0);
+      const productName = brandInfo.productName || 'Product Name';
+      const lines = this.wrapText(productName, width - 20, 14);
+      lines.slice(0, 3).forEach((line, index) => {
+        pdf.text(line, x + 10, y + 50 + (index * 18));
+      });
     }
   }
 
   /**
-   * Method 1: FIXED Raw PDF commands with correct coordinate transformations
+   * FIXED transformation method with correct coordinate handling
    */
-  static async drawWithFixedRawPDFCommands(pdf, labelData, position, boxNumber, totalBoxes, currentUser, debug) {
-    console.log('🔧 FIXED Raw PDF Commands with correct coordinates');
+  static async drawWithFixedTransformation(pdf, labelData, position, boxNumber, totalBoxes, currentUser, debug) {
+    console.log('🔧 FIXED transformation with correct coordinate handling');
     const { x, y, width, height } = position;
     
     // Save graphics state
     pdf.internal.write('q');
     
-    // FIXED APPROACH: Simple step-by-step transformations
-    const centerX = x + width / 2;
-    const centerY = y + height / 2;
-    
-    // Step 1: Translate to label center
-    pdf.internal.write(`1 0 0 1 ${centerX} ${centerY} cm`);
-    
-    // Step 2: Rotate 90° clockwise around origin
-    pdf.internal.write('0 1 -1 0 0 0 cm');
-    
-    // Step 3: Translate so content area is positioned correctly
-    const contentWidth = height; // 432pt (6" wide in landscape)
-    const contentHeight = width;  // 288pt (4" tall in landscape)
-    
-    // Move content area to start at "origin" of rotated coordinate system
-    pdf.internal.write(`1 0 0 1 ${-contentWidth/2} ${-contentHeight/2} cm`);
-    
-    // Now draw content in the rotated coordinate system
-    await this.drawEnhancedLandscapeContent(pdf, labelData, contentWidth, contentHeight, boxNumber, totalBoxes, currentUser, debug);
-    
-    // Restore graphics state
-    pdf.internal.write('Q');
+    try {
+      // FIXED APPROACH: Single transformation matrix
+      const centerX = x + width / 2;
+      const centerY = y + height / 2;
+      
+      // Single transformation: translate to center, rotate 90°, translate to origin
+      // This creates a coordinate system where (0,0) is at the center of our landscape content
+      const tx = centerX;
+      const ty = centerY;
+      
+      // Apply transformation: translate to center, then rotate 90° clockwise
+      pdf.internal.write(`0 1 -1 0 ${tx} ${ty} cm`);
+      
+      // Now draw content in the transformed coordinate system
+      // Content dimensions in landscape orientation
+      const contentWidth = height;  // 432pt (6" when rotated)
+      const contentHeight = width;  // 288pt (4" when rotated)
+      
+      console.log(`🎨 Drawing landscape content: ${contentWidth} × ${contentHeight}pt`);
+      
+      // Draw landscape content with coordinates relative to center (0,0)
+      await this.drawLandscapeContentFixed(pdf, labelData, contentWidth, contentHeight, boxNumber, totalBoxes, currentUser, debug);
+      
+    } finally {
+      // Always restore graphics state
+      pdf.internal.write('Q');
+    }
   }
 
   /**
-   * Enhanced landscape content for rotated coordinate system
+   * FIXED landscape content drawing with correct coordinate calculations
    */
-  static async drawEnhancedLandscapeContent(pdf, labelData, width, height, boxNumber, totalBoxes, currentUser, debug) {
-    console.log(`🎨 Drawing ENHANCED landscape content - ${width}x${height}pt`);
+  static async drawLandscapeContentFixed(pdf, labelData, width, height, boxNumber, totalBoxes, currentUser, debug) {
+    console.log(`🎨 Drawing FIXED landscape content - ${width}×${height}pt`);
     
+    // Content area calculations (coordinates relative to center)
     const padding = 15;
-    const contentWidth = width - (padding * 2);    // 402pt
-    const contentHeight = height - (padding * 2);  // 258pt
+    const contentLeft = -width / 2 + padding;   // Start from left edge
+    const contentTop = -height / 2 + padding;   // Start from top edge
+    const contentWidth = width - (padding * 2);
+    const contentHeight = height - (padding * 2);
 
     // Extract brand info
     const brandInfo = this.extractBrandFromProductName(labelData.productName);
 
-    // Layout sections for landscape content
-    const topSectionHeight = Math.floor(contentHeight * 0.35);     // ~90pt
-    const middleSectionHeight = Math.floor(contentHeight * 0.35);  // ~90pt  
-    const bottomSectionHeight = contentHeight - topSectionHeight - middleSectionHeight; // ~78pt
+    // Layout sections
+    const topSectionHeight = Math.floor(contentHeight * 0.4);      // 40% for product info
+    const middleSectionHeight = Math.floor(contentHeight * 0.25);  // 25% for store
+    const bottomSectionHeight = contentHeight - topSectionHeight - middleSectionHeight; // 35% for bottom row
 
-    let currentY = padding + 20;
+    let currentY = contentTop;
 
-    // Brand name - CENTERED
+    // TOP SECTION: Brand + Product Name (centered)
     if (brandInfo.brand) {
-      const brandFontSize = Math.min(28, Math.max(16, 32 - Math.floor(brandInfo.brand.length / 4)));
+      const brandFontSize = Math.min(24, Math.max(16, 28 - Math.floor(brandInfo.brand.length / 4)));
       
       pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(brandFontSize);
       pdf.setTextColor(44, 85, 48); // Dark green
       
-      // CENTER the brand name
-      pdf.text(brandInfo.brand, contentWidth / 2, currentY, { align: 'center' });
-      currentY += brandFontSize + 10;
+      // Center brand name
+      pdf.text(brandInfo.brand, 0, currentY + 25, { align: 'center' });
+      currentY += brandFontSize + 8;
     }
 
-    // Product name - CENTERED with line wrapping
-    const availableWidth = contentWidth - 20;
-    const productFontSize = this.calculateOptimalProductFontSize(brandInfo.productName, availableWidth);
+    // Product name (centered with larger fonts)
+    const productFontSize = this.calculateOptimalFontSize(brandInfo.productName, contentWidth * 0.9, 28, 14);
     
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(productFontSize);
     pdf.setTextColor(0, 0, 0);
     
-    const lines = this.wrapTextOptimal(brandInfo.productName, availableWidth, productFontSize);
-    lines.forEach((line, index) => {
-      if (index < 3) { // Max 3 lines
-        pdf.text(line, contentWidth / 2, currentY, { align: 'center' });
-        currentY += productFontSize + 4;
-      }
+    const productLines = this.wrapText(brandInfo.productName, contentWidth * 0.9, productFontSize);
+    productLines.slice(0, 3).forEach((line, index) => {
+      pdf.text(line, 0, currentY + 25 + (index * (productFontSize + 2)), { align: 'center' });
     });
 
-    // Store section - positioned in middle section
-    const storeY = padding + topSectionHeight + 20;
+    // MIDDLE SECTION: Store area
+    const storeY = contentTop + topSectionHeight + 15;
     
     // "Store:" label
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(16);
     pdf.setTextColor(0, 0, 0);
-    pdf.text('Store:', padding + 10, storeY);
+    pdf.text('Store:', contentLeft + 15, storeY);
     
     // Single centered textbox
-    const boxWidth = Math.min(contentWidth - 40, 280);
-    const boxHeight = 50;
-    const boxX = (contentWidth - boxWidth) / 2;
-    const boxY = storeY + 10;
+    const boxWidth = Math.min(contentWidth * 0.7, 300);
+    const boxHeight = 45;
+    const boxX = -boxWidth / 2; // Center horizontally
+    const boxY = storeY + 8;
     
     // Main textbox
     pdf.setDrawColor(0, 0, 0);
@@ -734,38 +252,35 @@ export class PDFGenerator {
     // Writing lines inside textbox
     pdf.setDrawColor(200, 200, 200);
     pdf.setLineWidth(0.5);
-    
-    const numLines = 3;
-    for (let i = 1; i < numLines; i++) {
-      const lineY = boxY + (i * (boxHeight / numLines));
+    for (let i = 1; i < 3; i++) {
+      const lineY = boxY + (i * (boxHeight / 3));
       pdf.line(boxX + 8, lineY, boxX + boxWidth - 8, lineY);
     }
 
-    // Bottom section - 3 columns
-    const bottomY = padding + topSectionHeight + middleSectionHeight + 15;
+    // BOTTOM SECTION: Three-column layout
+    const bottomY = contentTop + topSectionHeight + middleSectionHeight + 10;
     const colWidth = contentWidth / 3;
 
-    // Column 1: Barcode with numeric above
-    const col1X = colWidth / 2;
+    // Column 1: Barcode (left)
+    const col1X = contentLeft + (colWidth / 2);
     
-    // Barcode numeric ABOVE barcode
+    // Barcode numeric display (above barcode)
     const spacedBarcodeDisplay = this.formatBarcodeWithSpaces(labelData.barcodeDisplay);
-    
     pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(12);
+    pdf.setFontSize(11);
     pdf.setTextColor(102, 102, 102);
     pdf.text(spacedBarcodeDisplay, col1X, bottomY, { align: 'center' });
     
-    // Barcode image - LARGER
-    const barcodeWidth = 110;
+    // Barcode image (larger size)
+    const barcodeWidth = 120;
     const barcodeHeight = 50;
     const barcodeX = col1X - barcodeWidth / 2;
-    const barcodeY = bottomY + 5;
+    const barcodeY = bottomY + 8;
     
     await this.drawEnhancedBarcode(pdf, labelData.barcode, barcodeX, barcodeY, barcodeWidth, barcodeHeight);
 
-    // Column 2: Dates - centered
-    const col2X = colWidth + (colWidth / 2);
+    // Column 2: Dates (center)
+    const col2X = contentLeft + colWidth + (colWidth / 2);
     let dateY = bottomY;
     
     pdf.setFont('helvetica', 'bold');
@@ -790,75 +305,52 @@ export class PDFGenerator {
     const packageDate = labelData.packagedDate || 'MM/DD/YY';
     pdf.text(packageDate, col2X, dateY, { align: 'center' });
 
-    // Column 3: Case/Box with textboxes
-    const col3X = (colWidth * 2) + (colWidth / 2);
+    // Column 3: Case/Box (right)
+    const col3X = contentLeft + (colWidth * 2) + (colWidth / 2);
     let caseY = bottomY;
     
     // Case textbox
-    const caseBoxWidth = colWidth - 20;
+    const caseBoxWidth = colWidth * 0.8;
     const caseBoxHeight = 22;
     const caseBoxX = col3X - caseBoxWidth / 2;
     
     pdf.setDrawColor(0, 0, 0);
     pdf.setLineWidth(1);
-    pdf.rect(caseBoxX, caseY - 5, caseBoxWidth, caseBoxHeight);
+    pdf.rect(caseBoxX, caseY - 3, caseBoxWidth, caseBoxHeight);
     
     pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(14);
+    pdf.setFontSize(12);
     pdf.setTextColor(0, 0, 0);
     const caseQtyValue = labelData.caseQuantity || '___';
-    pdf.text(`Case: ${caseQtyValue}`, col3X, caseY + 8, { align: 'center' });
+    pdf.text(`Case: ${caseQtyValue}`, col3X, caseY + 10, { align: 'center' });
     
-    caseY += 25;
+    caseY += 28;
     
     // Box textbox
-    pdf.rect(caseBoxX, caseY - 5, caseBoxWidth, caseBoxHeight);
+    pdf.rect(caseBoxX, caseY - 3, caseBoxWidth, caseBoxHeight);
     const boxText = `Box ${boxNumber}/${totalBoxes}`;
-    pdf.text(boxText, col3X, caseY + 8, { align: 'center' });
+    pdf.text(boxText, col3X, caseY + 10, { align: 'center' });
 
     // Audit trail (bottom-left corner)
     const auditLine = this.generateAuditLine(currentUser);
     pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(9);
+    pdf.setFontSize(8);
     pdf.setTextColor(102, 102, 102);
-    pdf.text(auditLine, padding, contentHeight - 5);
+    pdf.text(auditLine, contentLeft, contentTop + contentHeight - 5);
 
     if (debug) {
-      // Debug content area
-      pdf.setDrawColor(0, 0, 255);
+      // Debug content area boundary
+      pdf.setDrawColor(0, 255, 0);
       pdf.setLineWidth(0.5);
-      pdf.rect(padding, padding, contentWidth, topSectionHeight); // Top
-      pdf.rect(padding, padding + topSectionHeight, contentWidth, middleSectionHeight); // Middle
-      pdf.rect(padding, padding + topSectionHeight + middleSectionHeight, contentWidth, bottomSectionHeight); // Bottom
+      pdf.rect(contentLeft, contentTop, contentWidth, contentHeight);
+      
+      // Debug section divisions
+      pdf.setDrawColor(0, 0, 255);
+      pdf.line(contentLeft, contentTop + topSectionHeight, contentLeft + contentWidth, contentTop + topSectionHeight);
+      pdf.line(contentLeft, contentTop + topSectionHeight + middleSectionHeight, contentLeft + contentWidth, contentTop + topSectionHeight + middleSectionHeight);
     }
 
-    console.log('✅ Enhanced landscape content drawing completed');
-  }
-
-  /**
-   * Method 2: Draw using matrix transformations
-   */
-  static async drawWithMatrixTransform(pdf, labelData, position, boxNumber, totalBoxes, currentUser, debug) {
-    const { x, y, width, height } = position;
-    
-    // Calculate transformation matrix for 90° rotation around center
-    const centerX = x + width / 2;
-    const centerY = y + height / 2;
-    
-    // 90° clockwise rotation matrix
-    const matrix = [0, 1, -1, 0, centerX + centerY, centerY - centerX];
-    
-    // Apply matrix transformation
-    pdf.setCurrentTransformationMatrix(matrix);
-    
-    // Draw content in landscape coordinates
-    const contentWidth = height; // 432pt
-    const contentHeight = width;  // 288pt
-    
-    await this.drawEnhancedLandscapeContent(pdf, labelData, contentWidth, contentHeight, boxNumber, totalBoxes, currentUser, debug);
-    
-    // Reset transformation matrix
-    pdf.setCurrentTransformationMatrix([1, 0, 0, 1, 0, 0]);
+    console.log('✅ Fixed landscape content drawing completed');
   }
 
   /**
@@ -914,7 +406,8 @@ export class PDFGenerator {
       landscapeContent: true,
       contentRotation: 90,
       postcardStyle: true,
-      optimalSpaceUsage: true
+      optimalSpaceUsage: true,
+      fixed: true
     };
   }
 
@@ -1023,7 +516,7 @@ export class PDFGenerator {
 
     const dashMatch = trimmed.match(/^([A-Za-z\s&'-]+?)\s*[-–:]\s*(.+)$/);
     if (dashMatch && dashMatch[1].length <= 25) {
-      return { brand: dashMatch[1].trim(), productName: dashMatch[2.trim() };
+      return { brand: dashMatch[1].trim(), productName: dashMatch[2].trim() };
     }
 
     return { brand: '', productName: trimmed };
@@ -1038,10 +531,84 @@ export class PDFGenerator {
   }
 
   /**
+   * Generate audit line
+   */
+  static generateAuditLine(currentUser) {
+    const now = new Date();
+    const month = (now.getMonth() + 1).toString().padStart(2, '0');
+    const day = now.getDate().toString().padStart(2, '0');
+    const year = now.getFullYear().toString().slice(-2);
+    
+    let hours = now.getHours();
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+    const hoursStr = hours.toString();
+    
+    const minutes = now.getMinutes().toString().padStart(2, '0');
+    
+    return `${month}/${day}/${year} ${hoursStr}:${minutes}${ampm} EST (${(currentUser || 'Unknown').substring(0, 8)})`;
+  }
+
+  /**
+   * Calculate optimal font size for available space
+   */
+  static calculateOptimalFontSize(text, availableWidth, maxSize = 28, minSize = 14) {
+    if (!text) return maxSize;
+    
+    const length = text.length;
+    let fontSize = maxSize;
+    
+    // Adjust based on text length
+    if (length > 100) fontSize = Math.max(minSize, maxSize - 12);
+    else if (length > 80) fontSize = Math.max(minSize, maxSize - 10);
+    else if (length > 60) fontSize = Math.max(minSize, maxSize - 8);
+    else if (length > 40) fontSize = Math.max(minSize, maxSize - 6);
+    else if (length > 25) fontSize = Math.max(minSize, maxSize - 4);
+    else if (length > 15) fontSize = Math.max(minSize, maxSize - 2);
+    
+    // Check if it fits in available space
+    const estimatedWidth = length * (fontSize * 0.6);
+    if (estimatedWidth > availableWidth) {
+      fontSize = Math.max(minSize, Math.floor((availableWidth / length) * 1.4));
+    }
+    
+    return Math.min(fontSize, maxSize);
+  }
+
+  /**
+   * Wrap text to fit within specified width
+   */
+  static wrapText(text, maxWidth, fontSize) {
+    if (!text) return [''];
+    
+    const words = text.split(' ');
+    const lines = [];
+    let currentLine = '';
+    
+    const charWidth = fontSize * 0.6;
+    const maxCharsPerLine = Math.floor(maxWidth / charWidth);
+    
+    words.forEach(word => {
+      const testLine = currentLine + (currentLine ? ' ' : '') + word;
+      if (testLine.length <= maxCharsPerLine || currentLine === '') {
+        currentLine = testLine;
+      } else {
+        lines.push(currentLine);
+        currentLine = word;
+      }
+    });
+    
+    if (currentLine) lines.push(currentLine);
+    
+    return lines.length > 0 ? lines : [''];
+  }
+
+  /**
    * Generate test PDF - Creates 4 different labels
    */
   static async generateTestPDF() {
-    console.log('🧪 Generating FIXED test PDF with corrected raw PDF commands...');
+    console.log('🧪 Generating FIXED test PDF with working landscape layout...');
     
     const testData = [
       {
@@ -1121,8 +688,8 @@ export class PDFGenerator {
       warnings,
       totalLabels: labelDataArray.length,
       estimatedPages: Math.ceil(labelDataArray.length / 4),
-      labelFormat: 'Uline S-12212 (FIXED Landscape Content with Raw PDF Commands)',
-      approach: 'Fixed coordinate transformations with enhanced landscape content'
+      labelFormat: 'Uline S-12212 (FIXED Landscape Content Layout)',
+      approach: 'Fixed single transformation matrix with corrected coordinate system'
     };
   }
 }
