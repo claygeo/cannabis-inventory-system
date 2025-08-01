@@ -11,18 +11,288 @@ import storage from './storage.js';
  */
 export class PDFGenerator {
   /**
+   * DEBUG: Check what methods are available on jsPDF instance
+   */
+  static debugJsPDFInstance() {
+    console.log('🔍 Debugging jsPDF instance...');
+    
+    const pdf = new jsPDF({
+      orientation: 'portrait',
+      unit: 'pt',
+      format: [612, 1008]
+    });
+    
+    console.log('📋 PDF instance type:', typeof pdf);
+    console.log('📋 PDF constructor:', pdf.constructor.name);
+    
+    // Check available methods
+    const methods = Object.getOwnPropertyNames(pdf).concat(Object.getOwnPropertyNames(Object.getPrototypeOf(pdf)));
+    const uniqueMethods = [...new Set(methods)].sort();
+    
+    console.log('📋 Available methods count:', uniqueMethods.length);
+    console.log('📋 First 20 methods:', uniqueMethods.slice(0, 20));
+    
+    // Check specific transformation methods
+    const transformMethods = ['save', 'restore', 'translate', 'rotate'];
+    console.log('🔄 Transformation methods check:');
+    transformMethods.forEach(method => {
+      const exists = typeof pdf[method] === 'function';
+      console.log(`  - ${method}: ${typeof pdf[method]} ${exists ? '✅' : '❌'}`);
+      if (exists) {
+        console.log(`    Function: ${pdf[method].toString().substring(0, 100)}...`);
+      }
+    });
+    
+    // Check if methods exist with different names
+    const alternativeNames = [
+      'saveState', 'restoreState', 'translatePage', 'rotatePage',
+      'saveGraphicsState', 'restoreGraphicsState', 'setCurrentTransformationMatrix'
+    ];
+    console.log('🔄 Alternative method names:');
+    alternativeNames.forEach(method => {
+      if (pdf[method]) {
+        console.log(`  - ${method}: ${typeof pdf[method]} ✅`);
+      }
+    });
+    
+    return pdf;
+  }
+
+  /**
+   * TEST: Try different transformation approaches
+   */
+  static async testTransformationMethods() {
+    console.log('🧪 Testing transformation methods...');
+    
+    const pdf = new jsPDF({
+      orientation: 'portrait',
+      unit: 'pt',
+      format: [612, 1008]
+    });
+    
+    try {
+      // Test 1: Standard jsPDF 2.5.1 approach
+      console.log('📝 Testing standard approach...');
+      
+      if (typeof pdf.save === 'function') {
+        console.log('✅ pdf.save() exists - calling it...');
+        pdf.save();
+        
+        if (typeof pdf.translate === 'function') {
+          console.log('✅ pdf.translate() exists - calling it...');
+          pdf.translate(100, 100);
+          
+          if (typeof pdf.rotate === 'function') {
+            console.log('✅ pdf.rotate() exists - calling it...');
+            pdf.rotate(Math.PI / 2);
+            
+            pdf.setFontSize(20);
+            pdf.text('Test Rotated Text', 0, 0);
+          }
+        }
+        
+        if (typeof pdf.restore === 'function') {
+          console.log('✅ pdf.restore() exists - calling it...');
+          pdf.restore();
+        }
+      }
+      
+      console.log('✅ Transformation test completed successfully');
+      return pdf.output('blob');
+      
+    } catch (error) {
+      console.error('❌ Transformation test failed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * DEBUGGING METHOD: Generate simple test PDF to isolate issues
+   */
+  static async generateDebugPDF() {
+    console.log('🔍 Starting debug PDF generation...');
+    
+    const pdf = new jsPDF({
+      orientation: 'portrait',
+      unit: 'pt',
+      format: [612, 1008] // Legal size
+    });
+
+    try {
+      // Step 1: Test basic positioning without rotation
+      console.log('📍 Testing basic label positioning...');
+      
+      for (let i = 0; i < 4; i++) {
+        const position = this.calculateUlineS12212PositionConnected(i);
+        console.log(`Label ${i}:`, position);
+        
+        // Draw basic rectangle for each label
+        pdf.setDrawColor(255, 0, 0); // Red border
+        pdf.setLineWidth(2);
+        pdf.rect(position.x, position.y, position.width, position.height);
+        
+        // Add label number
+        pdf.setFontSize(20);
+        pdf.setTextColor(255, 0, 0);
+        pdf.text(`Label ${i + 1}`, position.x + 10, position.y + 30);
+        
+        // Show dimensions
+        pdf.setFontSize(12);
+        pdf.text(`${position.width}x${position.height}`, position.x + 10, position.y + 50);
+        pdf.text(`(${position.x}, ${position.y})`, position.x + 10, position.y + 70);
+      }
+      
+      console.log('✅ Basic positioning test complete');
+      return pdf.output('blob');
+      
+    } catch (error) {
+      console.error('❌ Debug PDF generation failed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * DEBUGGING METHOD: Test rotation without content
+   */
+  static async generateRotationTestPDF() {
+    console.log('🔄 Testing rotation mechanics...');
+    
+    const pdf = new jsPDF({
+      orientation: 'portrait',
+      unit: 'pt',
+      format: [612, 1008]
+    });
+
+    try {
+      for (let i = 0; i < 4; i++) {
+        const position = this.calculateUlineS12212PositionConnected(i);
+        
+        // Draw label border
+        pdf.setDrawColor(0, 0, 0);
+        pdf.setLineWidth(1);
+        pdf.rect(position.x, position.y, position.width, position.height);
+        
+        // Test rotation
+        console.log(`🔄 Testing rotation for label ${i}...`);
+        
+        if (typeof pdf.save === 'function' && typeof pdf.restore === 'function' && 
+            typeof pdf.translate === 'function' && typeof pdf.rotate === 'function') {
+          
+          console.log('✅ All transformation methods available');
+          pdf.save();
+          
+          const centerX = position.x + position.width / 2;
+          const centerY = position.y + position.height / 2;
+          
+          console.log(`Label ${i} - Center: (${centerX}, ${centerY})`);
+          
+          pdf.translate(centerX, centerY);
+          pdf.rotate(90 * Math.PI / 180);
+          pdf.translate(-position.contentDesignWidth / 2, -position.contentDesignHeight / 2);
+          
+          // Draw rotated content area
+          pdf.setDrawColor(0, 255, 0); // Green
+          pdf.setLineWidth(2);
+          pdf.rect(0, 0, position.contentDesignWidth, position.contentDesignHeight);
+          
+          // Add rotated text
+          pdf.setFontSize(16);
+          pdf.setTextColor(0, 255, 0);
+          pdf.text(`Rotated ${i + 1}`, 20, 30);
+          pdf.text(`6" wide x 4" tall`, 20, 50);
+          
+          pdf.restore();
+          console.log(`✅ Rotation test ${i} completed`);
+        } else {
+          console.log('❌ Transformation methods not available');
+          // Fallback: just add text without rotation
+          pdf.setFontSize(16);
+          pdf.setTextColor(255, 0, 0);
+          pdf.text(`No Rotation ${i + 1}`, position.x + 10, position.y + 100);
+        }
+      }
+      
+      console.log('✅ Rotation test complete');
+      return pdf.output('blob');
+      
+    } catch (error) {
+      console.error('❌ Rotation test failed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * DEBUGGING METHOD: Check positioning calculations
+   */
+  static debugPositions() {
+    console.log('🧮 Debugging position calculations...');
+    
+    for (let i = 0; i < 4; i++) {
+      const pos = this.calculateUlineS12212PositionConnected(i);
+      
+      console.log(`Label ${i}:`, {
+        position: `(${pos.x}, ${pos.y})`,
+        size: `${pos.width} x ${pos.height}`,
+        contentSize: `${pos.contentDesignWidth} x ${pos.contentDesignHeight}`,
+        row: pos.row,
+        col: pos.col,
+        connectedSides: pos.connectedSides
+      });
+      
+      // Check if positions are valid
+      if (pos.x < 0 || pos.y < 0) {
+        console.warn(`⚠️ Label ${i} has negative position!`);
+      }
+      
+      if (pos.x + pos.width > 612) {
+        console.warn(`⚠️ Label ${i} extends beyond page width!`);
+      }
+      
+      if (pos.y + pos.height > 1008) {
+        console.warn(`⚠️ Label ${i} extends beyond page height!`);
+      }
+    }
+    
+    // Check for overlaps
+    for (let i = 0; i < 4; i++) {
+      for (let j = i + 1; j < 4; j++) {
+        const pos1 = this.calculateUlineS12212PositionConnected(i);
+        const pos2 = this.calculateUlineS12212PositionConnected(j);
+        
+        const overlapX = pos1.x < pos2.x + pos2.width && pos2.x < pos1.x + pos1.width;
+        const overlapY = pos1.y < pos2.y + pos2.height && pos2.y < pos1.y + pos1.height;
+        
+        if (overlapX && overlapY) {
+          console.warn(`⚠️ Labels ${i} and ${j} overlap!`);
+        }
+      }
+    }
+    
+    console.log('✅ Position debugging complete');
+  }
+
+  /**
    * Generate PDF with labels positioned for Uline S-12212 sheets
    * @param {Array} labelDataArray - Array of label data objects
    * @param {Object} options - Generation options
    * @returns {Promise<Blob>} - PDF blob
    */
   static async generateLabels(labelDataArray, options = {}) {
+    console.log('🏷️ Starting PDF generation with options:', options);
+    console.log('📋 Label data array length:', labelDataArray.length);
+    
     const {
       format = 'legal',
       orientation = 'portrait',
       debug = false,
       currentUser = 'Unknown'
     } = options;
+
+    // Debug jsPDF instance first
+    if (debug) {
+      this.debugJsPDFInstance();
+      this.debugPositions();
+    }
 
     // Legal size sheets for S-12212 (8.5" × 14")
     const pdf = new jsPDF({
@@ -31,32 +301,46 @@ export class PDFGenerator {
       format: [612, 1008] // Legal size in points
     });
 
+    console.log('📄 PDF instance created successfully');
+
     let currentLabelIndex = 0;
     let currentPage = 1;
     const specs = LabelFormatter.getLabelSpecs();
 
+    console.log('📊 Label specs:', specs);
+
     try {
       // Process each label data item
-      for (const labelData of labelDataArray) {
+      for (let dataIndex = 0; dataIndex < labelDataArray.length; dataIndex++) {
+        const labelData = labelDataArray[dataIndex];
+        console.log(`🏷️ Processing label data ${dataIndex + 1}/${labelDataArray.length}:`, labelData);
+        
         const formattedData = LabelFormatter.formatLabelData(
           labelData,
           labelData.enhancedData || {},
           labelData.user || currentUser
         );
 
+        console.log('📝 Formatted data:', formattedData);
+
         // Generate the number of labels specified
         for (let labelCopy = 0; labelCopy < formattedData.labelQuantity; labelCopy++) {
+          console.log(`📄 Generating label copy ${labelCopy + 1}/${formattedData.labelQuantity}`);
+          
           // Check if we need a new page (4 labels per sheet)
           if (currentLabelIndex > 0 && currentLabelIndex % specs.LABELS_PER_SHEET === 0) {
+            console.log('📄 Adding new page');
             pdf.addPage();
             currentPage++;
           }
 
           // Calculate position for this label (labels touching on all sides)
           const position = this.calculateUlineS12212PositionConnected(currentLabelIndex % specs.LABELS_PER_SHEET);
+          console.log(`📍 Label ${currentLabelIndex} position:`, position);
 
           // Calculate which box number this label represents
           const boxNumber = Math.floor(labelCopy / Math.max(1, Math.floor(formattedData.labelQuantity / formattedData.boxCount))) + 1;
+          console.log(`📦 Box number: ${boxNumber}/${formattedData.boxCount}`);
 
           // Draw the label with LANDSCAPE CONTENT ROTATED AS COMPLETE UNIT
           await this.drawLandscapeContentLabel(pdf, formattedData, position, boxNumber, formattedData.boxCount, debug, currentUser);
@@ -65,12 +349,14 @@ export class PDFGenerator {
         }
       }
 
+      console.log(`✅ Generated ${currentLabelIndex} labels across ${currentPage} pages`);
+
       // Add metadata
       pdf.setDocumentProperties({
         title: `Cannabis Inventory Labels - ${new Date().toISOString().slice(0, 10)}`,
         subject: 'Uline S-12212 Format Labels (Landscape Content Rotated as Complete Unit)',
         author: 'Cannabis Inventory Management System',
-        creator: 'Cannabis Inventory Management System v8.1.0',
+        creator: 'Cannabis Inventory Management System v8.2.0',
         keywords: 'cannabis, inventory, labels, uline, s-12212, landscape-content, rotated-layout, postcard-style'
       });
 
@@ -84,7 +370,8 @@ export class PDFGenerator {
       return pdf.output('blob');
 
     } catch (error) {
-      console.error('PDF generation error:', error);
+      console.error('❌ PDF generation error:', error);
+      console.error('❌ Error stack:', error.stack);
       
       storage.addSessionEvent(
         EVENT_TYPES.ERROR_OCCURRED,
@@ -192,6 +479,8 @@ export class PDFGenerator {
    * @param {string} currentUser - Current user
    */
   static async drawLandscapeContentLabel(pdf, labelData, position, boxNumber = 1, totalBoxes = 1, debug = false, currentUser = 'Unknown') {
+    console.log(`🎨 Drawing landscape content label at position:`, position);
+    
     const { x, y, width, height, contentDesignWidth, contentDesignHeight } = position;
 
     try {
@@ -231,58 +520,92 @@ export class PDFGenerator {
         pdf.text(`L${position.labelIndex + 1} LANDSCAPE`, x + 5, y + 20);
       }
 
-      // Save current state before rotation
-      pdf.save();
+      // Check if transformation methods are available
+      const hasTransformMethods = typeof pdf.save === 'function' && 
+                                  typeof pdf.restore === 'function' && 
+                                  typeof pdf.translate === 'function' && 
+                                  typeof pdf.rotate === 'function';
 
-      // Transform coordinate system for landscape content
-      // Move to center of label, rotate 90° clockwise, then translate for content positioning
-      const centerX = x + width / 2;
-      const centerY = y + height / 2;
-      
-      pdf.translate(centerX, centerY);
-      pdf.rotate(90 * Math.PI / 180); // 90° clockwise rotation
-      pdf.translate(-contentDesignWidth / 2, -contentDesignHeight / 2);
+      console.log(`🔄 Transform methods available: ${hasTransformMethods}`);
 
-      // Now draw content in landscape orientation (6" wide × 4" tall)
-      await this.drawLandscapeContent(pdf, labelData, contentDesignWidth, contentDesignHeight, boxNumber, totalBoxes, currentUser, debug);
+      if (hasTransformMethods) {
+        console.log('✅ Using PDF transformations for rotation');
+        
+        // Save current state before rotation
+        pdf.save();
 
-      // Restore coordinate system
-      pdf.restore();
+        // Transform coordinate system for landscape content
+        // Move to center of label, rotate 90° clockwise, then translate for content positioning
+        const centerX = x + width / 2;
+        const centerY = y + height / 2;
+        
+        console.log(`📍 Transforming to center (${centerX}, ${centerY})`);
+        
+        pdf.translate(centerX, centerY);
+        pdf.rotate(90 * Math.PI / 180); // 90° clockwise rotation
+        pdf.translate(-contentDesignWidth / 2, -contentDesignHeight / 2);
+
+        // Now draw content in landscape orientation (6" wide × 4" tall)
+        await this.drawLandscapeContent(pdf, labelData, contentDesignWidth, contentDesignHeight, boxNumber, totalBoxes, currentUser, debug);
+
+        // Restore coordinate system
+        pdf.restore();
+        console.log('✅ PDF transformation completed successfully');
+        
+      } else {
+        console.log('⚠️ PDF transformations not available - using fallback method');
+        
+        // Fallback: Draw content without transformation
+        await this.drawFallbackContent(pdf, labelData, x, y, width, height, boxNumber, totalBoxes, currentUser, debug);
+      }
 
     } catch (error) {
-      console.error('Error drawing landscape content label:', error);
-      pdf.restore(); // Ensure we restore even on error
+      console.error('❌ Error drawing landscape content label:', error);
+      console.error('❌ Error details:', {
+        position,
+        labelData: labelData.productName,
+        error: error.message,
+        stack: error.stack
+      });
       
+      // Ensure we restore PDF state even on error
+      if (typeof pdf.restore === 'function') {
+        try {
+          pdf.restore();
+        } catch (restoreError) {
+          console.error('❌ Error restoring PDF state:', restoreError);
+        }
+      }
+      
+      // Draw error indicator
       pdf.setFontSize(10);
       pdf.setTextColor(255, 0, 0);
       pdf.text('Label Error', x + 5, y + 20);
+      pdf.text(error.message.substring(0, 30), x + 5, y + 35);
     }
   }
 
   /**
    * Draw content in landscape orientation (6" wide × 4" tall)
    * This content will be rotated 90° clockwise as a complete unit
-   * @param {jsPDF} pdf - PDF document
-   * @param {Object} labelData - Label data
-   * @param {number} width - Content width (432pt = 6")
-   * @param {number} height - Content height (288pt = 4")
-   * @param {number} boxNumber - Box number
-   * @param {number} totalBoxes - Total boxes
-   * @param {string} currentUser - Current user
-   * @param {boolean} debug - Debug mode
    */
   static async drawLandscapeContent(pdf, labelData, width, height, boxNumber, totalBoxes, currentUser, debug) {
+    console.log(`🎨 Drawing landscape content - ${width}x${height}pt`);
+    
     const padding = 15;
     const contentWidth = width - (padding * 2);    // 402pt
     const contentHeight = height - (padding * 2);  // 258pt
 
     // Extract brand info
     const brandInfo = this.extractBrandFromProductName(labelData.productName);
+    console.log('🏷️ Brand info:', brandInfo);
 
     // Layout sections for landscape content (percentages from labelFormatter.js)
     const topSectionHeight = Math.floor(contentHeight * 0.35);     // ~90pt
     const middleSectionHeight = Math.floor(contentHeight * 0.35);  // ~90pt  
     const bottomSectionHeight = contentHeight - topSectionHeight - middleSectionHeight; // ~78pt
+
+    console.log('📏 Section heights:', { topSectionHeight, middleSectionHeight, bottomSectionHeight });
 
     // Section 1: Brand + Product Name (Top - 35%) - CENTERED
     await this.drawLandscapeTopSection(pdf, brandInfo, padding, padding, contentWidth, topSectionHeight);
@@ -304,12 +627,85 @@ export class PDFGenerator {
       pdf.rect(padding, padding + topSectionHeight, contentWidth, middleSectionHeight); // Middle
       pdf.rect(padding, padding + topSectionHeight + middleSectionHeight, contentWidth, bottomSectionHeight); // Bottom
     }
+
+    console.log('✅ Landscape content drawing completed');
+  }
+
+  /**
+   * Fallback content drawing method when transformations aren't available
+   */
+  static async drawFallbackContent(pdf, labelData, x, y, width, height, boxNumber, totalBoxes, currentUser, debug) {
+    console.log('⚠️ Drawing fallback content (no transformations)');
+    
+    const padding = 20;
+    
+    // Extract brand info
+    const brandInfo = this.extractBrandFromProductName(labelData.productName);
+    
+    let currentY = y + padding + 20;
+    
+    // Brand name
+    if (brandInfo.brand) {
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(16);
+      pdf.setTextColor(44, 85, 48);
+      pdf.text(brandInfo.brand, x + width / 2, currentY, { align: 'center' });
+      currentY += 25;
+    }
+    
+    // Product name
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(14);
+    pdf.setTextColor(0, 0, 0);
+    
+    const lines = this.wrapTextForFallback(brandInfo.productName, width - 40);
+    lines.forEach(line => {
+      pdf.text(line, x + width / 2, currentY, { align: 'center' });
+      currentY += 18;
+    });
+    
+    currentY += 20;
+    
+    // Store section
+    pdf.setFontSize(12);
+    pdf.text('Store:', x + padding, currentY);
+    
+    const storeBoxWidth = width - 60;
+    const storeBoxX = x + padding + 10;
+    currentY += 10;
+    
+    pdf.setDrawColor(0, 0, 0);
+    pdf.setLineWidth(1);
+    pdf.rect(storeBoxX, currentY, storeBoxWidth, 30);
+    
+    currentY += 50;
+    
+    // Bottom info
+    pdf.setFontSize(10);
+    pdf.text(`Harvest: ${labelData.harvestDate || 'MM/DD/YY'}`, x + padding, currentY);
+    currentY += 15;
+    pdf.text(`Package: ${labelData.packagedDate || 'MM/DD/YY'}`, x + padding, currentY);
+    currentY += 15;
+    pdf.text(`Case: ${labelData.caseQuantity || '___'}`, x + padding, currentY);
+    currentY += 15;
+    pdf.text(`Box ${boxNumber}/${totalBoxes}`, x + padding, currentY);
+    
+    // Audit trail
+    const now = new Date();
+    const auditLine = `${now.getMonth() + 1}/${now.getDate()}/${now.getFullYear().toString().slice(-2)} ${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`;
+    pdf.setFontSize(8);
+    pdf.setTextColor(128, 128, 128);
+    pdf.text(auditLine, x + padding, y + height - 15);
+    
+    console.log('✅ Fallback content drawing completed');
   }
 
   /**
    * Draw top section in landscape layout - Brand and Product Name (CENTERED)
    */
   static async drawLandscapeTopSection(pdf, brandInfo, x, y, width, height) {
+    console.log('🎨 Drawing landscape top section');
+    
     let currentY = y + 20;
     
     // Brand name (CENTERED)
@@ -351,6 +747,8 @@ export class PDFGenerator {
    * Draw store section in landscape layout - UPDATED: Store label above single textbox
    */
   static drawLandscapeStoreSection(pdf, x, y, width, height) {
+    console.log('🎨 Drawing landscape store section');
+    
     // "Store:" label - positioned above and to the left of textbox
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(16);
@@ -384,6 +782,8 @@ export class PDFGenerator {
    * UPDATED: Larger barcode, numeric above, textboxes around case/box
    */
   static async drawLandscapeBottomSection(pdf, labelData, x, y, width, height, boxNumber, totalBoxes) {
+    console.log('🎨 Drawing landscape bottom section');
+    
     const colWidth = width / 3;
 
     // Column 1: Barcode - UPDATED LAYOUT
@@ -400,6 +800,8 @@ export class PDFGenerator {
    * Draw barcode column in landscape layout - UPDATED: Larger barcode, numeric above
    */
   static async drawLandscapeBarcodeColumn(pdf, labelData, x, y, width, height) {
+    console.log('🎨 Drawing landscape barcode column');
+    
     const centerX = x + width / 2;
     
     // Barcode numeric display ABOVE barcode
@@ -423,6 +825,8 @@ export class PDFGenerator {
    * Draw dates column in landscape layout
    */
   static drawLandscapeDatesColumn(pdf, labelData, x, y, width, height) {
+    console.log('🎨 Drawing landscape dates column');
+    
     const centerX = x + width / 2;
     let currentY = y + 20;
     
@@ -456,6 +860,8 @@ export class PDFGenerator {
    * Draw case/box column in landscape layout - WITH TEXTBOXES
    */
   static drawLandscapeCaseColumn(pdf, labelData, x, y, width, height, boxNumber, totalBoxes) {
+    console.log('🎨 Drawing landscape case column');
+    
     const centerX = x + width / 2;
     let currentY = y + 15;
     
@@ -549,6 +955,32 @@ export class PDFGenerator {
     
     const charWidth = fontSize * 0.6; // Approximate character width
     const maxCharsPerLine = Math.floor(maxWidth / charWidth);
+    
+    words.forEach(word => {
+      const testLine = currentLine + (currentLine ? ' ' : '') + word;
+      if (testLine.length <= maxCharsPerLine || currentLine === '') {
+        currentLine = testLine;
+      } else {
+        lines.push(currentLine);
+        currentLine = word;
+      }
+    });
+    
+    if (currentLine) lines.push(currentLine);
+    
+    return lines.length > 0 ? lines : [''];
+  }
+
+  /**
+   * Wrap text for fallback method
+   */
+  static wrapTextForFallback(text, maxWidth) {
+    if (!text) return [''];
+    
+    const words = text.split(' ');
+    const lines = [];
+    let currentLine = '';
+    const maxCharsPerLine = Math.floor(maxWidth / 8); // Approximate
     
     words.forEach(word => {
       const testLine = currentLine + (currentLine ? ' ' : '') + word;
@@ -664,6 +1096,8 @@ export class PDFGenerator {
    * Generate test PDF - FIXED: Creates 4 different labels
    */
   static async generateTestPDF() {
+    console.log('🧪 Generating test PDF with 4 different products...');
+    
     const testData = [
       {
         sku: 'CURALEAF-PINK-CHAMPAGNE',
@@ -719,6 +1153,7 @@ export class PDFGenerator {
       }
     ];
 
+    console.log('📋 Test data created:', testData.length, 'products');
     return this.generateLabels(testData, { debug: true, currentUser: 'TestUser' });
   }
 
@@ -777,7 +1212,7 @@ export class PDFGenerator {
 
     return {
       migration: 'Uline S-12212 Landscape Content with Complete Rotation',
-      version: '8.1.0',
+      version: '8.2.0',
       approach: {
         concept: 'Content designed for landscape (6" wide × 4" tall), rotated as complete unit',
         method: 'PDF coordinate transformation with save/restore for entire content area rotation',
