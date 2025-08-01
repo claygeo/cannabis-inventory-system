@@ -6,7 +6,7 @@ import storage from './storage.js';
 
 /**
  * PDF Generation utilities for Uline S-12212 label sheets (4" × 6")
- * SIMPLE ROTATION APPROACH: Create normal horizontal layout, then rotate entire content 90°
+ * MANUAL ROTATION APPROACH: Position rotated text manually without transformation matrices
  * Final result: Content flows horizontally across 6" width when paper is rotated 90° clockwise
  */
 export class PDFGenerator {
@@ -58,8 +58,8 @@ export class PDFGenerator {
           // Calculate which box number this label represents
           const boxNumber = Math.floor(labelCopy / Math.max(1, Math.floor(formattedData.labelQuantity / formattedData.boxCount))) + 1;
 
-          // Draw the label with SIMPLE ROTATION APPROACH
-          await this.drawSimpleRotatedLabel(pdf, formattedData, position, boxNumber, formattedData.boxCount, debug, currentUser);
+          // Draw the label with MANUAL ROTATION
+          await this.drawManuallyRotatedLabel(pdf, formattedData, position, boxNumber, formattedData.boxCount, debug, currentUser);
 
           currentLabelIndex++;
         }
@@ -68,17 +68,17 @@ export class PDFGenerator {
       // Add metadata
       pdf.setDocumentProperties({
         title: `Cannabis Inventory Labels - ${new Date().toISOString().slice(0, 10)}`,
-        subject: 'Uline S-12212 Format Labels (Simple Rotation for 6" Width)',
+        subject: 'Uline S-12212 Format Labels (Manual Rotation for 6" Width)',
         author: 'Cannabis Inventory Management System',
-        creator: 'Cannabis Inventory Management System v6.9.0',
-        keywords: 'cannabis, inventory, labels, uline, s-12212, simple-rotation, 6inch'
+        creator: 'Cannabis Inventory Management System v7.0.0',
+        keywords: 'cannabis, inventory, labels, uline, s-12212, manual-rotation, 6inch'
       });
 
       // Log generation event
       storage.addSessionEvent(
         EVENT_TYPES.LABEL_GENERATED,
-        `Generated ${currentLabelIndex} S-12212 labels with simple rotation approach across ${currentPage} pages`,
-        `Items: ${labelDataArray.length}, Format: Uline S-12212 (Simple Rotation for 6" Width)`
+        `Generated ${currentLabelIndex} S-12212 labels with manual rotation across ${currentPage} pages`,
+        `Items: ${labelDataArray.length}, Format: Uline S-12212 (Manual Rotation for 6" Width)`
       );
 
       return pdf.output('blob');
@@ -151,14 +151,14 @@ export class PDFGenerator {
       // Layout info
       isSideways: true,
       requiresRotation: true,
-      simpleRotation: true, // NEW: Using simple rotation approach
+      manualRotation: true, // NEW: Using manual rotation positioning
       rotationInstructions: 'Rotate paper 90° clockwise to read labels optimized for 6" width'
     };
   }
 
   /**
-   * Draw label with SIMPLE ROTATION APPROACH
-   * Create horizontal layout (6" wide × 4" tall), then rotate entire content 90° clockwise
+   * Draw label with MANUAL ROTATION - no transformation matrices
+   * Position each element manually to create the effect of 90° rotation
    * @param {jsPDF} pdf - PDF document
    * @param {Object} labelData - Formatted label data
    * @param {Object} position - Label position and dimensions
@@ -167,7 +167,7 @@ export class PDFGenerator {
    * @param {boolean} debug - Show debug borders
    * @param {string} currentUser - Current user
    */
-  static async drawSimpleRotatedLabel(pdf, labelData, position, boxNumber = 1, totalBoxes = 1, debug = false, currentUser = 'Unknown') {
+  static async drawManuallyRotatedLabel(pdf, labelData, position, boxNumber = 1, totalBoxes = 1, debug = false, currentUser = 'Unknown') {
     const { x, y, width, height } = position;
 
     try {
@@ -176,53 +176,52 @@ export class PDFGenerator {
       pdf.setLineWidth(1);
       pdf.rect(x, y, width, height);
 
-      // Save the current graphics state
-      pdf.saveGraphicsState();
-
-      // Set up rotation: rotate 90° clockwise around the label center
-      const centerX = x + width / 2;
-      const centerY = y + height / 2;
-      
-      // Translate to center, rotate, translate back
-      pdf.setCurrentTransformationMatrix(
-        Math.cos(Math.PI/2),   // cos(90°) = 0
-        Math.sin(Math.PI/2),   // sin(90°) = 1  
-        -Math.sin(Math.PI/2),  // -sin(90°) = -1
-        Math.cos(Math.PI/2),   // cos(90°) = 0
-        centerX + centerY,     // tx
-        centerY - centerX      // ty
-      );
-
-      // Now draw content in "horizontal" coordinate system (6" wide × 4" tall)
-      // This content will be rotated 90° clockwise by the transformation
-      const contentWidth = 432;  // 6" when rotated (flows horizontally)
-      const contentHeight = 288;  // 4" when rotated (flows vertically)
-      
-      // Center the content in the transformed space
-      const contentX = -contentWidth / 2;
-      const contentY = -contentHeight / 2;
-
-      // Debug info for rotated content
+      // Debug info
       if (debug) {
         pdf.setDrawColor(255, 0, 0);
         pdf.setLineWidth(0.5);
-        pdf.rect(contentX, contentY, contentWidth, contentHeight);
+        pdf.rect(x + 2, y + 2, width - 4, height - 4);
         
         pdf.setFontSize(8);
         pdf.setTextColor(255, 0, 0);
-        pdf.text(`L${position.labelIndex + 1} SIMPLE-ROT`, contentX + 5, contentY + 15);
+        pdf.text(`L${position.labelIndex + 1} MANUAL`, x + 5, y + 15, { angle: 90 });
       }
+
+      const padding = 10;
+      const contentX = x + padding;
+      const contentY = y + padding;
+      const contentWidth = width - (padding * 2);    // 268pt
+      const contentHeight = height - (padding * 2);  // 412pt
 
       const brandInfo = this.extractBrandFromProductName(labelData.productName);
 
-      // Draw horizontal layout (this will appear rotated 90° clockwise in final PDF)
-      await this.drawHorizontalLayout(pdf, labelData, brandInfo, contentX, contentY, contentWidth, contentHeight, boxNumber, totalBoxes, currentUser);
+      // When paper is rotated 90° clockwise, the layout should look like:
+      // [Brand + Product] [Store] [Barcode|Dates|Case] [Audit]
+      // flowing horizontally across the 6" width
 
-      // Restore the graphics state
-      pdf.restoreGraphicsState();
+      // In PDF coordinates (before paper rotation):
+      // Top section = Left when rotated (Brand + Product)
+      // Middle-top = Center-left when rotated (Store)  
+      // Middle-bottom = Center-right when rotated (Bottom info)
+      // Bottom = Right when rotated (Audit)
+
+      // Section widths when rotated (heights in PDF coordinates)
+      const brandProductHeight = Math.floor(contentHeight * 0.40); // 165pt
+      const storeHeight = Math.floor(contentHeight * 0.25);        // 103pt  
+      const bottomInfoHeight = Math.floor(contentHeight * 0.30);   // 124pt
+      const auditHeight = contentHeight - brandProductHeight - storeHeight - bottomInfoHeight; // Remaining
+
+      // Draw sections
+      await this.drawRotatedBrandProduct(pdf, brandInfo, contentX, contentY, contentWidth, brandProductHeight);
+      
+      this.drawRotatedStore(pdf, contentX, contentY + brandProductHeight, contentWidth, storeHeight);
+      
+      await this.drawRotatedBottomInfo(pdf, labelData, contentX, contentY + brandProductHeight + storeHeight, contentWidth, bottomInfoHeight, boxNumber, totalBoxes);
+      
+      this.drawRotatedAudit(pdf, currentUser, contentX, contentY + brandProductHeight + storeHeight + bottomInfoHeight, contentWidth, auditHeight);
 
     } catch (error) {
-      console.error('Error drawing simple rotated label:', error);
+      console.error('Error drawing manually rotated label:', error);
       pdf.setFontSize(10);
       pdf.setTextColor(255, 0, 0);
       pdf.text('Label Error', x + 5, y + 20);
@@ -230,52 +229,14 @@ export class PDFGenerator {
   }
 
   /**
-   * Draw horizontal layout (6" wide × 4" tall) - this gets rotated 90° by transformation
-   * @param {jsPDF} pdf - PDF document
-   * @param {Object} labelData - Label data
-   * @param {Object} brandInfo - Brand information
-   * @param {number} x - X position (left edge)
-   * @param {number} y - Y position (top edge)
-   * @param {number} width - Width (432pt = 6")
-   * @param {number} height - Height (288pt = 4")
-   * @param {number} boxNumber - Box number
-   * @param {number} totalBoxes - Total boxes
-   * @param {string} currentUser - Current user
+   * Draw brand and product section (top of rotated view = left in PDF)
    */
-  static async drawHorizontalLayout(pdf, labelData, brandInfo, x, y, width, height, boxNumber, totalBoxes, currentUser) {
-    const padding = 10;
-    const contentX = x + padding;
-    const contentY = y + padding;
-    const contentWidth = width - (padding * 2);   // 412pt
-    const contentHeight = height - (padding * 2); // 268pt
+  static async drawRotatedBrandProduct(pdf, brandInfo, x, y, width, height) {
+    // Start from top of this section, text flows down (which becomes left-to-right when rotated)
+    let currentY = y + 20;
+    const textX = x + 15; // Left margin
 
-    // Section 1: Brand + Product Name (top 40%)
-    const section1Height = Math.floor(contentHeight * 0.40); // 107pt
-    await this.drawBrandProductSection(pdf, brandInfo, contentX, contentY, contentWidth, section1Height);
-
-    // Section 2: Store (middle 25%)
-    const section2Y = contentY + section1Height;
-    const section2Height = Math.floor(contentHeight * 0.25); // 67pt
-    this.drawStoreSection(pdf, contentX, section2Y, contentWidth, section2Height);
-
-    // Section 3: Bottom Row - Barcode | Dates | Case/Box (bottom 30%)
-    const section3Y = section2Y + section2Height;
-    const section3Height = Math.floor(contentHeight * 0.30); // 80pt
-    await this.drawBottomSection(pdf, labelData, contentX, section3Y, contentWidth, section3Height, boxNumber, totalBoxes);
-
-    // Section 4: Audit Trail (bottom 5%)
-    const section4Y = section3Y + section3Height;
-    const section4Height = contentHeight - section1Height - section2Height - section3Height; // Remaining
-    this.drawAuditSection(pdf, currentUser, contentX, section4Y, contentWidth, section4Height);
-  }
-
-  /**
-   * Draw brand and product name section (top 40%)
-   */
-  static async drawBrandProductSection(pdf, brandInfo, x, y, width, height) {
-    let currentY = y + 15;
-
-    // Brand name (large, centered)
+    // Brand name (large)
     if (brandInfo.brand) {
       const brandFontSize = Math.min(28, Math.max(16, 30 - Math.floor(brandInfo.brand.length / 4)));
       
@@ -283,56 +244,67 @@ export class PDFGenerator {
       pdf.setFontSize(brandFontSize);
       pdf.setTextColor(0, 0, 0);
       
-      const brandWidth = pdf.getTextWidth(brandInfo.brand);
-      const brandX = x + (width - brandWidth) / 2; // Center horizontally
-      pdf.text(brandInfo.brand, brandX, currentY);
-      currentY += brandFontSize + 8;
+      pdf.text(brandInfo.brand, textX, currentY, { angle: 90 });
+      currentY += brandFontSize + 15;
     }
 
-    // Product name (large, centered, multiple lines if needed)
-    const remainingHeight = height - (currentY - y) - 10;
-    const maxProductFontSize = brandInfo.brand ? 22 : 26;
-    const productFontSize = Math.min(maxProductFontSize, Math.max(14, maxProductFontSize - Math.floor(brandInfo.productName.length / 8)));
+    // Product name (large, may wrap)
+    const maxProductFontSize = brandInfo.brand ? 24 : 28;
+    const productFontSize = Math.min(maxProductFontSize, Math.max(16, maxProductFontSize - Math.floor(brandInfo.productName.length / 6)));
     
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(productFontSize);
     pdf.setTextColor(0, 0, 0);
     
-    // Split text to fit width
-    const productLines = pdf.splitTextToSize(brandInfo.productName, width - 20);
-    const lineHeight = productFontSize * 1.2;
+    // For rotated text, we need to consider the available height for text flow
+    const availableHeight = height - (currentY - y) - 20;
+    const maxLineWidth = availableHeight - 20;
     
-    // Center the text block vertically and horizontally
-    const totalTextHeight = productLines.length * lineHeight;
-    const startY = currentY + Math.max(0, (remainingHeight - totalTextHeight) / 2);
+    // Split text if needed
+    const words = brandInfo.productName.split(' ');
+    let currentLine = '';
+    let lines = [];
     
-    productLines.forEach((line, index) => {
-      const textWidth = pdf.getTextWidth(line);
-      const textX = x + (width - textWidth) / 2; // Center each line
-      const lineY = startY + (index * lineHeight);
-      pdf.text(line, textX, lineY);
+    words.forEach(word => {
+      const testLine = currentLine + (currentLine ? ' ' : '') + word;
+      const testWidth = pdf.getTextWidth(testLine);
+      
+      if (testWidth <= maxLineWidth || currentLine === '') {
+        currentLine = testLine;
+      } else {
+        lines.push(currentLine);
+        currentLine = word;
+      }
+    });
+    if (currentLine) lines.push(currentLine);
+
+    // Draw each line
+    lines.forEach((line, index) => {
+      if (currentY + (productFontSize * 1.2) < y + height - 10) {
+        pdf.text(line, textX, currentY, { angle: 90 });
+        currentY += productFontSize * 1.2;
+      }
     });
   }
 
   /**
-   * Draw store section (middle 25%)
+   * Draw store section (center-left of rotated view)
    */
-  static drawStoreSection(pdf, x, y, width, height) {
-    // "Store:" label centered
+  static drawRotatedStore(pdf, x, y, width, height) {
+    const centerY = y + (height / 2);
+    const textX = x + 20;
+    
+    // "Store:" label
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(14);
     pdf.setTextColor(0, 0, 0);
+    pdf.text('Store:', textX, centerY - 40, { angle: 90 });
     
-    const storeLabel = 'Store:';
-    const labelWidth = pdf.getTextWidth(storeLabel);
-    const labelX = x + (width - labelWidth) / 2;
-    pdf.text(storeLabel, labelX, y + 18);
-    
-    // Text box centered below label
-    const boxWidth = Math.min(width * 0.8, 250);
-    const boxHeight = height - 30;
-    const boxX = x + (width - boxWidth) / 2;
-    const boxY = y + 25;
+    // Store text box - need to position for rotated view
+    const boxWidth = width - 40;
+    const boxHeight = 50;
+    const boxX = x + 10;
+    const boxY = centerY - 10;
     
     // Main box
     pdf.setDrawColor(0, 0, 0);
@@ -351,28 +323,28 @@ export class PDFGenerator {
   }
 
   /**
-   * Draw bottom section with 3 columns (bottom 30%)
+   * Draw bottom info section (center-right of rotated view)
    */
-  static async drawBottomSection(pdf, labelData, x, y, width, height, boxNumber, totalBoxes) {
-    const columnWidth = width / 3;
+  static async drawRotatedBottomInfo(pdf, labelData, x, y, width, height, boxNumber, totalBoxes) {
+    // Divide into 3 rows (which become 3 columns when rotated)
+    const rowHeight = height / 3;
 
-    // Column 1: Barcode (left)
-    await this.drawBarcodeColumn(pdf, labelData, x, y, columnWidth, height);
+    // Row 1: Barcode
+    await this.drawRotatedBarcodeRow(pdf, labelData, x, y, width, rowHeight);
     
-    // Column 2: Dates (center)
-    this.drawDatesColumn(pdf, labelData, x + columnWidth, y, columnWidth, height);
+    // Row 2: Dates  
+    this.drawRotatedDatesRow(pdf, labelData, x, y + rowHeight, width, rowHeight);
     
-    // Column 3: Case/Box (right)
-    this.drawCaseColumn(pdf, labelData, x + (columnWidth * 2), y, columnWidth, height, boxNumber, totalBoxes);
+    // Row 3: Case/Box
+    this.drawRotatedCaseRow(pdf, labelData, x, y + (rowHeight * 2), width, rowHeight, boxNumber, totalBoxes);
   }
 
   /**
-   * Draw barcode column
+   * Draw barcode row (becomes left column when rotated)
    */
-  static async drawBarcodeColumn(pdf, labelData, x, y, width, height) {
-    const padding = 8;
-    const innerX = x + padding;
-    const innerWidth = width - (padding * 2);
+  static async drawRotatedBarcodeRow(pdf, labelData, x, y, width, height) {
+    const centerY = y + (height / 2);
+    const textX = x + 15;
     
     // Barcode numeric display
     const spacedBarcodeDisplay = this.formatBarcodeWithSpaces(labelData.barcodeDisplay);
@@ -380,106 +352,81 @@ export class PDFGenerator {
     pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(9);
     pdf.setTextColor(102, 102, 102);
+    pdf.text(spacedBarcodeDisplay, textX, centerY - 30, { angle: 90 });
     
-    const displayWidth = pdf.getTextWidth(spacedBarcodeDisplay);
-    const displayX = innerX + (innerWidth - displayWidth) / 2;
-    pdf.text(spacedBarcodeDisplay, displayX, y + 12);
-    
-    // Barcode image
-    const barcodeHeight = Math.min(height - 20, 50);
-    const barcodeWidth = Math.min(innerWidth, 120);
-    const barcodeX = innerX + (innerWidth - barcodeWidth) / 2;
-    
-    await this.drawEnhancedBarcode(
-      pdf, 
-      labelData.barcode, 
-      barcodeX, 
-      y + 18, 
-      barcodeWidth, 
-      barcodeHeight
-    );
+    // Barcode image - create and position for rotated view
+    const barcodeHeight = Math.min(height - 40, 60);
+    const barcodeWidth = Math.min(width - 30, 80);
+    await this.drawEnhancedBarcode(pdf, labelData.barcode, x + 15, centerY - 10, barcodeWidth, barcodeHeight);
   }
 
   /**
-   * Draw dates column
+   * Draw dates row (becomes center column when rotated)
    */
-  static drawDatesColumn(pdf, labelData, x, y, width, height) {
-    const padding = 8;
-    const centerX = x + width / 2;
-    let currentY = y + 15;
+  static drawRotatedDatesRow(pdf, labelData, x, y, width, height) {
+    const centerY = y + (height / 2);
+    let textX = x + 15;
     
-    // Harvest Date
+    // Harvest date
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(11);
     pdf.setTextColor(0, 0, 0);
-    
-    const harvestLabel = 'Harvest:';
-    const harvestLabelWidth = pdf.getTextWidth(harvestLabel);
-    pdf.text(harvestLabel, centerX - harvestLabelWidth / 2, currentY);
-    currentY += 15;
+    pdf.text('Harvest:', textX, centerY - 25, { angle: 90 });
     
     pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(10);
     const harvestDate = labelData.harvestDate || 'MM/DD/YY';
-    const harvestDateWidth = pdf.getTextWidth(harvestDate);
-    pdf.text(harvestDate, centerX - harvestDateWidth / 2, currentY);
-    currentY += 20;
+    pdf.text(harvestDate, textX, centerY + 5, { angle: 90 });
     
-    // Package Date
+    textX += 35; // Move right for package date
+    
+    // Package date  
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(11);
-    const packageLabel = 'Package:';
-    const packageLabelWidth = pdf.getTextWidth(packageLabel);
-    pdf.text(packageLabel, centerX - packageLabelWidth / 2, currentY);
-    currentY += 15;
+    pdf.text('Package:', textX, centerY - 25, { angle: 90 });
     
     pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(10);
     const packageDate = labelData.packagedDate || 'MM/DD/YY';
-    const packageDateWidth = pdf.getTextWidth(packageDate);
-    pdf.text(packageDate, centerX - packageDateWidth / 2, currentY);
+    pdf.text(packageDate, textX, centerY + 5, { angle: 90 });
   }
 
   /**
-   * Draw case/box column
+   * Draw case row (becomes right column when rotated)
    */
-  static drawCaseColumn(pdf, labelData, x, y, width, height, boxNumber, totalBoxes) {
-    const padding = 8;
-    const innerX = x + padding;
-    const innerWidth = width - (padding * 2);
-    const centerX = x + width / 2;
+  static drawRotatedCaseRow(pdf, labelData, x, y, width, height, boxNumber, totalBoxes) {
+    const centerY = y + (height / 2);
+    const textX = x + 15;
     
-    let currentY = y + 15;
+    // Case quantity box
+    const boxWidth = width - 30;
     const boxHeight = 16;
+    const boxX = x + 15;
+    const caseBoxY = centerY - 20;
     
-    // Case Qty Box
-    const caseBoxX = innerX;
     pdf.setDrawColor(0, 0, 0);
     pdf.setLineWidth(1);
-    pdf.rect(caseBoxX, currentY, innerWidth, boxHeight);
+    pdf.rect(boxX, caseBoxY, boxWidth, boxHeight);
     
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(10);
     pdf.setTextColor(0, 0, 0);
     const caseQtyValue = labelData.caseQuantity || '___';
     const caseQtyText = `Case: ${caseQtyValue}`;
-    const caseQtyWidth = pdf.getTextWidth(caseQtyText);
-    pdf.text(caseQtyText, centerX - caseQtyWidth / 2, currentY + 11);
+    pdf.text(caseQtyText, textX, caseBoxY + 12, { angle: 90 });
     
-    currentY += boxHeight + 8;
-    
-    // Box Number Box
-    pdf.rect(caseBoxX, currentY, innerWidth, boxHeight);
+    // Box number box
+    const boxBoxY = centerY + 5;
+    pdf.rect(boxX, boxBoxY, boxWidth, boxHeight);
     
     const boxText = `Box ${boxNumber}/${totalBoxes}`;
-    const boxTextWidth = pdf.getTextWidth(boxText);
-    pdf.text(boxText, centerX - boxTextWidth / 2, currentY + 11);
+    pdf.text(boxText, textX, boxBoxY + 12, { angle: 90 });
   }
 
   /**
-   * Draw audit section (bottom 5%)
+   * Draw audit section (right edge of rotated view)
    */
-  static drawAuditSection(pdf, currentUser, x, y, width, height) {
+  static drawRotatedAudit(pdf, currentUser, x, y, width, height) {
     const now = new Date();
     const month = (now.getMonth() + 1).toString().padStart(2, '0');
     const day = now.getDate().toString().padStart(2, '0');
@@ -499,8 +446,8 @@ export class PDFGenerator {
     pdf.setFontSize(7);
     pdf.setTextColor(102, 102, 102);
     
-    // Bottom left corner
-    pdf.text(auditLine, x + 5, y + height - 3);
+    // Position at far right when rotated (bottom in PDF coordinates)
+    pdf.text(auditLine, x + 10, y + 15, { angle: 90 });
   }
 
   /**
@@ -554,7 +501,7 @@ export class PDFGenerator {
     
     pdf.setFontSize(8);
     pdf.setTextColor(255, 0, 0);
-    pdf.text('Barcode Error', x + 5, y + height / 2);
+    pdf.text('Barcode Error', x + 5, y + height / 2, { angle: 90 });
   }
 
   /**
@@ -603,7 +550,7 @@ export class PDFGenerator {
    */
   static async generateTestPDF() {
     const testData = [{
-      sku: 'TEST-S12212-SIMPLE-ROT',
+      sku: 'TEST-S12212-MANUAL-ROT',
       barcode: 'TEST123456',
       productName: 'Curaleaf Pink Champagne Premium Cannabis Capsules [10mg THC] 30-Count',
       brand: 'Test Brand',
@@ -654,12 +601,12 @@ export class PDFGenerator {
       warnings,
       totalLabels,
       estimatedPages: Math.ceil(totalLabels / 4),
-      labelFormat: 'Uline S-12212 (Simple Rotation for 6" Width)',
+      labelFormat: 'Uline S-12212 (Manual Rotation for 6" Width)',
       pageSize: 'Legal (8.5" × 14")',
       labelsPerPage: 4,
-      contentLayout: 'Horizontal layout rotated 90° clockwise as complete unit',
-      rotationNote: 'Content designed horizontally then rotated 90° clockwise for optimal 6" width utilization',
-      simpleRotation: 'Enabled - Entire content area rotated as single unit'
+      contentLayout: 'Manual positioning with 90° text rotation',
+      rotationNote: 'All text manually positioned and rotated 90° clockwise for optimal 6" width utilization',
+      manualRotation: 'Enabled - No transformation matrices used'
     };
   }
 
@@ -673,33 +620,31 @@ export class PDFGenerator {
     }
 
     return {
-      migration: 'Uline S-12212 Simple Rotation Approach',
-      version: '6.9.0',
+      migration: 'Uline S-12212 Manual Rotation Approach',
+      version: '7.0.0',
       approach: {
-        method: 'Create horizontal layout, rotate entire content 90° clockwise',
+        method: 'Manual positioning of rotated elements',
         advantages: [
-          'Normal horizontal layout logic',
-          'Single transformation applied to entire content',
-          'Predictable positioning and spacing',
-          'Clean coordinate system'
+          'No transformation matrices',
+          'Simple text rotation only',
+          'Full jsPDF compatibility',
+          'Predictable element positioning'
         ],
-        transformation: 'setCurrentTransformationMatrix with 90° rotation'
+        textRotation: 'pdf.text(text, x, y, { angle: 90 })'
       },
-      layoutFlow: {
-        design: 'Horizontal 6" × 4" layout',
-        sections: {
-          brandProduct: 'Top 40% - Brand name and product name with large fonts',
-          store: 'Middle 25% - Store label and text box with lines',
-          bottomRow: 'Bottom 30% - Three columns: Barcode | Dates | Case/Box',
-          audit: 'Bottom 5% - Audit trail in bottom left'
+      layoutMapping: {
+        rotatedView: {
+          left: 'Brand + Product Name (40%)',
+          centerLeft: 'Store Section (25%)',
+          centerRight: 'Barcode | Dates | Case (30%)',
+          right: 'Audit Trail (5%)'
         },
-        rotation: 'Entire layout rotated 90° clockwise for final output'
-      },
-      finalResult: {
-        paperOrientation: 'Rotate paper 90° clockwise to read',
-        effectiveDimensions: '6" wide × 4" tall',
-        textFlow: 'Horizontal across full 6" width',
-        readability: 'Optimal for cannabis inventory labels'
+        pdfCoordinates: {
+          top: 'Brand + Product Name',
+          upperMiddle: 'Store Section',
+          lowerMiddle: 'Bottom Info',
+          bottom: 'Audit Trail'
+        }
       },
       positions: positions
     };
@@ -711,10 +656,10 @@ export class PDFGenerator {
   }
 
   static async drawSidewaysLabel(pdf, labelData, position, boxNumber, totalBoxes, debug, currentUser) {
-    return this.drawSimpleRotatedLabel(pdf, labelData, position, boxNumber, totalBoxes, debug, currentUser);
+    return this.drawManuallyRotatedLabel(pdf, labelData, position, boxNumber, totalBoxes, debug, currentUser);
   }
 
   static async draw4LayerOptimizedLabel(pdf, labelData, position, boxNumber, totalBoxes, debug, currentUser) {
-    return this.drawSimpleRotatedLabel(pdf, labelData, position, boxNumber, totalBoxes, debug, currentUser);
+    return this.drawManuallyRotatedLabel(pdf, labelData, position, boxNumber, totalBoxes, debug, currentUser);
   }
 }
