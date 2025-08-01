@@ -1,4 +1,4 @@
-// COMPLETE CANVAS-BASED PDF GENERATOR - Drop-in replacement
+// REFINED CANVAS-BASED PDF GENERATOR - Fixed textbox positioning
 import { jsPDF } from 'jspdf';
 import 'jspdf/dist/jspdf.es.min.js';
 
@@ -8,19 +8,18 @@ import { EVENT_TYPES } from '../constants.js';
 import storage from './storage.js';
 
 /**
- * Canvas-based PDF Generator for Uline S-12212 labels
- * Uses HTML Canvas for reliable rendering, then converts to PDF
- * Drop-in replacement for existing PDFGenerator class
+ * Refined Canvas-based PDF Generator for Uline S-12212 labels
+ * Fixed textbox positioning and enlarged harvest/package text
  */
 export class PDFGenerator {
   /**
-   * Generate PDF labels using Canvas approach
+   * Generate PDF labels using refined Canvas approach
    * @param {Array} labelDataArray - Array of label data objects
    * @param {Object} options - Generation options
    * @returns {Blob} - PDF blob
    */
   static async generateLabels(labelDataArray, options = {}) {
-    console.log('🎨 Starting Canvas-based PDF generation...');
+    console.log('🎨 Starting REFINED Canvas-based PDF generation...');
     console.log('📋 Label data array length:', labelDataArray.length);
     
     const {
@@ -38,7 +37,7 @@ export class PDFGenerator {
       format: [612, 1008] // Legal size: 8.5" × 14"
     });
 
-    console.log('📄 PDF instance created for Canvas-based generation');
+    console.log('📄 PDF instance created for refined Canvas generation');
 
     let currentLabelIndex = 0;
     let currentPage = 1;
@@ -65,8 +64,8 @@ export class PDFGenerator {
           // For single label debugging, center it on page
           if (startWithSingle) {
             const centerPosition = this.calculateSingleLabelCenterPosition();
-            await this.drawCanvasBasedLabel(pdf, formattedData, centerPosition, 1, 1, debug, currentUser);
-            console.log('🧪 Single Canvas-based label generated');
+            await this.drawRefinedCanvasLabel(pdf, formattedData, centerPosition, 1, 1, debug, currentUser);
+            console.log('🧪 Single refined Canvas label generated');
             break;
           }
           
@@ -83,8 +82,8 @@ export class PDFGenerator {
           // Calculate box number
           const boxNumber = Math.floor(labelCopy / Math.max(1, Math.floor(formattedData.labelQuantity / formattedData.boxCount))) + 1;
 
-          // Draw the label using Canvas approach
-          await this.drawCanvasBasedLabel(pdf, formattedData, position, boxNumber, formattedData.boxCount, debug, currentUser);
+          // Draw the label using refined Canvas approach
+          await this.drawRefinedCanvasLabel(pdf, formattedData, position, boxNumber, formattedData.boxCount, debug, currentUser);
 
           currentLabelIndex++;
         }
@@ -92,27 +91,27 @@ export class PDFGenerator {
         if (startWithSingle) break;
       }
 
-      console.log(`✅ Generated ${currentLabelIndex} Canvas-based labels across ${currentPage} pages`);
+      console.log(`✅ Generated ${currentLabelIndex} refined Canvas labels across ${currentPage} pages`);
 
       // Add metadata
       pdf.setDocumentProperties({
-        title: `Cannabis Inventory Labels - Canvas Generated - ${new Date().toISOString().slice(0, 10)}`,
-        subject: 'Uline S-12212 Labels - Canvas-based Generation',
+        title: `Cannabis Inventory Labels - Refined Canvas - ${new Date().toISOString().slice(0, 10)}`,
+        subject: 'Uline S-12212 Labels - Refined Canvas Generation',
         author: 'Cannabis Inventory Management System',
-        creator: 'Cannabis Inventory Management System v9.0.0',
-        keywords: 'cannabis, inventory, labels, uline, s-12212, canvas-based'
+        creator: 'Cannabis Inventory Management System v9.1.0',
+        keywords: 'cannabis, inventory, labels, uline, s-12212, refined-canvas'
       });
 
       return pdf.output('blob');
 
     } catch (error) {
-      console.error('❌ Canvas-based PDF generation error:', error);
-      throw new Error(`Canvas-based PDF generation failed: ${error.message}`);
+      console.error('❌ Refined Canvas PDF generation error:', error);
+      throw new Error(`Refined Canvas PDF generation failed: ${error.message}`);
     }
   }
 
   /**
-   * Draw label using HTML Canvas approach
+   * Draw label using refined Canvas approach
    * @param {Object} pdf - jsPDF instance
    * @param {Object} labelData - Formatted label data
    * @param {Object} position - Label position
@@ -121,8 +120,8 @@ export class PDFGenerator {
    * @param {boolean} debug - Debug mode
    * @param {string} currentUser - Current user
    */
-  static async drawCanvasBasedLabel(pdf, labelData, position, boxNumber, totalBoxes, debug, currentUser) {
-    console.log(`🎨 Drawing Canvas-based label...`);
+  static async drawRefinedCanvasLabel(pdf, labelData, position, boxNumber, totalBoxes, debug, currentUser) {
+    console.log(`🎨 Drawing refined Canvas label...`);
     
     const { x, y, width, height } = position;
 
@@ -150,8 +149,8 @@ export class PDFGenerator {
       ctx.lineWidth = 1;
       ctx.strokeRect(0, 0, width, height);
       
-      // Draw content for landscape application
-      await this.drawCanvasContent(ctx, labelData, width, height, boxNumber, totalBoxes, currentUser, debug);
+      // Draw refined content for landscape application
+      await this.drawRefinedCanvasContent(ctx, labelData, width, height, boxNumber, totalBoxes, currentUser, debug);
       
       // Convert canvas to image and add to PDF
       const imgData = canvas.toDataURL('image/png', 1.0);
@@ -160,22 +159,22 @@ export class PDFGenerator {
       // Clean up
       canvas.remove();
       
-      console.log('✅ Canvas-based label drawn successfully');
+      console.log('✅ Refined Canvas label drawn successfully');
 
     } catch (error) {
-      console.error('❌ Canvas-based label drawing failed:', error);
+      console.error('❌ Refined Canvas label drawing failed:', error);
       
       // Emergency fallback - simple text
       pdf.setFontSize(12);
       pdf.setTextColor(255, 0, 0);
       pdf.text('Label Generation Error', x + 10, y + 30);
-      pdf.text('Using Canvas Fallback', x + 10, y + 50);
+      pdf.text('Canvas Fallback Mode', x + 10, y + 50);
     }
   }
 
   /**
-   * Draw content on canvas for landscape application
-   * Content positioned and rotated for landscape use
+   * Draw refined content on canvas for landscape application
+   * Fixed textbox positioning and enlarged harvest/package text
    * @param {CanvasRenderingContext2D} ctx - Canvas context
    * @param {Object} labelData - Label data
    * @param {number} width - Canvas width
@@ -185,8 +184,8 @@ export class PDFGenerator {
    * @param {string} currentUser - Current user
    * @param {boolean} debug - Debug mode
    */
-  static async drawCanvasContent(ctx, labelData, width, height, boxNumber, totalBoxes, currentUser, debug) {
-    console.log(`🎨 Drawing Canvas content for landscape application`);
+  static async drawRefinedCanvasContent(ctx, labelData, width, height, boxNumber, totalBoxes, currentUser, debug) {
+    console.log(`🎨 Drawing refined Canvas content for landscape application`);
     
     // Save context state
     ctx.save();
@@ -266,13 +265,13 @@ export class PDFGenerator {
     const columnWidth = landscapeWidth / 3;
     
     // Column 1: BARCODE (left)
-    await this.drawCanvasBarcodeColumn(ctx, labelData, padding, bottomRowY, columnWidth, bottomRowHeight);
+    await this.drawRefinedBarcodeColumn(ctx, labelData, padding, bottomRowY, columnWidth, bottomRowHeight);
     
-    // Column 2: DATES (center)
-    this.drawCanvasDatesColumn(ctx, labelData, columnWidth, bottomRowY, columnWidth, bottomRowHeight);
+    // Column 2: DATES (center) - ENLARGED TEXT
+    this.drawRefinedDatesColumn(ctx, labelData, columnWidth, bottomRowY, columnWidth, bottomRowHeight);
     
-    // Column 3: CASE/BOX (right)
-    this.drawCanvasCaseBoxColumn(ctx, labelData, boxNumber, totalBoxes, columnWidth * 2, bottomRowY, columnWidth, bottomRowHeight);
+    // Column 3: CASE/BOX (right) - FIXED TEXTBOX POSITIONING
+    this.drawRefinedCaseBoxColumn(ctx, labelData, boxNumber, totalBoxes, columnWidth * 2, bottomRowY, columnWidth, bottomRowHeight);
     
     // AUDIT TRAIL (bottom-left)
     const auditLine = this.generateAuditLine(currentUser);
@@ -298,19 +297,26 @@ export class PDFGenerator {
       ctx.lineTo(columnWidth * 2, bottomRowY + bottomRowHeight);
       ctx.stroke();
       
+      // Add debug labels
       ctx.setLineDash([]);
+      ctx.fillStyle = '#ff0000';
+      ctx.font = '8px Arial, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText('BARCODE', padding + 5, bottomRowY + 10);
+      ctx.fillText('DATES', columnWidth + 5, bottomRowY + 10);
+      ctx.fillText('CASE/BOX', columnWidth * 2 + 5, bottomRowY + 10);
     }
     
     // Restore context state
     ctx.restore();
     
-    console.log('✅ Canvas content drawn for landscape application');
+    console.log('✅ Refined Canvas content drawn for landscape application');
   }
 
   /**
-   * Draw barcode column on canvas
+   * Draw refined barcode column on canvas
    */
-  static async drawCanvasBarcodeColumn(ctx, labelData, x, y, width, height) {
+  static async drawRefinedBarcodeColumn(ctx, labelData, x, y, width, height) {
     const centerX = x + width / 2;
     
     // Barcode numeric display
@@ -399,46 +405,46 @@ export class PDFGenerator {
   }
 
   /**
-   * Draw dates column on canvas
+   * Draw refined dates column on canvas - ENLARGED TEXT
    */
-  static drawCanvasDatesColumn(ctx, labelData, x, y, width, height) {
+  static drawRefinedDatesColumn(ctx, labelData, x, y, width, height) {
     const centerX = x + width / 2;
     let textY = y + 15;
     
     ctx.textAlign = 'center';
     ctx.fillStyle = '#000000';
     
-    // Harvest date
-    ctx.font = 'bold 11px Arial, sans-serif';
+    // Harvest date - ENLARGED
+    ctx.font = 'bold 13px Arial, sans-serif'; // Increased from 11px
     ctx.fillText('Harvest:', centerX, textY);
-    textY += 15;
+    textY += 18; // Increased spacing
     
-    ctx.font = '10px Arial, sans-serif';
+    ctx.font = '12px Arial, sans-serif'; // Increased from 10px
     ctx.fillText(labelData.harvestDate || 'MM/DD/YY', centerX, textY);
-    textY += 25;
+    textY += 28; // Increased spacing
     
-    // Package date
-    ctx.font = 'bold 11px Arial, sans-serif';
+    // Package date - ENLARGED
+    ctx.font = 'bold 13px Arial, sans-serif'; // Increased from 11px
     ctx.fillText('Package:', centerX, textY);
-    textY += 15;
+    textY += 18; // Increased spacing
     
-    ctx.font = '10px Arial, sans-serif';
+    ctx.font = '12px Arial, sans-serif'; // Increased from 10px
     ctx.fillText(labelData.packagedDate || 'MM/DD/YY', centerX, textY);
   }
 
   /**
-   * Draw case/box column on canvas
+   * Draw refined case/box column on canvas - FIXED TEXTBOX POSITIONING
    */
-  static drawCanvasCaseBoxColumn(ctx, labelData, boxNumber, totalBoxes, x, y, width, height) {
+  static drawRefinedCaseBoxColumn(ctx, labelData, boxNumber, totalBoxes, x, y, width, height) {
     const centerX = x + width / 2;
     let textY = y + 15;
     
     ctx.textAlign = 'center';
     ctx.fillStyle = '#000000';
     
-    // Case quantity with textbox
-    const caseBoxWidth = 55;
-    const caseBoxHeight = 18;
+    // Case quantity with textbox - FIXED POSITIONING
+    const caseBoxWidth = 65;  // Slightly wider
+    const caseBoxHeight = 20; // Slightly taller
     const caseBoxX = centerX - caseBoxWidth / 2;
     
     // Draw case textbox
@@ -446,17 +452,33 @@ export class PDFGenerator {
     ctx.lineWidth = 1.5;
     ctx.strokeRect(caseBoxX, textY, caseBoxWidth, caseBoxHeight);
     
-    textY += 28;
+    // Case label - POSITIONED ABOVE THE TEXTBOX
     ctx.font = 'bold 10px Arial, sans-serif';
-    ctx.fillText(`Case: ${labelData.caseQuantity || '___'}`, centerX, textY);
+    ctx.fillText('Case:', centerX, textY - 12); // Above the textbox
     
-    textY += 25;
+    // Case value - POSITIONED INSIDE THE TEXTBOX
+    ctx.font = 'bold 10px Arial, sans-serif';
+    ctx.textBaseline = 'middle'; // Center vertically
+    ctx.fillText(labelData.caseQuantity || '___', centerX, textY + caseBoxHeight / 2);
     
-    // Box quantity with textbox
-    ctx.strokeRect(caseBoxX, textY, caseBoxWidth, caseBoxHeight);
+    textY += caseBoxHeight + 25; // Move down for next section
     
-    textY += 28;
-    ctx.fillText(`Box ${boxNumber}/${totalBoxes}`, centerX, textY);
+    // Box quantity with textbox - FIXED POSITIONING
+    const boxBoxX = centerX - caseBoxWidth / 2;
+    
+    // Draw box textbox
+    ctx.strokeRect(boxBoxX, textY, caseBoxWidth, caseBoxHeight);
+    
+    // Box label - POSITIONED ABOVE THE TEXTBOX
+    ctx.textBaseline = 'top'; // Reset baseline
+    ctx.fillText('Box:', centerX, textY - 12); // Above the textbox
+    
+    // Box value - POSITIONED INSIDE THE TEXTBOX
+    ctx.textBaseline = 'middle'; // Center vertically
+    ctx.fillText(`${boxNumber}/${totalBoxes}`, centerX, textY + caseBoxHeight / 2);
+    
+    // Reset text baseline
+    ctx.textBaseline = 'top';
   }
 
   /**
@@ -516,7 +538,7 @@ export class PDFGenerator {
       width: labelWidth,
       height: labelHeight,
       row, col, labelIndex,
-      method: 'canvas_based_s12212'
+      method: 'refined_canvas_s12212'
     };
   }
 
@@ -534,7 +556,7 @@ export class PDFGenerator {
       y: (pageHeight - labelHeight) / 2,
       width: labelWidth,
       height: labelHeight,
-      method: 'single_label_canvas_debug',
+      method: 'single_label_refined_canvas_debug',
       centered: true
     };
   }
@@ -725,9 +747,9 @@ export class PDFGenerator {
       LABELS_PER_SHEET: 4,
       SHEET_WIDTH: 8.5,
       SHEET_HEIGHT: 14,
-      ORIENTATION: 'portrait_pdf_canvas_based',
+      ORIENTATION: 'portrait_pdf_refined_canvas',
       FORMAT: 'S-12212',
-      LAYOUT: 'canvas_based_landscape_content',
+      LAYOUT: 'refined_canvas_landscape_content',
       
       LABEL_WIDTH_PT: 288,
       LABEL_HEIGHT_PT: 432,
@@ -740,7 +762,7 @@ export class PDFGenerator {
    * Generate test PDF (single label for debugging)
    */
   static async generateTestPDF() {
-    console.log('🧪 Generating Canvas-based test PDF (single label)...');
+    console.log('🧪 Generating refined Canvas test PDF (single label)...');
     
     const testData = [
       {
@@ -770,7 +792,7 @@ export class PDFGenerator {
    * Generate full sheet test PDF (4 connected labels)
    */
   static async generateFullSheetTestPDF() {
-    console.log('🧪 Generating Canvas-based full sheet test PDF...');
+    console.log('🧪 Generating refined Canvas full sheet test PDF...');
     
     const testData = [
       {
@@ -824,9 +846,9 @@ export class PDFGenerator {
       warnings,
       totalLabels: labelDataArray.length,
       estimatedPages: Math.ceil(labelDataArray.length / 4),
-      labelFormat: 'Uline S-12212 (Canvas-based Generation)',
-      approach: 'Canvas-based rendering with landscape content orientation',
-      method: 'canvas_based_reliable',
+      labelFormat: 'Uline S-12212 (Refined Canvas Generation)',
+      approach: 'Refined Canvas-based rendering with fixed textbox positioning',
+      method: 'refined_canvas_reliable',
       compatibility: 'Uline S-12212 label sheets on legal paper'
     };
   }
