@@ -1,4 +1,4 @@
-// ULINE S-12212 PDF GENERATOR - HTML Visual Layout Replication
+// ULINE S-12212 PDF GENERATOR - LANDSCAPE CONTENT ORIENTATION
 import { jsPDF } from 'jspdf';
 import 'jspdf/dist/jspdf.es.min.js';
 
@@ -8,19 +8,19 @@ import { EVENT_TYPES } from '../constants.js';
 import storage from './storage.js';
 
 /**
- * PDF Generator for Uline S-12212 labels (4" × 6") 
- * Generates labels that match HTML visual layout exactly
- * Labels positioned for landscape orientation when applied to boxes
+ * PDF Generator for Uline S-12212 labels with LANDSCAPE CONTENT ORIENTATION
+ * Content rotated/positioned for landscape application on boxes
+ * Matches HTML visual layout exactly when labels are applied in landscape
  */
 export class PDFGenerator {
   /**
-   * Generate PDF labels for Uline S-12212 sheets
+   * Generate PDF labels with landscape-oriented content for Uline S-12212 sheets
    * @param {Array} labelDataArray - Array of label data objects
    * @param {Object} options - Generation options
    * @returns {Blob} - PDF blob
    */
   static async generateLabels(labelDataArray, options = {}) {
-    console.log('🏷️ Starting Uline S-12212 PDF generation...');
+    console.log('🏷️ Starting Uline S-12212 PDF generation with LANDSCAPE CONTENT...');
     console.log('📋 Label data array length:', labelDataArray.length);
     
     const {
@@ -38,7 +38,7 @@ export class PDFGenerator {
       format: [612, 1008] // Legal size: 8.5" × 14"
     });
 
-    console.log('📄 PDF instance created for Uline S-12212');
+    console.log('📄 PDF instance created for Uline S-12212 with landscape content');
 
     let currentLabelIndex = 0;
     let currentPage = 1;
@@ -65,8 +65,8 @@ export class PDFGenerator {
           // For single label debugging, center it on page
           if (startWithSingle) {
             const centerPosition = this.calculateSingleLabelCenterPosition();
-            await this.drawS12212Label(pdf, formattedData, centerPosition, 1, 1, debug, currentUser);
-            console.log('🧪 Single label generated for debugging');
+            await this.drawS12212LabelLandscapeContent(pdf, formattedData, centerPosition, 1, 1, debug, currentUser);
+            console.log('🧪 Single label with landscape content generated for debugging');
             break;
           }
           
@@ -83,8 +83,8 @@ export class PDFGenerator {
           // Calculate which box number this label represents
           const boxNumber = Math.floor(labelCopy / Math.max(1, Math.floor(formattedData.labelQuantity / formattedData.boxCount))) + 1;
 
-          // Draw the label matching HTML visual layout
-          await this.drawS12212Label(pdf, formattedData, position, boxNumber, formattedData.boxCount, debug, currentUser);
+          // Draw the label with landscape-oriented content
+          await this.drawS12212LabelLandscapeContent(pdf, formattedData, position, boxNumber, formattedData.boxCount, debug, currentUser);
 
           currentLabelIndex++;
         }
@@ -92,15 +92,15 @@ export class PDFGenerator {
         if (startWithSingle) break; // Only process first item in single mode
       }
 
-      console.log(`✅ Generated ${currentLabelIndex} labels across ${currentPage} pages`);
+      console.log(`✅ Generated ${currentLabelIndex} labels with landscape content across ${currentPage} pages`);
 
       // Add metadata
       pdf.setDocumentProperties({
-        title: `Cannabis Inventory Labels - Uline S-12212 - ${new Date().toISOString().slice(0, 10)}`,
-        subject: 'Uline S-12212 Format Labels - HTML Visual Layout',
+        title: `Cannabis Inventory Labels - Uline S-12212 Landscape - ${new Date().toISOString().slice(0, 10)}`,
+        subject: 'Uline S-12212 Format Labels - Landscape Content Orientation',
         author: 'Cannabis Inventory Management System',
-        creator: 'Cannabis Inventory Management System v8.6.0',
-        keywords: 'cannabis, inventory, labels, uline, s-12212, html-visual-match'
+        creator: 'Cannabis Inventory Management System v8.7.0',
+        keywords: 'cannabis, inventory, labels, uline, s-12212, landscape-content, rotated-layout'
       });
 
       return pdf.output('blob');
@@ -112,7 +112,8 @@ export class PDFGenerator {
   }
 
   /**
-   * Draw S-12212 label matching HTML visual layout exactly
+   * Draw S-12212 label with LANDSCAPE CONTENT ORIENTATION
+   * Content positioned/rotated to match HTML visual when applied in landscape
    * @param {Object} pdf - jsPDF instance
    * @param {Object} labelData - Formatted label data
    * @param {Object} position - Label position
@@ -121,8 +122,8 @@ export class PDFGenerator {
    * @param {boolean} debug - Debug mode
    * @param {string} currentUser - Current user
    */
-  static async drawS12212Label(pdf, labelData, position, boxNumber, totalBoxes, debug, currentUser) {
-    console.log(`🎨 Drawing S-12212 label matching HTML visual...`);
+  static async drawS12212LabelLandscapeContent(pdf, labelData, position, boxNumber, totalBoxes, debug, currentUser) {
+    console.log(`🎨 Drawing S-12212 label with LANDSCAPE CONTENT ORIENTATION...`);
     
     const { x, y, width, height } = position;
 
@@ -132,13 +133,13 @@ export class PDFGenerator {
       pdf.setLineWidth(1);
       pdf.rect(x, y, width, height);
 
-      // Draw content matching HTML visual layout
-      await this.drawHTMLMatchingContent(pdf, labelData, position, boxNumber, totalBoxes, currentUser, debug);
+      // Draw landscape-oriented content matching HTML visual
+      await this.drawLandscapeOrientedContent(pdf, labelData, position, boxNumber, totalBoxes, currentUser, debug);
       
-      console.log('✅ HTML visual layout matched successfully');
+      console.log('✅ Landscape content orientation applied successfully');
 
     } catch (error) {
-      console.error('❌ HTML layout matching failed:', error);
+      console.error('❌ Landscape content orientation failed:', error);
       
       // Emergency fallback
       pdf.setFontSize(12);
@@ -148,8 +149,9 @@ export class PDFGenerator {
   }
 
   /**
-   * Draw content exactly matching the HTML visual layout
-   * Layout: Brand (centered) → Product (large, centered) → Store → Bottom Row (Barcode | Dates | Case/Box)
+   * Draw content in LANDSCAPE ORIENTATION to match HTML visual
+   * When labels are applied to boxes in landscape, content reads correctly
+   * Transform coordinates and rotate text for landscape application
    * @param {Object} pdf - jsPDF instance
    * @param {Object} labelData - Label data
    * @param {Object} position - Position
@@ -158,8 +160,8 @@ export class PDFGenerator {
    * @param {string} currentUser - User
    * @param {boolean} debug - Debug mode
    */
-  static async drawHTMLMatchingContent(pdf, labelData, position, boxNumber, totalBoxes, currentUser, debug) {
-    console.log(`🎨 Drawing HTML visual matching content`);
+  static async drawLandscapeOrientedContent(pdf, labelData, position, boxNumber, totalBoxes, currentUser, debug) {
+    console.log(`🎨 Drawing LANDSCAPE-ORIENTED content matching HTML visual`);
     
     const { x, y, width, height } = position;
     const padding = 15;
@@ -167,93 +169,158 @@ export class PDFGenerator {
     // Extract brand info
     const brandInfo = this.extractBrandFromProductName(labelData.productName);
     
-    // SECTION 1: BRAND NAME (centered, normal black color)
-    let currentY = y + padding + 20;
+    // LANDSCAPE LAYOUT ZONES (when label is applied in landscape orientation):
+    // Portrait PDF: 4" wide × 6" tall → Landscape Application: 6" wide × 4" tall
+    // 
+    // LEFT SIDE of portrait PDF = TOP of landscape application
+    // CENTER of portrait PDF = CENTER of landscape application  
+    // RIGHT SIDE of portrait PDF = BOTTOM of landscape application
     
+    // ZONE 1: BRAND NAME (appears at TOP-LEFT in landscape - LEFT side of portrait PDF)
     if (brandInfo.brand) {
       const brandFontSize = this.calculateBrandFontSize(brandInfo.brand);
       
       pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(brandFontSize);
-      pdf.setTextColor(0, 0, 0); // BLACK (not green as mentioned)
+      pdf.setTextColor(0, 0, 0); // BLACK color as specified
       
-      // Center horizontally
-      const brandWidth = pdf.getTextWidth(brandInfo.brand);
-      const brandX = x + (width - brandWidth) / 2;
+      // Position for landscape application: brand at top-left
+      const brandX = x + padding;
+      const brandY = y + padding + brandFontSize;
       
-      pdf.text(brandInfo.brand, brandX, currentY);
-      currentY += brandFontSize + 10;
+      // Rotate text 90° clockwise for landscape reading
+      pdf.text(brandInfo.brand, brandX, brandY, { angle: 90 });
     }
     
-    // SECTION 2: PRODUCT NAME (large, centered, multiple lines)
-    const productFontSize = this.calculateProductFontSize(brandInfo.productName, width - 30);
-    const productLines = this.wrapTextToLines(brandInfo.productName, width - 30, productFontSize);
+    // ZONE 2: PRODUCT NAME (appears at TOP-CENTER in landscape - LEFT-CENTER of portrait PDF)
+    const productStartX = x + padding + 60; // Space for brand
+    const productStartY = y + padding + 20;
+    
+    const productFontSize = this.calculateLandscapeProductFontSize(brandInfo.productName);
+    const productLines = this.wrapTextForLandscape(brandInfo.productName, 280, productFontSize);
     
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(productFontSize);
     pdf.setTextColor(0, 0, 0);
     
-    // Center each line
+    // Rotate product name lines 90° clockwise for landscape reading
     productLines.slice(0, 3).forEach((line, index) => {
-      const lineWidth = pdf.getTextWidth(line);
-      const lineX = x + (width - lineWidth) / 2;
-      pdf.text(line, lineX, currentY + (index * (productFontSize + 5)));
+      const lineY = productStartY + (index * (productFontSize + 8));
+      pdf.text(line, productStartX, lineY, { angle: 90 });
     });
     
-    currentY += (productLines.length * (productFontSize + 5)) + 15;
+    // ZONE 3: STORE SECTION (appears at CENTER-LEFT in landscape - CENTER-LEFT of portrait PDF)
+    const storeX = x + padding + 140;
+    const storeY = y + padding + 30;
     
-    // SECTION 3: STORE (centered label and textbox)
-    const storeY = currentY;
-    
-    // "Store:" label - CENTERED
+    // "Store:" label rotated for landscape reading
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(14);
     pdf.setTextColor(0, 0, 0);
+    pdf.text('Store:', storeX, storeY, { angle: 90 });
     
-    const storeLabelWidth = pdf.getTextWidth('Store:');
-    const storeLabelX = x + (width - storeLabelWidth) / 2;
-    pdf.text('Store:', storeLabelX, storeY);
+    // Store textbox positioned for landscape orientation
+    const storeBoxWidth = 40;  // Will become height in landscape
+    const storeBoxHeight = 120; // Will become width in landscape
+    const storeBoxX = storeX - 15;
+    const storeBoxY = storeY + 20;
     
-    // Store textbox - CENTERED below label
-    const storeBoxWidth = Math.min(250, width - 60);
-    const storeBoxHeight = 40;
-    const storeBoxX = x + (width - storeBoxWidth) / 2;
-    const storeBoxY = storeY + 10;
-    
-    // Draw textbox with border
+    // Draw textbox
     pdf.setDrawColor(0, 0, 0);
     pdf.setLineWidth(2);
     pdf.rect(storeBoxX, storeBoxY, storeBoxWidth, storeBoxHeight);
     
-    // Add writing lines inside textbox
+    // Writing lines in textbox (horizontal lines for landscape use)
     pdf.setDrawColor(200, 200, 200);
     pdf.setLineWidth(0.5);
-    const lineSpacing = storeBoxHeight / 3;
-    for (let i = 1; i < 3; i++) {
+    const lineSpacing = storeBoxHeight / 4;
+    for (let i = 1; i < 4; i++) {
       const lineY = storeBoxY + (i * lineSpacing);
-      pdf.line(storeBoxX + 5, lineY, storeBoxX + storeBoxWidth - 5, lineY);
+      pdf.line(storeBoxX + 3, lineY, storeBoxX + storeBoxWidth - 3, lineY);
     }
     
-    currentY = storeBoxY + storeBoxHeight + 20;
+    // ZONE 4: BOTTOM ROW FOR LANDSCAPE (appears at BOTTOM in landscape - RIGHT side of portrait PDF)
+    const bottomZoneX = x + width - 120; // Right side of portrait PDF
+    const bottomZoneStartY = y + padding + 30;
     
-    // SECTION 4: BOTTOM ROW (3 columns: Barcode | Dates | Case/Box)
-    const bottomRowY = currentY;
-    const bottomRowHeight = y + height - currentY - padding;
-    const columnWidth = (width - (padding * 2)) / 3;
+    // BARCODE SECTION (rotated for landscape reading)
+    let currentBottomY = bottomZoneStartY;
     
-    // Column 1: BARCODE (left)
-    const barcodeX = x + padding;
-    await this.drawBarcodeColumn(pdf, labelData, barcodeX, bottomRowY, columnWidth, bottomRowHeight);
+    // Barcode numeric (rotated 90° for landscape reading)
+    const spacedBarcodeDisplay = this.formatBarcodeWithSpaces(labelData.barcodeDisplay);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(10);
+    pdf.setTextColor(0, 0, 0);
+    pdf.text(spacedBarcodeDisplay, bottomZoneX, currentBottomY, { angle: 90 });
     
-    // Column 2: DATES (center)
-    const datesX = barcodeX + columnWidth;
-    this.drawDatesColumn(pdf, labelData, datesX, bottomRowY, columnWidth, bottomRowHeight);
+    // Barcode image (rotated for landscape orientation)
+    const barcodeWidth = 35;  // Will become height in landscape
+    const barcodeHeight = 80; // Will become width in landscape
+    const barcodeX = bottomZoneX - 20;
+    const barcodeY = currentBottomY + 20;
     
-    // Column 3: CASE/BOX (right)
-    const caseBoxX = datesX + columnWidth;
-    this.drawCaseBoxColumn(pdf, labelData, boxNumber, totalBoxes, caseBoxX, bottomRowY, columnWidth, bottomRowHeight);
+    await this.drawLandscapeBarcode(pdf, labelData.barcode, barcodeX, barcodeY, barcodeWidth, barcodeHeight);
     
-    // AUDIT TRAIL (bottom-left corner)
+    currentBottomY += 120;
+    
+    // DATES SECTION (rotated for landscape reading)
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(11);
+    pdf.setTextColor(0, 0, 0);
+    
+    // Harvest date
+    pdf.text('Harvest:', bottomZoneX, currentBottomY, { angle: 90 });
+    currentBottomY += 15;
+    
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(10);
+    const harvestDate = labelData.harvestDate || 'MM/DD/YY';
+    pdf.text(harvestDate, bottomZoneX, currentBottomY, { angle: 90 });
+    currentBottomY += 25;
+    
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(11);
+    pdf.text('Package:', bottomZoneX, currentBottomY, { angle: 90 });
+    currentBottomY += 15;
+    
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(10);
+    const packageDate = labelData.packagedDate || 'MM/DD/YY';
+    pdf.text(packageDate, bottomZoneX, currentBottomY, { angle: 90 });
+    currentBottomY += 30;
+    
+    // CASE/BOX SECTION (rotated for landscape reading)
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(10);
+    pdf.setTextColor(0, 0, 0);
+    
+    // Case textbox (positioned for landscape orientation)
+    const caseBoxWidth = 15;
+    const caseBoxHeight = 40;
+    const caseBoxX = bottomZoneX - 10;
+    const caseBoxY = currentBottomY;
+    
+    pdf.setDrawColor(0, 0, 0);
+    pdf.setLineWidth(1.5);
+    pdf.rect(caseBoxX, caseBoxY, caseBoxWidth, caseBoxHeight);
+    
+    // Case label and value (rotated)
+    const caseText = `Case: ${labelData.caseQuantity || '___'}`;
+    pdf.text(caseText, bottomZoneX, caseBoxY + 50, { angle: 90 });
+    
+    currentBottomY += 70;
+    
+    // Box textbox (positioned for landscape orientation)
+    const boxBoxX = bottomZoneX - 10;
+    const boxBoxY = currentBottomY;
+    
+    pdf.rect(boxBoxX, boxBoxY, caseBoxWidth, caseBoxHeight);
+    
+    // Box label and value (rotated)
+    const boxText = `Box ${boxNumber}/${totalBoxes}`;
+    pdf.text(boxText, bottomZoneX, boxBoxY + 50, { angle: 90 });
+    
+    // AUDIT TRAIL (positioned for bottom-left in landscape - bottom-left of portrait)
     const auditLine = this.generateAuditLine(currentUser);
     pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(6);
@@ -261,124 +328,21 @@ export class PDFGenerator {
     pdf.text(auditLine, x + padding, y + height - 10);
     
     if (debug) {
-      this.drawDebugLines(pdf, position, {
-        brandY: y + padding + 20,
-        productY: brandInfo.brand ? y + padding + 50 : y + padding + 20,
-        storeY: storeY,
-        bottomRowY: bottomRowY
+      this.drawLandscapeDebugLines(pdf, position, {
+        brandZone: x + padding,
+        productZone: productStartX,
+        storeZone: storeX,
+        bottomZone: bottomZoneX
       });
     }
     
-    console.log('✅ HTML visual content drawn successfully');
+    console.log('✅ Landscape-oriented content positioned successfully');
   }
 
   /**
-   * Draw barcode column (left column)
+   * Draw barcode rotated for landscape orientation
    */
-  static async drawBarcodeColumn(pdf, labelData, x, y, width, height) {
-    const centerX = x + width / 2;
-    
-    // Barcode numeric display (above barcode)
-    const spacedBarcodeDisplay = this.formatBarcodeWithSpaces(labelData.barcodeDisplay);
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(10);
-    pdf.setTextColor(0, 0, 0);
-    
-    const numericWidth = pdf.getTextWidth(spacedBarcodeDisplay);
-    pdf.text(spacedBarcodeDisplay, centerX - numericWidth / 2, y + 15);
-    
-    // Barcode image
-    const barcodeWidth = Math.min(width - 10, 80);
-    const barcodeHeight = 35;
-    const barcodeX = centerX - barcodeWidth / 2;
-    const barcodeY = y + 25;
-    
-    await this.drawEnhancedBarcode(pdf, labelData.barcode, barcodeX, barcodeY, barcodeWidth, barcodeHeight);
-  }
-
-  /**
-   * Draw dates column (center column)
-   */
-  static drawDatesColumn(pdf, labelData, x, y, width, height) {
-    const centerX = x + width / 2;
-    let textY = y + 15;
-    
-    pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(11);
-    pdf.setTextColor(0, 0, 0);
-    
-    // Harvest date
-    const harvestLabel = 'Harvest:';
-    const harvestLabelWidth = pdf.getTextWidth(harvestLabel);
-    pdf.text(harvestLabel, centerX - harvestLabelWidth / 2, textY);
-    
-    textY += 15;
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(10);
-    const harvestDate = labelData.harvestDate || 'MM/DD/YY';
-    const harvestDateWidth = pdf.getTextWidth(harvestDate);
-    pdf.text(harvestDate, centerX - harvestDateWidth / 2, textY);
-    
-    textY += 20;
-    pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(11);
-    
-    // Package date
-    const packageLabel = 'Package:';
-    const packageLabelWidth = pdf.getTextWidth(packageLabel);
-    pdf.text(packageLabel, centerX - packageLabelWidth / 2, textY);
-    
-    textY += 15;
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(10);
-    const packageDate = labelData.packagedDate || 'MM/DD/YY';
-    const packageDateWidth = pdf.getTextWidth(packageDate);
-    pdf.text(packageDate, centerX - packageDateWidth / 2, textY);
-  }
-
-  /**
-   * Draw case/box column (right column)
-   */
-  static drawCaseBoxColumn(pdf, labelData, boxNumber, totalBoxes, x, y, width, height) {
-    const centerX = x + width / 2;
-    let textY = y + 15;
-    
-    pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(10);
-    pdf.setTextColor(0, 0, 0);
-    
-    // Case quantity with textbox
-    const caseBoxWidth = 50;
-    const caseBoxHeight = 20;
-    const caseBoxX = centerX - caseBoxWidth / 2;
-    
-    // Draw textbox border
-    pdf.setDrawColor(0, 0, 0);
-    pdf.setLineWidth(1.5);
-    pdf.rect(caseBoxX, textY, caseBoxWidth, caseBoxHeight);
-    
-    // Case label and value
-    textY += 30;
-    const caseText = `Case: ${labelData.caseQuantity || '___'}`;
-    const caseTextWidth = pdf.getTextWidth(caseText);
-    pdf.text(caseText, centerX - caseTextWidth / 2, textY);
-    
-    textY += 25;
-    
-    // Box quantity with textbox
-    const boxBoxX = centerX - caseBoxWidth / 2;
-    pdf.rect(boxBoxX, textY, caseBoxWidth, caseBoxHeight);
-    
-    textY += 30;
-    const boxText = `Box ${boxNumber}/${totalBoxes}`;
-    const boxTextWidth = pdf.getTextWidth(boxText);
-    pdf.text(boxText, centerX - boxTextWidth / 2, textY);
-  }
-
-  /**
-   * Draw enhanced barcode
-   */
-  static async drawEnhancedBarcode(pdf, barcodeValue, x, y, width, height) {
+  static async drawLandscapeBarcode(pdf, barcodeValue, x, y, width, height) {
     if (!barcodeValue) return;
 
     try {
@@ -387,20 +351,20 @@ export class PDFGenerator {
       const validation = BarcodeGenerator.validateCode39(cleanBarcodeValue);
       if (!validation.isValid) {
         console.warn('Invalid barcode:', validation.error);
-        this.drawBarcodeError(pdf, x, y, width, height);
+        this.drawLandscapeBarcodeError(pdf, x, y, width, height);
         return;
       }
 
       const canvas = document.createElement('canvas');
-      canvas.width = width * 2;
-      canvas.height = height * 2;
+      canvas.width = height * 2; // Swapped for rotation
+      canvas.height = width * 2;  // Swapped for rotation
       
       const JsBarcode = (await import('jsbarcode')).default;
       
       JsBarcode(canvas, validation.cleanValue, {
         format: 'CODE39',
-        width: Math.max(2, Math.floor(width / 25)),
-        height: height * 2,
+        width: Math.max(2, Math.floor(height / 25)), // Adjusted for rotation
+        height: width * 2,
         displayValue: false,
         margin: 0,
         background: '#ffffff',
@@ -408,28 +372,112 @@ export class PDFGenerator {
       });
 
       const barcodeDataURL = canvas.toDataURL('image/png');
-      pdf.addImage(barcodeDataURL, 'PNG', x, y, width, height);
+      
+      // Add barcode rotated 90° for landscape orientation
+      pdf.addImage(barcodeDataURL, 'PNG', x, y, width, height, undefined, 'NONE', 90);
 
     } catch (error) {
-      console.error('Barcode generation error:', error);
-      this.drawBarcodeError(pdf, x, y, width, height);
+      console.error('Landscape barcode generation error:', error);
+      this.drawLandscapeBarcodeError(pdf, x, y, width, height);
     }
   }
 
   /**
-   * Draw barcode error placeholder
+   * Draw barcode error for landscape orientation
    */
-  static drawBarcodeError(pdf, x, y, width, height) {
+  static drawLandscapeBarcodeError(pdf, x, y, width, height) {
     pdf.setDrawColor(255, 0, 0);
     pdf.setLineWidth(1);
     pdf.rect(x, y, width, height);
     
+    pdf.setFontSize(7);
+    pdf.setTextColor(255, 0, 0);
+    pdf.text('Barcode Error', x, y + height/2, { angle: 90 });
+  }
+
+  /**
+   * Calculate font size for landscape product names
+   */
+  static calculateLandscapeProductFontSize(productText) {
+    if (!productText) return 24;
+    
+    const length = productText.length;
+    let fontSize = 28; // Larger starting size for landscape
+    
+    // Adjust based on length for landscape reading
+    if (length > 80) fontSize = 16;
+    else if (length > 60) fontSize = 18;
+    else if (length > 40) fontSize = 20;
+    else if (length > 25) fontSize = 24;
+    else if (length > 15) fontSize = 26;
+    
+    return Math.max(fontSize, 14);
+  }
+
+  /**
+   * Wrap text optimized for landscape orientation
+   */
+  static wrapTextForLandscape(text, maxWidth, fontSize) {
+    if (!text) return [''];
+    
+    // For landscape orientation, optimize line breaks differently
+    const avgCharWidth = fontSize * 0.6;
+    const maxCharsPerLine = Math.floor(maxWidth / avgCharWidth);
+    
+    const words = text.split(' ');
+    const lines = [];
+    let currentLine = '';
+    
+    words.forEach(word => {
+      const testLine = currentLine + (currentLine ? ' ' : '') + word;
+      if (testLine.length <= maxCharsPerLine || currentLine === '') {
+        currentLine = testLine;
+      } else {
+        lines.push(currentLine);
+        currentLine = word;
+      }
+    });
+    
+    if (currentLine) lines.push(currentLine);
+    
+    return lines.length > 0 ? lines : [''];
+  }
+
+  /**
+   * Draw debug lines for landscape orientation
+   */
+  static drawLandscapeDebugLines(pdf, position, zones) {
+    const { x, y, width, height } = position;
+    
+    pdf.setDrawColor(255, 0, 0);
+    pdf.setLineWidth(0.5);
+    
+    // Vertical zone dividers for landscape layout
+    if (zones.brandZone) {
+      pdf.line(zones.brandZone, y, zones.brandZone, y + height);
+    }
+    if (zones.productZone) {
+      pdf.line(zones.productZone, y, zones.productZone, y + height);
+    }
+    if (zones.storeZone) {
+      pdf.line(zones.storeZone, y, zones.storeZone, y + height);
+    }
+    if (zones.bottomZone) {
+      pdf.line(zones.bottomZone, y, zones.bottomZone, y + height);
+    }
+    
+    // Add zone labels for debugging
     pdf.setFontSize(8);
     pdf.setTextColor(255, 0, 0);
-    const errorText = 'Barcode Error';
-    const textWidth = pdf.getTextWidth(errorText);
-    pdf.text(errorText, x + (width - textWidth) / 2, y + height / 2);
+    pdf.text('BRAND', zones.brandZone + 5, y + 15);
+    pdf.text('PRODUCT', zones.productZone + 5, y + 15);
+    pdf.text('STORE', zones.storeZone + 5, y + 15);
+    pdf.text('BOTTOM', zones.bottomZone + 5, y + 15);
   }
+
+  // ============================================================================
+  // UTILITY METHODS (same as before but optimized for landscape)
+  // ============================================================================
 
   /**
    * Calculate S-12212 label position for connected labels (touching on all sides)
@@ -473,9 +521,10 @@ export class PDFGenerator {
       labelIndex: labelIndex,
       
       // Method info
-      method: 'html_visual_match',
-      approach: 'connected_labels_s12212',
-      format: 'Uline S-12212'
+      method: 'landscape_content_orientation',
+      approach: 'connected_labels_s12212_landscape',
+      format: 'Uline S-12212',
+      contentOrientation: 'landscape'
     };
   }
 
@@ -493,13 +542,14 @@ export class PDFGenerator {
       y: (pageHeight - labelHeight) / 2,
       width: labelWidth,
       height: labelHeight,
-      method: 'single_label_debug',
-      centered: true
+      method: 'single_label_landscape_debug',
+      centered: true,
+      contentOrientation: 'landscape'
     };
   }
 
   /**
-   * Format label data for S-12212 layout
+   * Format label data for S-12212 landscape layout
    */
   static formatLabelDataForS12212(item, enhancedData, username) {
     const timestamp = new Date();
@@ -531,7 +581,11 @@ export class PDFGenerator {
       
       // Source information
       source: item.source || 'Unknown',
-      displaySource: item.displaySource || '[UNK]'
+      displaySource: item.displaySource || '[UNK]',
+      
+      // Landscape orientation info
+      landscapeOriented: true,
+      contentRotation: 90
     };
   }
 
@@ -569,65 +623,17 @@ export class PDFGenerator {
   }
 
   /**
-   * Calculate optimal brand font size
+   * Calculate optimal brand font size for landscape
    */
   static calculateBrandFontSize(brandText) {
     if (!brandText) return 16;
     
     const length = brandText.length;
-    if (length <= 8) return 20;
-    if (length <= 12) return 18;
-    if (length <= 16) return 16;
-    if (length <= 20) return 14;
-    return 12;
-  }
-
-  /**
-   * Calculate optimal product font size
-   */
-  static calculateProductFontSize(productText, availableWidth) {
-    if (!productText) return 24;
-    
-    const length = productText.length;
-    let fontSize = 24;
-    
-    // Adjust based on length
-    if (length > 80) fontSize = 14;
-    else if (length > 60) fontSize = 16;
-    else if (length > 40) fontSize = 18;
-    else if (length > 25) fontSize = 20;
-    else if (length > 15) fontSize = 22;
-    
-    return Math.max(fontSize, 12);
-  }
-
-  /**
-   * Wrap text to fit within specified width
-   */
-  static wrapTextToLines(text, maxWidth, fontSize) {
-    if (!text) return [''];
-    
-    // Estimate character width (rough approximation)
-    const avgCharWidth = fontSize * 0.6;
-    const maxCharsPerLine = Math.floor(maxWidth / avgCharWidth);
-    
-    const words = text.split(' ');
-    const lines = [];
-    let currentLine = '';
-    
-    words.forEach(word => {
-      const testLine = currentLine + (currentLine ? ' ' : '') + word;
-      if (testLine.length <= maxCharsPerLine || currentLine === '') {
-        currentLine = testLine;
-      } else {
-        lines.push(currentLine);
-        currentLine = word;
-      }
-    });
-    
-    if (currentLine) lines.push(currentLine);
-    
-    return lines.length > 0 ? lines : [''];
+    if (length <= 8) return 22;
+    if (length <= 12) return 20;
+    if (length <= 16) return 18;
+    if (length <= 20) return 16;
+    return 14;
   }
 
   /**
@@ -716,36 +722,7 @@ export class PDFGenerator {
   }
 
   /**
-   * Draw debug lines
-   */
-  static drawDebugLines(pdf, position, sections) {
-    const { x, y, width, height } = position;
-    
-    pdf.setDrawColor(255, 0, 0);
-    pdf.setLineWidth(0.5);
-    
-    // Section dividers
-    if (sections.brandY) {
-      pdf.line(x, sections.brandY, x + width, sections.brandY);
-    }
-    if (sections.productY) {
-      pdf.line(x, sections.productY, x + width, sections.productY);
-    }
-    if (sections.storeY) {
-      pdf.line(x, sections.storeY, x + width, sections.storeY);
-    }
-    if (sections.bottomRowY) {
-      pdf.line(x, sections.bottomRowY, x + width, sections.bottomRowY);
-    }
-    
-    // Column dividers
-    const columnWidth = width / 3;
-    pdf.line(x + columnWidth, sections.bottomRowY, x + columnWidth, y + height);
-    pdf.line(x + (columnWidth * 2), sections.bottomRowY, x + (columnWidth * 2), y + height);
-  }
-
-  /**
-   * Get S-12212 specifications
+   * Get S-12212 specifications for landscape content
    */
   static getS12212Specs() {
     return {
@@ -754,9 +731,10 @@ export class PDFGenerator {
       LABELS_PER_SHEET: 4,
       SHEET_WIDTH: 8.5,
       SHEET_HEIGHT: 14,
-      ORIENTATION: 'portrait',
+      ORIENTATION: 'portrait_pdf_landscape_content',
+      CONTENT_ORIENTATION: 'landscape',
       FORMAT: 'S-12212',
-      LAYOUT: 'html_visual_match',
+      LAYOUT: 'landscape_content_match_html_visual',
       
       // Dimensions in points
       LABEL_WIDTH_PT: 288,  // 4" × 72
@@ -767,10 +745,10 @@ export class PDFGenerator {
   }
 
   /**
-   * Generate test PDF (single label for debugging)
+   * Generate test PDF (single label for debugging landscape content)
    */
   static async generateTestPDF() {
-    console.log('🧪 Generating S-12212 test PDF (single label)...');
+    console.log('🧪 Generating S-12212 test PDF (single label with LANDSCAPE CONTENT)...');
     
     const testData = [
       {
@@ -797,10 +775,10 @@ export class PDFGenerator {
   }
 
   /**
-   * Generate full sheet test PDF (4 connected labels)
+   * Generate full sheet test PDF (4 connected labels with landscape content)
    */
   static async generateFullSheetTestPDF() {
-    console.log('🧪 Generating S-12212 full sheet test PDF...');
+    console.log('🧪 Generating S-12212 full sheet test PDF (LANDSCAPE CONTENT)...');
     
     const testData = [
       {
@@ -845,10 +823,11 @@ export class PDFGenerator {
       warnings,
       totalLabels: labelDataArray.length,
       estimatedPages: Math.ceil(labelDataArray.length / 4),
-      labelFormat: 'Uline S-12212 (HTML Visual Match)',
-      approach: 'Connected labels matching HTML visual layout exactly',
-      method: 'html_visual_match',
-      compatibility: 'Uline S-12212 label sheets on legal paper'
+      labelFormat: 'Uline S-12212 (Landscape Content Orientation)',
+      approach: 'Connected labels with landscape-oriented content matching HTML visual',
+      method: 'landscape_content_orientation',
+      compatibility: 'Uline S-12212 label sheets on legal paper',
+      contentOrientation: 'Rotated for landscape application on boxes'
     };
   }
 }
