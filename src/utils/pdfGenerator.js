@@ -1,4 +1,4 @@
-// FINAL ROTATED VIEW PDF GENERATOR - Position for Physical Paper Rotation
+// ULINE S-12212 PDF GENERATOR - HTML Visual Layout Replication
 import { jsPDF } from 'jspdf';
 import 'jspdf/dist/jspdf.es.min.js';
 
@@ -8,37 +8,41 @@ import { EVENT_TYPES } from '../constants.js';
 import storage from './storage.js';
 
 /**
- * PDF Generation designed for final rotated view
- * Position everything exactly where it should appear when paper is rotated 90° clockwise
- * NO PDF rotation - just strategic positioning for physical paper rotation
+ * PDF Generator for Uline S-12212 labels (4" × 6") 
+ * Generates labels that match HTML visual layout exactly
+ * Labels positioned for landscape orientation when applied to boxes
  */
 export class PDFGenerator {
   /**
-   * Generate PDF with labels positioned for Uline S-12212 sheets
+   * Generate PDF labels for Uline S-12212 sheets
+   * @param {Array} labelDataArray - Array of label data objects
+   * @param {Object} options - Generation options
+   * @returns {Blob} - PDF blob
    */
   static async generateLabels(labelDataArray, options = {}) {
-    console.log('🏷️ Starting FINAL ROTATED VIEW PDF generation...');
+    console.log('🏷️ Starting Uline S-12212 PDF generation...');
     console.log('📋 Label data array length:', labelDataArray.length);
     
     const {
       format = 'legal',
       orientation = 'portrait',
       debug = false,
-      currentUser = 'Unknown'
+      currentUser = 'Unknown',
+      startWithSingle = false // Start with single label for debugging
     } = options;
 
-    // Create PDF instance - PORTRAIT mode for Uline S-12212 compatibility
+    // Create PDF instance - PORTRAIT mode for legal paper compatibility
     const pdf = new jsPDF({
       orientation: 'portrait',
       unit: 'pt',
-      format: [612, 1008]
+      format: [612, 1008] // Legal size: 8.5" × 14"
     });
 
-    console.log('📄 PDF instance created successfully');
+    console.log('📄 PDF instance created for Uline S-12212');
 
     let currentLabelIndex = 0;
     let currentPage = 1;
-    const specs = LabelFormatter.getLabelSpecs();
+    const specs = this.getS12212Specs();
 
     try {
       // Process each label data item
@@ -46,15 +50,25 @@ export class PDFGenerator {
         const labelData = labelDataArray[dataIndex];
         console.log(`🏷️ Processing label data ${dataIndex + 1}/${labelDataArray.length}`);
         
-        const formattedData = LabelFormatter.formatLabelData(
+        const formattedData = this.formatLabelDataForS12212(
           labelData,
           labelData.enhancedData || {},
           labelData.user || currentUser
         );
 
         // Generate the number of labels specified
-        for (let labelCopy = 0; labelCopy < formattedData.labelQuantity; labelCopy++) {
-          console.log(`📄 Generating label copy ${labelCopy + 1}/${formattedData.labelQuantity}`);
+        const labelsToGenerate = startWithSingle ? 1 : formattedData.labelQuantity;
+        
+        for (let labelCopy = 0; labelCopy < labelsToGenerate; labelCopy++) {
+          console.log(`📄 Generating label copy ${labelCopy + 1}/${labelsToGenerate}`);
+          
+          // For single label debugging, center it on page
+          if (startWithSingle) {
+            const centerPosition = this.calculateSingleLabelCenterPosition();
+            await this.drawS12212Label(pdf, formattedData, centerPosition, 1, 1, debug, currentUser);
+            console.log('🧪 Single label generated for debugging');
+            break;
+          }
           
           // Check if we need a new page (4 labels per sheet)
           if (currentLabelIndex > 0 && currentLabelIndex % specs.LABELS_PER_SHEET === 0) {
@@ -63,28 +77,30 @@ export class PDFGenerator {
             currentPage++;
           }
 
-          // Calculate position for this label (labels touching on all sides)
-          const position = this.calculateUlineS12212PositionConnected(currentLabelIndex % specs.LABELS_PER_SHEET);
+          // Calculate position for connected labels (touching on all sides)
+          const position = this.calculateS12212PositionConnected(currentLabelIndex % specs.LABELS_PER_SHEET);
 
           // Calculate which box number this label represents
           const boxNumber = Math.floor(labelCopy / Math.max(1, Math.floor(formattedData.labelQuantity / formattedData.boxCount))) + 1;
 
-          // Draw the label positioned for final rotated view
-          await this.drawLabelForRotatedView(pdf, formattedData, position, boxNumber, formattedData.boxCount, debug, currentUser);
+          // Draw the label matching HTML visual layout
+          await this.drawS12212Label(pdf, formattedData, position, boxNumber, formattedData.boxCount, debug, currentUser);
 
           currentLabelIndex++;
         }
+        
+        if (startWithSingle) break; // Only process first item in single mode
       }
 
       console.log(`✅ Generated ${currentLabelIndex} labels across ${currentPage} pages`);
 
       // Add metadata
       pdf.setDocumentProperties({
-        title: `Cannabis Inventory Labels - ${new Date().toISOString().slice(0, 10)}`,
-        subject: 'Uline S-12212 Format Labels (Final Rotated View)',
+        title: `Cannabis Inventory Labels - Uline S-12212 - ${new Date().toISOString().slice(0, 10)}`,
+        subject: 'Uline S-12212 Format Labels - HTML Visual Layout',
         author: 'Cannabis Inventory Management System',
-        creator: 'Cannabis Inventory Management System v8.5.0',
-        keywords: 'cannabis, inventory, labels, uline, s-12212, rotated-view, physical-rotation'
+        creator: 'Cannabis Inventory Management System v8.6.0',
+        keywords: 'cannabis, inventory, labels, uline, s-12212, html-visual-match'
       });
 
       return pdf.output('blob');
@@ -96,10 +112,17 @@ export class PDFGenerator {
   }
 
   /**
-   * Draw label positioned for final rotated view (when paper is rotated 90° clockwise)
+   * Draw S-12212 label matching HTML visual layout exactly
+   * @param {Object} pdf - jsPDF instance
+   * @param {Object} labelData - Formatted label data
+   * @param {Object} position - Label position
+   * @param {number} boxNumber - Box number
+   * @param {number} totalBoxes - Total boxes
+   * @param {boolean} debug - Debug mode
+   * @param {string} currentUser - Current user
    */
-  static async drawLabelForRotatedView(pdf, labelData, position, boxNumber, totalBoxes, debug, currentUser) {
-    console.log(`🎨 Drawing label positioned for final rotated view...`);
+  static async drawS12212Label(pdf, labelData, position, boxNumber, totalBoxes, debug, currentUser) {
+    console.log(`🎨 Drawing S-12212 label matching HTML visual...`);
     
     const { x, y, width, height } = position;
 
@@ -109,13 +132,13 @@ export class PDFGenerator {
       pdf.setLineWidth(1);
       pdf.rect(x, y, width, height);
 
-      // Position content for rotated view
-      await this.positionContentForRotatedView(pdf, labelData, position, boxNumber, totalBoxes, currentUser, debug);
+      // Draw content matching HTML visual layout
+      await this.drawHTMLMatchingContent(pdf, labelData, position, boxNumber, totalBoxes, currentUser, debug);
       
-      console.log('✅ Rotated view positioning successful');
+      console.log('✅ HTML visual layout matched successfully');
 
     } catch (error) {
-      console.error('❌ Rotated view positioning failed:', error);
+      console.error('❌ HTML layout matching failed:', error);
       
       // Emergency fallback
       pdf.setFontSize(12);
@@ -125,195 +148,237 @@ export class PDFGenerator {
   }
 
   /**
-   * Position content for rotated view - when paper is rotated 90° clockwise
-   * Portrait label (4" wide × 6" tall) becomes landscape (6" wide × 4" tall)
+   * Draw content exactly matching the HTML visual layout
+   * Layout: Brand (centered) → Product (large, centered) → Store → Bottom Row (Barcode | Dates | Case/Box)
+   * @param {Object} pdf - jsPDF instance
+   * @param {Object} labelData - Label data
+   * @param {Object} position - Position
+   * @param {number} boxNumber - Box number
+   * @param {number} totalBoxes - Total boxes
+   * @param {string} currentUser - User
+   * @param {boolean} debug - Debug mode
    */
-  static async positionContentForRotatedView(pdf, labelData, position, boxNumber, totalBoxes, currentUser, debug) {
-    console.log(`🎨 Positioning content for rotated view`);
+  static async drawHTMLMatchingContent(pdf, labelData, position, boxNumber, totalBoxes, currentUser, debug) {
+    console.log(`🎨 Drawing HTML visual matching content`);
     
     const { x, y, width, height } = position;
+    const padding = 15;
     
     // Extract brand info
     const brandInfo = this.extractBrandFromProductName(labelData.productName);
     
-    // When rotated 90° clockwise:
-    // - Portrait width (4") becomes rotated height 
-    // - Portrait height (6") becomes rotated width
+    // SECTION 1: BRAND NAME (centered, normal black color)
+    let currentY = y + padding + 20;
     
-    // ROTATED VIEW ZONES (what user sees after rotating paper):
-    // TOP of rotated view = RIGHT side of portrait PDF
-    // MIDDLE of rotated view = CENTER of portrait PDF  
-    // BOTTOM of rotated view = LEFT side of portrait PDF
-    
-    const padding = 15;
-    
-    // TOP ZONE (Brand + Product) - RIGHT side of portrait PDF
-    const topZoneX = x + width - 120; // Right side of portrait label
-    let topZoneY = y + padding + 30;
-    
-    // Brand Name - positioned to appear at top-left of rotated view
     if (brandInfo.brand) {
-      const brandFontSize = Math.min(20, Math.max(14, 24 - Math.floor(brandInfo.brand.length / 4)));
+      const brandFontSize = this.calculateBrandFontSize(brandInfo.brand);
       
       pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(brandFontSize);
-      pdf.setTextColor(44, 85, 48); // Dark green
+      pdf.setTextColor(0, 0, 0); // BLACK (not green as mentioned)
       
-      // Text rotated 90° clockwise to read properly when paper is rotated
-      pdf.text(brandInfo.brand, topZoneX, topZoneY, { angle: 90 });
-      topZoneY += 80; // Move down for next element
+      // Center horizontally
+      const brandWidth = pdf.getTextWidth(brandInfo.brand);
+      const brandX = x + (width - brandWidth) / 2;
+      
+      pdf.text(brandInfo.brand, brandX, currentY);
+      currentY += brandFontSize + 10;
     }
     
-    // Product Name - multiple lines, positioned for rotated view
-    const productFontSize = this.calculateOptimalFontSize(brandInfo.productName, 300, 18, 12);
+    // SECTION 2: PRODUCT NAME (large, centered, multiple lines)
+    const productFontSize = this.calculateProductFontSize(brandInfo.productName, width - 30);
+    const productLines = this.wrapTextToLines(brandInfo.productName, width - 30, productFontSize);
     
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(productFontSize);
     pdf.setTextColor(0, 0, 0);
     
-    const productLines = this.wrapText(brandInfo.productName, 40, productFontSize);
+    // Center each line
     productLines.slice(0, 3).forEach((line, index) => {
-      pdf.text(line, topZoneX, topZoneY + (index * 60), { angle: 90 });
+      const lineWidth = pdf.getTextWidth(line);
+      const lineX = x + (width - lineWidth) / 2;
+      pdf.text(line, lineX, currentY + (index * (productFontSize + 5)));
     });
     
-    // MIDDLE ZONE (Store) - CENTER of portrait PDF
-    const storeZoneX = x + width / 2;
-    const storeZoneY = y + padding + 30;
+    currentY += (productLines.length * (productFontSize + 5)) + 15;
     
-    // "Store:" label - positioned to appear above textbox in rotated view
+    // SECTION 3: STORE (centered label and textbox)
+    const storeY = currentY;
+    
+    // "Store:" label - CENTERED
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(14);
     pdf.setTextColor(0, 0, 0);
-    pdf.text('Store:', storeZoneX - 20, storeZoneY, { angle: 90 });
     
-    // Store textbox - positioned for rotated view
-    const storeBoxWidth = 160; // Will become height when rotated
-    const storeBoxHeight = 40;  // Will become width when rotated
-    const storeBoxX = storeZoneX - storeBoxHeight / 2;
-    const storeBoxY = storeZoneY + 30;
+    const storeLabelWidth = pdf.getTextWidth('Store:');
+    const storeLabelX = x + (width - storeLabelWidth) / 2;
+    pdf.text('Store:', storeLabelX, storeY);
     
-    // Draw textbox
+    // Store textbox - CENTERED below label
+    const storeBoxWidth = Math.min(250, width - 60);
+    const storeBoxHeight = 40;
+    const storeBoxX = x + (width - storeBoxWidth) / 2;
+    const storeBoxY = storeY + 10;
+    
+    // Draw textbox with border
     pdf.setDrawColor(0, 0, 0);
     pdf.setLineWidth(2);
-    pdf.rect(storeBoxX, storeBoxY, storeBoxHeight, storeBoxWidth);
+    pdf.rect(storeBoxX, storeBoxY, storeBoxWidth, storeBoxHeight);
     
-    // Writing lines in textbox
+    // Add writing lines inside textbox
     pdf.setDrawColor(200, 200, 200);
     pdf.setLineWidth(0.5);
-    const lineSpacing = storeBoxWidth / 3;
+    const lineSpacing = storeBoxHeight / 3;
     for (let i = 1; i < 3; i++) {
       const lineY = storeBoxY + (i * lineSpacing);
-      pdf.line(storeBoxX + 3, lineY, storeBoxX + storeBoxHeight - 3, lineY);
+      pdf.line(storeBoxX + 5, lineY, storeBoxX + storeBoxWidth - 5, lineY);
     }
     
-    // BOTTOM ZONE (Barcode | Dates | Case/Box) - LEFT side of portrait PDF
-    const bottomZoneX = x + 80; // Left side of portrait label
-    const bottomRowY = y + padding + 40;
-    const columnSpacing = 130; // Spacing between columns in rotated view
+    currentY = storeBoxY + storeBoxHeight + 20;
     
-    // Column 1: Barcode - positioned for rotated view
-    let col1Y = bottomRowY;
+    // SECTION 4: BOTTOM ROW (3 columns: Barcode | Dates | Case/Box)
+    const bottomRowY = currentY;
+    const bottomRowHeight = y + height - currentY - padding;
+    const columnWidth = (width - (padding * 2)) / 3;
     
-    // Barcode numeric (appears above barcode in rotated view)
-    const spacedBarcodeDisplay = this.formatBarcodeWithSpaces(labelData.barcodeDisplay);
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(9);
-    pdf.setTextColor(102, 102, 102);
-    pdf.text(spacedBarcodeDisplay, bottomZoneX, col1Y, { angle: 90 });
+    // Column 1: BARCODE (left)
+    const barcodeX = x + padding;
+    await this.drawBarcodeColumn(pdf, labelData, barcodeX, bottomRowY, columnWidth, bottomRowHeight);
     
-    // Barcode image
-    const barcodeWidth = 80;
-    const barcodeHeight = 35;
-    const barcodeX = bottomZoneX - barcodeHeight / 2;
-    const barcodeY = col1Y + 15;
+    // Column 2: DATES (center)
+    const datesX = barcodeX + columnWidth;
+    this.drawDatesColumn(pdf, labelData, datesX, bottomRowY, columnWidth, bottomRowHeight);
     
-    await this.drawEnhancedBarcodeForRotatedView(pdf, labelData.barcode, barcodeX, barcodeY, barcodeHeight, barcodeWidth);
+    // Column 3: CASE/BOX (right)
+    const caseBoxX = datesX + columnWidth;
+    this.drawCaseBoxColumn(pdf, labelData, boxNumber, totalBoxes, caseBoxX, bottomRowY, columnWidth, bottomRowHeight);
     
-    // Column 2: Dates - positioned for rotated view  
-    let col2Y = bottomRowY;
-    
-    pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(11);
-    pdf.setTextColor(0, 0, 0);
-    pdf.text('Harvest:', bottomZoneX, col2Y + columnSpacing, { angle: 90 });
-    
-    col2Y += 15;
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(10);
-    const harvestDate = labelData.harvestDate || 'MM/DD/YY';
-    pdf.text(harvestDate, bottomZoneX, col2Y + columnSpacing, { angle: 90 });
-    
-    col2Y += 20;
-    pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(11);
-    pdf.text('Package:', bottomZoneX, col2Y + columnSpacing, { angle: 90 });
-    
-    col2Y += 15;
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(10);
-    const packageDate = labelData.packagedDate || 'MM/DD/YY';
-    pdf.text(packageDate, bottomZoneX, col2Y + columnSpacing, { angle: 90 });
-    
-    // Column 3: Case/Box with textboxes - positioned for rotated view
-    let col3Y = bottomRowY;
-    
-    // Case textbox
-    const caseBoxSize = 15;
-    const caseBoxLength = 50;
-    const caseBoxX = bottomZoneX - caseBoxSize / 2;
-    const caseBoxY = col3Y + (columnSpacing * 2);
-    
-    pdf.setDrawColor(0, 0, 0);
-    pdf.setLineWidth(1);
-    pdf.rect(caseBoxX, caseBoxY, caseBoxSize, caseBoxLength);
-    
-    pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(9);
-    pdf.setTextColor(0, 0, 0);
-    const caseQtyValue = labelData.caseQuantity || '___';
-    pdf.text(`Case: ${caseQtyValue}`, bottomZoneX, caseBoxY + 30, { angle: 90 });
-    
-    col3Y += 35;
-    
-    // Box textbox
-    const boxBoxX = bottomZoneX - caseBoxSize / 2;
-    const boxBoxY = col3Y + (columnSpacing * 2);
-    
-    pdf.rect(boxBoxX, boxBoxY, caseBoxSize, caseBoxLength);
-    
-    const boxText = `Box ${boxNumber}/${totalBoxes}`;
-    pdf.text(boxText, bottomZoneX, boxBoxY + 25, { angle: 90 });
-    
-    // Audit trail - positioned for bottom-left of rotated view
+    // AUDIT TRAIL (bottom-left corner)
     const auditLine = this.generateAuditLine(currentUser);
     pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(6);
     pdf.setTextColor(102, 102, 102);
-    
-    pdf.text(auditLine, bottomZoneX, y + height - 20, { angle: 90 });
+    pdf.text(auditLine, x + padding, y + height - 10);
     
     if (debug) {
-      // Debug: Show positioning zones
-      pdf.setDrawColor(255, 0, 0);
-      pdf.setLineWidth(0.5);
-      
-      // TOP zone (right side)
-      pdf.rect(x + width - 120, y, 120, height);
-      
-      // MIDDLE zone (center)  
-      pdf.rect(x + width/2 - 40, y, 80, height);
-      
-      // BOTTOM zone (left side)
-      pdf.rect(x, y, 120, height);
+      this.drawDebugLines(pdf, position, {
+        brandY: y + padding + 20,
+        productY: brandInfo.brand ? y + padding + 50 : y + padding + 20,
+        storeY: storeY,
+        bottomRowY: bottomRowY
+      });
     }
     
-    console.log('✅ Content positioned for rotated view');
+    console.log('✅ HTML visual content drawn successfully');
   }
 
   /**
-   * Draw barcode for rotated view
+   * Draw barcode column (left column)
    */
-  static async drawEnhancedBarcodeForRotatedView(pdf, barcodeValue, x, y, width, height) {
+  static async drawBarcodeColumn(pdf, labelData, x, y, width, height) {
+    const centerX = x + width / 2;
+    
+    // Barcode numeric display (above barcode)
+    const spacedBarcodeDisplay = this.formatBarcodeWithSpaces(labelData.barcodeDisplay);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(10);
+    pdf.setTextColor(0, 0, 0);
+    
+    const numericWidth = pdf.getTextWidth(spacedBarcodeDisplay);
+    pdf.text(spacedBarcodeDisplay, centerX - numericWidth / 2, y + 15);
+    
+    // Barcode image
+    const barcodeWidth = Math.min(width - 10, 80);
+    const barcodeHeight = 35;
+    const barcodeX = centerX - barcodeWidth / 2;
+    const barcodeY = y + 25;
+    
+    await this.drawEnhancedBarcode(pdf, labelData.barcode, barcodeX, barcodeY, barcodeWidth, barcodeHeight);
+  }
+
+  /**
+   * Draw dates column (center column)
+   */
+  static drawDatesColumn(pdf, labelData, x, y, width, height) {
+    const centerX = x + width / 2;
+    let textY = y + 15;
+    
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(11);
+    pdf.setTextColor(0, 0, 0);
+    
+    // Harvest date
+    const harvestLabel = 'Harvest:';
+    const harvestLabelWidth = pdf.getTextWidth(harvestLabel);
+    pdf.text(harvestLabel, centerX - harvestLabelWidth / 2, textY);
+    
+    textY += 15;
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(10);
+    const harvestDate = labelData.harvestDate || 'MM/DD/YY';
+    const harvestDateWidth = pdf.getTextWidth(harvestDate);
+    pdf.text(harvestDate, centerX - harvestDateWidth / 2, textY);
+    
+    textY += 20;
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(11);
+    
+    // Package date
+    const packageLabel = 'Package:';
+    const packageLabelWidth = pdf.getTextWidth(packageLabel);
+    pdf.text(packageLabel, centerX - packageLabelWidth / 2, textY);
+    
+    textY += 15;
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(10);
+    const packageDate = labelData.packagedDate || 'MM/DD/YY';
+    const packageDateWidth = pdf.getTextWidth(packageDate);
+    pdf.text(packageDate, centerX - packageDateWidth / 2, textY);
+  }
+
+  /**
+   * Draw case/box column (right column)
+   */
+  static drawCaseBoxColumn(pdf, labelData, boxNumber, totalBoxes, x, y, width, height) {
+    const centerX = x + width / 2;
+    let textY = y + 15;
+    
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(10);
+    pdf.setTextColor(0, 0, 0);
+    
+    // Case quantity with textbox
+    const caseBoxWidth = 50;
+    const caseBoxHeight = 20;
+    const caseBoxX = centerX - caseBoxWidth / 2;
+    
+    // Draw textbox border
+    pdf.setDrawColor(0, 0, 0);
+    pdf.setLineWidth(1.5);
+    pdf.rect(caseBoxX, textY, caseBoxWidth, caseBoxHeight);
+    
+    // Case label and value
+    textY += 30;
+    const caseText = `Case: ${labelData.caseQuantity || '___'}`;
+    const caseTextWidth = pdf.getTextWidth(caseText);
+    pdf.text(caseText, centerX - caseTextWidth / 2, textY);
+    
+    textY += 25;
+    
+    // Box quantity with textbox
+    const boxBoxX = centerX - caseBoxWidth / 2;
+    pdf.rect(boxBoxX, textY, caseBoxWidth, caseBoxHeight);
+    
+    textY += 30;
+    const boxText = `Box ${boxNumber}/${totalBoxes}`;
+    const boxTextWidth = pdf.getTextWidth(boxText);
+    pdf.text(boxText, centerX - boxTextWidth / 2, textY);
+  }
+
+  /**
+   * Draw enhanced barcode
+   */
+  static async drawEnhancedBarcode(pdf, barcodeValue, x, y, width, height) {
     if (!barcodeValue) return;
 
     try {
@@ -322,7 +387,7 @@ export class PDFGenerator {
       const validation = BarcodeGenerator.validateCode39(cleanBarcodeValue);
       if (!validation.isValid) {
         console.warn('Invalid barcode:', validation.error);
-        this.drawBarcodeErrorForRotatedView(pdf, x, y, width, height);
+        this.drawBarcodeError(pdf, x, y, width, height);
         return;
       }
 
@@ -334,7 +399,7 @@ export class PDFGenerator {
       
       JsBarcode(canvas, validation.cleanValue, {
         format: 'CODE39',
-        width: Math.max(2, Math.floor(width / 30)),
+        width: Math.max(2, Math.floor(width / 25)),
         height: height * 2,
         displayValue: false,
         margin: 0,
@@ -343,33 +408,33 @@ export class PDFGenerator {
       });
 
       const barcodeDataURL = canvas.toDataURL('image/png');
-      
-      // Add barcode rotated 90° for proper orientation when paper is rotated
-      pdf.addImage(barcodeDataURL, 'PNG', x, y, width, height, undefined, 'NONE', 90);
+      pdf.addImage(barcodeDataURL, 'PNG', x, y, width, height);
 
     } catch (error) {
       console.error('Barcode generation error:', error);
-      this.drawBarcodeErrorForRotatedView(pdf, x, y, width, height);
+      this.drawBarcodeError(pdf, x, y, width, height);
     }
   }
 
   /**
-   * Draw barcode error for rotated view
+   * Draw barcode error placeholder
    */
-  static drawBarcodeErrorForRotatedView(pdf, x, y, width, height) {
+  static drawBarcodeError(pdf, x, y, width, height) {
     pdf.setDrawColor(255, 0, 0);
     pdf.setLineWidth(1);
     pdf.rect(x, y, width, height);
     
-    pdf.setFontSize(7);
+    pdf.setFontSize(8);
     pdf.setTextColor(255, 0, 0);
-    pdf.text('Barcode Error', x + width/2, y + height/2, { angle: 90, align: 'center' });
+    const errorText = 'Barcode Error';
+    const textWidth = pdf.getTextWidth(errorText);
+    pdf.text(errorText, x + (width - textWidth) / 2, y + height / 2);
   }
 
   /**
-   * Calculate label position for Uline S-12212 on legal paper - LABELS CONNECTED ON ALL SIDES
+   * Calculate S-12212 label position for connected labels (touching on all sides)
    */
-  static calculateUlineS12212PositionConnected(labelIndex) {
+  static calculateS12212PositionConnected(labelIndex) {
     // Legal size sheet dimensions (8.5" × 14")
     const pageWidth = 612;   // 8.5" in points  
     const pageHeight = 1008; // 14" in points
@@ -408,9 +473,65 @@ export class PDFGenerator {
       labelIndex: labelIndex,
       
       // Method info
-      method: 'final_rotated_view',
-      approach: 'position_for_physical_rotation',
-      rotation: 'none_in_pdf'
+      method: 'html_visual_match',
+      approach: 'connected_labels_s12212',
+      format: 'Uline S-12212'
+    };
+  }
+
+  /**
+   * Calculate position for single label centered on page (for debugging)
+   */
+  static calculateSingleLabelCenterPosition() {
+    const pageWidth = 612;
+    const pageHeight = 1008;
+    const labelWidth = 288;  // 4"
+    const labelHeight = 432; // 6"
+    
+    return {
+      x: (pageWidth - labelWidth) / 2,
+      y: (pageHeight - labelHeight) / 2,
+      width: labelWidth,
+      height: labelHeight,
+      method: 'single_label_debug',
+      centered: true
+    };
+  }
+
+  /**
+   * Format label data for S-12212 layout
+   */
+  static formatLabelDataForS12212(item, enhancedData, username) {
+    const timestamp = new Date();
+    
+    // Extract brand information
+    const brandInfo = this.extractBrandFromProductName(item.productName);
+    
+    return {
+      // Product information
+      productName: item.productName || 'Product Name',
+      originalProductName: item.productName,
+      sku: item.sku || '',
+      barcode: item.barcode || item.sku || this.generateFallbackBarcode(item),
+      brand: brandInfo.brand || item.brand || '',
+      
+      // Enhanced data
+      labelQuantity: Math.max(1, parseInt(enhancedData?.labelQuantity || '1')),
+      caseQuantity: enhancedData?.caseQuantity || '',
+      boxCount: Math.max(1, parseInt(enhancedData?.boxCount || '1')),
+      harvestDate: this.formatDate(enhancedData?.harvestDate),
+      packagedDate: this.formatDate(enhancedData?.packagedDate),
+      
+      // Display formats
+      barcodeDisplay: this.formatBarcodeDisplay(item.barcode || item.sku || ''),
+      
+      // Audit information
+      username: username || 'Unknown',
+      timestamp,
+      
+      // Source information
+      source: item.source || 'Unknown',
+      displaySource: item.displaySource || '[UNK]'
     };
   }
 
@@ -448,11 +569,119 @@ export class PDFGenerator {
   }
 
   /**
+   * Calculate optimal brand font size
+   */
+  static calculateBrandFontSize(brandText) {
+    if (!brandText) return 16;
+    
+    const length = brandText.length;
+    if (length <= 8) return 20;
+    if (length <= 12) return 18;
+    if (length <= 16) return 16;
+    if (length <= 20) return 14;
+    return 12;
+  }
+
+  /**
+   * Calculate optimal product font size
+   */
+  static calculateProductFontSize(productText, availableWidth) {
+    if (!productText) return 24;
+    
+    const length = productText.length;
+    let fontSize = 24;
+    
+    // Adjust based on length
+    if (length > 80) fontSize = 14;
+    else if (length > 60) fontSize = 16;
+    else if (length > 40) fontSize = 18;
+    else if (length > 25) fontSize = 20;
+    else if (length > 15) fontSize = 22;
+    
+    return Math.max(fontSize, 12);
+  }
+
+  /**
+   * Wrap text to fit within specified width
+   */
+  static wrapTextToLines(text, maxWidth, fontSize) {
+    if (!text) return [''];
+    
+    // Estimate character width (rough approximation)
+    const avgCharWidth = fontSize * 0.6;
+    const maxCharsPerLine = Math.floor(maxWidth / avgCharWidth);
+    
+    const words = text.split(' ');
+    const lines = [];
+    let currentLine = '';
+    
+    words.forEach(word => {
+      const testLine = currentLine + (currentLine ? ' ' : '') + word;
+      if (testLine.length <= maxCharsPerLine || currentLine === '') {
+        currentLine = testLine;
+      } else {
+        lines.push(currentLine);
+        currentLine = word;
+      }
+    });
+    
+    if (currentLine) lines.push(currentLine);
+    
+    return lines.length > 0 ? lines : [''];
+  }
+
+  /**
    * Format barcode display with spaces
    */
   static formatBarcodeWithSpaces(barcodeDisplay) {
     if (!barcodeDisplay) return '';
     return barcodeDisplay.replace(/-/g, ' ');
+  }
+
+  /**
+   * Format barcode for display
+   */
+  static formatBarcodeDisplay(barcode) {
+    if (!barcode) return '';
+    
+    const clean = barcode.replace(/[^A-Za-z0-9]/g, '');
+    
+    if (clean.length <= 6) {
+      return clean.replace(/(.{2})/g, '$1-').replace(/-$/, '');
+    } else if (clean.length <= 12) {
+      return clean.replace(/(.{3})/g, '$1-').replace(/-$/, '');
+    } else {
+      return clean.replace(/(.{4})/g, '$1-').replace(/-$/, '');
+    }
+  }
+
+  /**
+   * Format date string
+   */
+  static formatDate(dateStr) {
+    if (!dateStr) return '';
+    
+    const cleaned = dateStr.toString().replace(/[^\d\/\-]/g, '');
+    
+    // Convert to MM/DD/YY format
+    const formats = [
+      { regex: /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/, format: (m, d, y) => `${m.padStart(2, '0')}/${d.padStart(2, '0')}/${y.slice(-2)}` },
+      { regex: /^(\d{1,2})\/(\d{1,2})\/(\d{2})$/, format: (m, d, y) => `${m.padStart(2, '0')}/${d.padStart(2, '0')}/${y}` },
+      { regex: /^(\d{1,2})-(\d{1,2})-(\d{4})$/, format: (m, d, y) => `${m.padStart(2, '0')}/${d.padStart(2, '0')}/${y.slice(-2)}` },
+      { regex: /^(\d{1,2})-(\d{1,2})-(\d{2})$/, format: (m, d, y) => `${m.padStart(2, '0')}/${d.padStart(2, '0')}/${y}` },
+      { regex: /^(\d{4})-(\d{1,2})-(\d{1,2})$/, format: (y, m, d) => `${m.padStart(2, '0')}/${d.padStart(2, '0')}/${y.slice(-2)}` },
+    ];
+    
+    for (const format of formats) {
+      if (format.regex.test(cleaned)) {
+        if (typeof format.format === 'function') {
+          const match = cleaned.match(format.regex);
+          return format.format(...match.slice(1));
+        }
+      }
+    }
+    
+    return cleaned.replace(/-/g, '/');
   }
 
   /**
@@ -476,54 +705,72 @@ export class PDFGenerator {
   }
 
   /**
-   * Calculate optimal font size
+   * Generate fallback barcode
    */
-  static calculateOptimalFontSize(text, availableSpace, maxSize = 18, minSize = 10) {
-    if (!text) return maxSize;
-    
-    const length = text.length;
-    let fontSize = maxSize;
-    
-    // Simple length-based sizing
-    if (length > 100) fontSize = Math.max(minSize, maxSize - 6);
-    else if (length > 80) fontSize = Math.max(minSize, maxSize - 5);
-    else if (length > 60) fontSize = Math.max(minSize, maxSize - 4);
-    else if (length > 40) fontSize = Math.max(minSize, maxSize - 3);
-    else if (length > 25) fontSize = Math.max(minSize, maxSize - 2);
-    
-    return fontSize;
+  static generateFallbackBarcode(item) {
+    const base = item.sku || item.productName || 'UNKNOWN';
+    const clean = base.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+    const truncated = clean.substring(0, 10);
+    const timestamp = Date.now().toString().slice(-4);
+    return truncated + timestamp;
   }
 
   /**
-   * Simple text wrapping
+   * Draw debug lines
    */
-  static wrapText(text, maxLength, fontSize) {
-    if (!text) return [''];
+  static drawDebugLines(pdf, position, sections) {
+    const { x, y, width, height } = position;
     
-    const words = text.split(' ');
-    const lines = [];
-    let currentLine = '';
+    pdf.setDrawColor(255, 0, 0);
+    pdf.setLineWidth(0.5);
     
-    words.forEach(word => {
-      const testLine = currentLine + (currentLine ? ' ' : '') + word;
-      if (testLine.length <= maxLength || currentLine === '') {
-        currentLine = testLine;
-      } else {
-        lines.push(currentLine);
-        currentLine = word;
-      }
-    });
+    // Section dividers
+    if (sections.brandY) {
+      pdf.line(x, sections.brandY, x + width, sections.brandY);
+    }
+    if (sections.productY) {
+      pdf.line(x, sections.productY, x + width, sections.productY);
+    }
+    if (sections.storeY) {
+      pdf.line(x, sections.storeY, x + width, sections.storeY);
+    }
+    if (sections.bottomRowY) {
+      pdf.line(x, sections.bottomRowY, x + width, sections.bottomRowY);
+    }
     
-    if (currentLine) lines.push(currentLine);
-    
-    return lines.length > 0 ? lines : [''];
+    // Column dividers
+    const columnWidth = width / 3;
+    pdf.line(x + columnWidth, sections.bottomRowY, x + columnWidth, y + height);
+    pdf.line(x + (columnWidth * 2), sections.bottomRowY, x + (columnWidth * 2), y + height);
   }
 
   /**
-   * Generate test PDF
+   * Get S-12212 specifications
+   */
+  static getS12212Specs() {
+    return {
+      WIDTH_INCHES: 4,
+      HEIGHT_INCHES: 6,
+      LABELS_PER_SHEET: 4,
+      SHEET_WIDTH: 8.5,
+      SHEET_HEIGHT: 14,
+      ORIENTATION: 'portrait',
+      FORMAT: 'S-12212',
+      LAYOUT: 'html_visual_match',
+      
+      // Dimensions in points
+      LABEL_WIDTH_PT: 288,  // 4" × 72
+      LABEL_HEIGHT_PT: 432, // 6" × 72
+      PAGE_WIDTH_PT: 612,   // 8.5" × 72
+      PAGE_HEIGHT_PT: 1008  // 14" × 72
+    };
+  }
+
+  /**
+   * Generate test PDF (single label for debugging)
    */
   static async generateTestPDF() {
-    console.log('🧪 Generating FINAL ROTATED VIEW test PDF...');
+    console.log('🧪 Generating S-12212 test PDF (single label)...');
     
     const testData = [
       {
@@ -542,12 +789,45 @@ export class PDFGenerator {
       }
     ];
 
-    return this.generateLabels(testData, { debug: false, currentUser: 'TestUser' });
+    return this.generateLabels(testData, { 
+      debug: true, 
+      currentUser: 'TestUser', 
+      startWithSingle: true 
+    });
+  }
+
+  /**
+   * Generate full sheet test PDF (4 connected labels)
+   */
+  static async generateFullSheetTestPDF() {
+    console.log('🧪 Generating S-12212 full sheet test PDF...');
+    
+    const testData = [
+      {
+        sku: 'CURALEAF-PINK-CHAMPAGNE',
+        barcode: 'CUR19862332',
+        barcodeDisplay: 'CUR-1986-2332',
+        productName: 'Curaleaf Pink Champagne Premium Cannabis Capsules [10mg THC] 30-Count',
+        enhancedData: {
+          labelQuantity: 4,
+          caseQuantity: '8',
+          boxCount: '2',
+          harvestDate: '04/20/25',
+          packagedDate: '07/10/25'
+        },
+        user: 'TestUser'
+      }
+    ];
+
+    return this.generateLabels(testData, { 
+      debug: false, 
+      currentUser: 'TestUser'
+    });
   }
 
   // Legacy compatibility methods
   static calculateUlineLabelPosition(labelIndex) {
-    return this.calculateUlineS12212PositionConnected(labelIndex % 4);
+    return this.calculateS12212PositionConnected(labelIndex % 4);
   }
 
   static validateGenerationData(labelDataArray) {
@@ -565,10 +845,10 @@ export class PDFGenerator {
       warnings,
       totalLabels: labelDataArray.length,
       estimatedPages: Math.ceil(labelDataArray.length / 4),
-      labelFormat: 'Uline S-12212 (Final Rotated View)',
-      approach: 'Position for physical paper rotation - no PDF rotation',
-      method: 'final_rotated_view',
-      compatibility: 'Uline S-12212 label sheets'
+      labelFormat: 'Uline S-12212 (HTML Visual Match)',
+      approach: 'Connected labels matching HTML visual layout exactly',
+      method: 'html_visual_match',
+      compatibility: 'Uline S-12212 label sheets on legal paper'
     };
   }
 }
