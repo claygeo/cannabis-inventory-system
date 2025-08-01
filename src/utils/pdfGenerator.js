@@ -6,8 +6,8 @@ import storage from './storage.js';
 
 /**
  * PDF Generation utilities for Uline S-5492 label sheets
- * CORRECTED LAYOUT: Content positioned for optimal rotated view
- * Maps content to appear correctly when paper is rotated 90° clockwise
+ * FINAL LAYOUT: Enhanced with larger elements and optimal positioning
+ * Content positioned for perfect rotated view with enlarged components
  */
 export class PDFGenerator {
   /**
@@ -58,8 +58,8 @@ export class PDFGenerator {
           // Calculate which box number this label represents
           const boxNumber = Math.floor(labelCopy / Math.max(1, Math.floor(formattedData.labelQuantity / formattedData.boxCount))) + 1;
 
-          // Draw the sideways label with CORRECTED ROTATION MAPPING
-          await this.drawSidewaysLabelCorrectedLayout(pdf, formattedData, position, boxNumber, formattedData.boxCount, debug, currentUser);
+          // Draw the sideways label with FINAL ENHANCED LAYOUT
+          await this.drawSidewaysLabelFinalLayout(pdf, formattedData, position, boxNumber, formattedData.boxCount, debug, currentUser);
 
           currentLabelIndex++;
         }
@@ -68,17 +68,17 @@ export class PDFGenerator {
       // Add metadata
       pdf.setDocumentProperties({
         title: `Cannabis Inventory Labels - ${new Date().toISOString().slice(0, 10)}`,
-        subject: 'Uline S-5492 Format Labels (CORRECTED ROTATION MAPPING)',
+        subject: 'Uline S-5492 Format Labels (FINAL ENHANCED LAYOUT)',
         author: 'Cannabis Inventory Management System',
-        creator: 'Cannabis Inventory Management System v6.3.2',
-        keywords: 'cannabis, inventory, labels, uline, s-5492, corrected, rotation, mapping'
+        creator: 'Cannabis Inventory Management System v6.4.0',
+        keywords: 'cannabis, inventory, labels, uline, s-5492, final, enhanced, larger'
       });
 
       // Log generation event
       storage.addSessionEvent(
         EVENT_TYPES.LABEL_GENERATED,
-        `Generated ${currentLabelIndex} S-5492 labels with corrected rotation mapping across ${currentPage} pages`,
-        `Items: ${labelDataArray.length}, Format: Uline S-5492 (Corrected Rotation Mapping)`
+        `Generated ${currentLabelIndex} S-5492 labels with final enhanced layout across ${currentPage} pages`,
+        `Items: ${labelDataArray.length}, Format: Uline S-5492 (Final Enhanced Layout)`
       );
 
       return pdf.output('blob');
@@ -98,7 +98,7 @@ export class PDFGenerator {
 
   /**
    * Calculate label position for Uline S-5492 positioned SIDEWAYS on legal paper
-   * Container positioning remains unchanged - only content layout is corrected
+   * Container positioning remains unchanged - only content layout is enhanced
    * @param {number} labelIndex - Index of label (0-3 for 4 labels per sheet)
    * @returns {Object} - Position coordinates in points
    */
@@ -158,8 +158,8 @@ export class PDFGenerator {
   }
 
   /**
-   * CORRECTED LAYOUT: Draw sideways label with properly mapped content for rotation
-   * Content positioned to appear correctly when paper is rotated 90° clockwise
+   * FINAL ENHANCED LAYOUT: Draw sideways label with enlarged elements
+   * Content positioned for optimal rotated view with larger components
    * @param {jsPDF} pdf - PDF document
    * @param {Object} labelData - Formatted label data
    * @param {Object} position - Label position and dimensions
@@ -168,7 +168,7 @@ export class PDFGenerator {
    * @param {boolean} debug - Show debug borders
    * @param {string} currentUser - Current user
    */
-  static async drawSidewaysLabelCorrectedLayout(pdf, labelData, position, boxNumber = 1, totalBoxes = 1, debug = false, currentUser = 'Unknown') {
+  static async drawSidewaysLabelFinalLayout(pdf, labelData, position, boxNumber = 1, totalBoxes = 1, debug = false, currentUser = 'Unknown') {
     const { x, y, width, height } = position;
 
     try {
@@ -186,52 +186,40 @@ export class PDFGenerator {
         // Debug text
         pdf.setFontSize(8);
         pdf.setTextColor(255, 0, 0);
-        pdf.text(`L${position.labelIndex + 1} CORRECTED`, x + 5, y + 15);
+        pdf.text(`L${position.labelIndex + 1} FINAL`, x + 5, y + 15);
         pdf.text(`PDF: ${width}×${height}pt`, x + 5, y + 25);
-        pdf.text('Rotated: 432×288pt', x + 5, y + 35);
+        pdf.text('Enhanced Layout', x + 5, y + 35);
       }
 
-      const padding = 10;
+      const padding = 8;
       const contentX = x + padding;
       const contentY = y + padding;
-      const contentWidth = width - (padding * 2);    // 268pt
-      const contentHeight = height - (padding * 2);  // 412pt
-
-      // CORRECTED COORDINATE MAPPING for 90° clockwise rotation
-      // When paper is rotated 90° clockwise:
-      // - PDF bottom becomes rotated left
-      // - PDF top becomes rotated right  
-      // - PDF left becomes rotated bottom
-      // - PDF right becomes rotated top
+      const contentWidth = width - (padding * 2);    // 272pt
+      const contentHeight = height - (padding * 2);  // 416pt
 
       const brandInfo = this.extractBrandFromProductName(labelData.productName);
 
-      // 1. AUDIT TRAIL: Should appear in TOP-LEFT of rotated view
-      //    → Position at BOTTOM-LEFT of PDF coordinates
-      await this.drawAuditTrailForRotation(pdf, currentUser, contentX + 5, contentY + contentHeight - 45);
+      // 1. AUDIT TRAIL: All the way to bottom-left (top-left when rotated)
+      await this.drawAuditTrailBottomLeft(pdf, currentUser, contentX, contentY + contentHeight - 8);
 
-      // 2. PRODUCT NAME: Should appear in TOP-CENTER/RIGHT of rotated view  
-      //    → Position at BOTTOM-CENTER/RIGHT of PDF coordinates
-      await this.drawProductNameForRotation(pdf, brandInfo, contentX + 50, contentY + contentHeight - 120, contentWidth - 50, 120);
+      // 2. ENLARGED PRODUCT NAME SECTION: Larger area, bigger fonts (top when rotated)
+      const productNameHeight = 160; // Increased from 120
+      await this.drawEnlargedProductNameSection(pdf, brandInfo, contentX + 15, contentY + contentHeight - productNameHeight - 10, contentWidth - 15, productNameHeight);
 
-      // 3. BARCODE: Should appear in BOTTOM-LEFT of rotated view
-      //    → Position at TOP-LEFT of PDF coordinates  
-      await this.drawBarcodeForRotation(pdf, labelData, contentX + 5, contentY + 5, 65, 80);
+      // 3. ENLARGED BARCODE: Bottom-left when rotated (top-left in PDF)
+      await this.drawEnlargedBarcodeSection(pdf, labelData, contentX + 5, contentY + 5, 75, 100); // Increased size
 
-      // 4. STORE BOX: Should appear in BOTTOM-CENTER-LEFT of rotated view
-      //    → Position at TOP-CENTER-LEFT of PDF coordinates
-      this.drawStoreBoxForRotation(pdf, contentX + 75, contentY + 5, 60, 80);
+      // 4. CENTERED STORE BOX: More centered position (bottom-center-left when rotated)
+      this.drawCenteredStoreBox(pdf, contentX + 85, contentY + 5, 70, 100); // More centered, larger
 
-      // 5. DATES: Should appear in BOTTOM-CENTER-RIGHT of rotated view  
-      //    → Position at TOP-CENTER-RIGHT of PDF coordinates
-      this.drawDatesForRotation(pdf, labelData, contentX + 140, contentY + 5, 65, 80);
+      // 5. ENLARGED DATES: Bigger fonts (bottom-center-right when rotated)
+      this.drawEnlargedDatesSection(pdf, labelData, contentX + 160, contentY + 5, 75, 100); // Increased size and fonts
 
-      // 6. CASE/BOX: Should appear in BOTTOM-RIGHT of rotated view
-      //    → Position at TOP-RIGHT of PDF coordinates
-      this.drawCaseBoxForRotation(pdf, labelData, contentX + 210, contentY + 5, 55, 80, boxNumber, totalBoxes);
+      // 6. ENLARGED CASE/BOX: Bigger fonts and boxes (bottom-right when rotated)
+      this.drawEnlargedCaseBoxSection(pdf, labelData, contentX + 240, contentY + 5, 65, 100, boxNumber, totalBoxes); // Increased size
 
     } catch (error) {
-      console.error('Error drawing corrected layout label:', error);
+      console.error('Error drawing final enhanced layout label:', error);
       pdf.setFontSize(10);
       pdf.setTextColor(255, 0, 0);
       pdf.text('Label Error', x + 5, y + 20);
@@ -239,13 +227,13 @@ export class PDFGenerator {
   }
 
   /**
-   * Draw audit trail positioned for top-left of rotated view (bottom-left of PDF)
+   * Draw audit trail all the way to bottom-left corner (top-left when rotated)
    * @param {jsPDF} pdf - PDF document  
    * @param {string} currentUser - Current user
    * @param {number} x - X position in PDF coordinates
    * @param {number} y - Y position in PDF coordinates  
    */
-  static async drawAuditTrailForRotation(pdf, currentUser, x, y) {
+  static async drawAuditTrailBottomLeft(pdf, currentUser, x, y) {
     const now = new Date();
     const month = (now.getMonth() + 1).toString().padStart(2, '0');
     const day = now.getDate().toString().padStart(2, '0');
@@ -259,31 +247,31 @@ export class PDFGenerator {
     
     const minutes = now.getMinutes().toString().padStart(2, '0');
     
-    // Compact audit info that will appear in top-left when rotated
-    const auditLine = `${month}/${day}/${year} ${hoursStr}:${minutes}${ampm} (${(currentUser || 'Unknown').substring(0, 6)})`;
+    // Very compact audit info in the corner
+    const auditLine = `${month}/${day}/${year} ${hoursStr}:${minutes}${ampm} (${(currentUser || 'Unknown').substring(0, 5)})`;
     
     pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(6);
+    pdf.setFontSize(5); // Very small to fit in corner
     pdf.setTextColor(102, 102, 102);
     pdf.text(auditLine, x, y);
   }
 
   /**
-   * Draw product name positioned for top-center/right of rotated view (bottom of PDF)
+   * Draw enlarged product name section (top when rotated, bottom in PDF)
    * @param {jsPDF} pdf - PDF document
    * @param {Object} brandInfo - Brand information  
    * @param {number} x - X position in PDF coordinates
    * @param {number} y - Y position in PDF coordinates
    * @param {number} width - Available width
-   * @param {number} height - Available height
+   * @param {number} height - Available height (enlarged)
    */
-  static async drawProductNameForRotation(pdf, brandInfo, x, y, width, height) {
-    let currentY = y + height - 10; // Start from bottom and work up
-    const lineSpacing = 1.2;
+  static async drawEnlargedProductNameSection(pdf, brandInfo, x, y, width, height) {
+    let currentY = y + height - 15; // Start from bottom and work up
+    const lineSpacing = 1.3;
 
-    // Draw brand name if present (will appear above product name when rotated)
+    // Draw brand name if present (ENLARGED FONTS)
     if (brandInfo.brand) {
-      const brandFontSize = Math.min(20, LabelFormatter.autoFitFontSize(brandInfo.brand, width, 25, 20));
+      const brandFontSize = Math.min(26, LabelFormatter.autoFitFontSize(brandInfo.brand, width, 35, 26)); // Increased from 20
       
       pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(brandFontSize);
@@ -293,12 +281,12 @@ export class PDFGenerator {
       const brandWidth = pdf.getTextWidth(brandInfo.brand);
       const brandX = x + (width - brandWidth) / 2;
       pdf.text(brandInfo.brand, brandX, currentY);
-      currentY -= brandFontSize * lineSpacing + 8; // Move up
+      currentY -= brandFontSize * lineSpacing + 12; // More spacing
     }
 
-    // Draw product name (will appear below brand when rotated)
-    const remainingHeight = Math.max(25, currentY - y);
-    const maxProductFontSize = brandInfo.brand ? 28 : 32;
+    // Draw product name (ENLARGED FONTS)
+    const remainingHeight = Math.max(30, currentY - y);
+    const maxProductFontSize = brandInfo.brand ? 36 : 42; // Increased significantly
     
     const productFontSize = Math.min(maxProductFontSize, LabelFormatter.autoFitFontSize(
       brandInfo.productName, 
@@ -325,55 +313,55 @@ export class PDFGenerator {
   }
 
   /**
-   * Draw barcode positioned for bottom-left of rotated view (top-left of PDF)
+   * Draw enlarged barcode section (bottom-left when rotated, top-left in PDF)
    * @param {jsPDF} pdf - PDF document
    * @param {Object} labelData - Label data
    * @param {number} x - X position in PDF coordinates
    * @param {number} y - Y position in PDF coordinates
-   * @param {number} width - Available width  
-   * @param {number} height - Available height
+   * @param {number} width - Available width (enlarged) 
+   * @param {number} height - Available height (enlarged)
    */
-  static async drawBarcodeForRotation(pdf, labelData, x, y, width, height) {
-    // Barcode numeric display above barcode
+  static async drawEnlargedBarcodeSection(pdf, labelData, x, y, width, height) {
+    // ENLARGED barcode numeric display
     const spacedBarcodeDisplay = this.formatBarcodeWithSpaces(labelData.barcodeDisplay);
     
     pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(7);
+    pdf.setFontSize(9); // Increased from 7
     pdf.setTextColor(102, 102, 102);
     const displayWidth = pdf.getTextWidth(spacedBarcodeDisplay);
     const displayX = x + Math.max(0, (width - displayWidth) / 2);
-    pdf.text(spacedBarcodeDisplay, displayX, y + 12);
+    pdf.text(spacedBarcodeDisplay, displayX, y + 15);
     
-    // Barcode image
-    const barcodeHeight = Math.min(height - 20, 50);
+    // ENLARGED barcode image
+    const barcodeHeight = Math.min(height - 25, 70); // Increased significantly
     await this.drawEnhancedBarcode(
       pdf, 
       labelData.barcode, 
       x, 
-      y + 15, 
+      y + 20, 
       width, 
       barcodeHeight
     );
   }
 
   /**
-   * Draw store box positioned for bottom-center-left of rotated view (top-center-left of PDF)
+   * Draw centered store box (bottom-center-left when rotated, top-center-left in PDF)
    * @param {jsPDF} pdf - PDF document
-   * @param {number} x - X position in PDF coordinates
+   * @param {number} x - X position in PDF coordinates (more centered)
    * @param {number} y - Y position in PDF coordinates  
    * @param {number} width - Available width
    * @param {number} height - Available height
    */
-  static drawStoreBoxForRotation(pdf, x, y, width, height) {
-    // "Store:" label
+  static drawCenteredStoreBox(pdf, x, y, width, height) {
+    // "Store:" label with larger font
     pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(9);
+    pdf.setFontSize(11); // Increased from 9
     pdf.setTextColor(0, 0, 0);
-    pdf.text('Store:', x, y + 12);
+    pdf.text('Store:', x, y + 15);
     
-    // Text box with lines
-    const boxHeight = Math.min(height - 20, 55);
-    const boxY = y + 16;
+    // Larger text box with lines
+    const boxHeight = Math.min(height - 25, 70); // Larger box
+    const boxY = y + 20;
     
     // Main box
     pdf.setDrawColor(0, 0, 0);
@@ -384,7 +372,7 @@ export class PDFGenerator {
     pdf.setDrawColor(220, 220, 220);
     pdf.setLineWidth(0.5);
     
-    const numLines = 4;
+    const numLines = 5; // More lines
     for (let i = 1; i < numLines; i++) {
       const lineY = boxY + (i * (boxHeight / numLines));
       pdf.line(x + 2, lineY, x + width - 2, lineY);
@@ -392,7 +380,7 @@ export class PDFGenerator {
   }
 
   /**
-   * Draw dates positioned for bottom-center-right of rotated view (top-center-right of PDF)
+   * Draw enlarged dates section (bottom-center-right when rotated, top-center-right in PDF)
    * @param {jsPDF} pdf - PDF document
    * @param {Object} labelData - Label data
    * @param {number} x - X position in PDF coordinates
@@ -400,36 +388,36 @@ export class PDFGenerator {
    * @param {number} width - Available width
    * @param {number} height - Available height
    */
-  static drawDatesForRotation(pdf, labelData, x, y, width, height) {
-    let currentY = y + 12;
+  static drawEnlargedDatesSection(pdf, labelData, x, y, width, height) {
+    let currentY = y + 15;
     
-    // Harvest Date
+    // ENLARGED Harvest Date
     pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(9);
+    pdf.setFontSize(11); // Increased from 9
     pdf.setTextColor(0, 0, 0);
     pdf.text('Harvest:', x, currentY);
-    currentY += 12;
+    currentY += 15; // More spacing
     
     pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(9);
+    pdf.setFontSize(11); // Increased from 9
     const harvestDate = labelData.harvestDate || 'MM/DD/YY';
     pdf.text(harvestDate, x, currentY);
-    currentY += 18;
+    currentY += 22; // More spacing
     
-    // Package Date
+    // ENLARGED Package Date
     pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(9);
+    pdf.setFontSize(11); // Increased from 9
     pdf.text('Package:', x, currentY);
-    currentY += 12;
+    currentY += 15; // More spacing
     
     pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(9);
+    pdf.setFontSize(11); // Increased from 9
     const packageDate = labelData.packagedDate || 'MM/DD/YY';
     pdf.text(packageDate, x, currentY);
   }
 
   /**
-   * Draw case/box positioned for bottom-right of rotated view (top-right of PDF)
+   * Draw enlarged case/box section (bottom-right when rotated, top-right in PDF)
    * @param {jsPDF} pdf - PDF document
    * @param {Object} labelData - Label data
    * @param {number} x - X position in PDF coordinates
@@ -439,31 +427,33 @@ export class PDFGenerator {
    * @param {number} boxNumber - Box number
    * @param {number} totalBoxes - Total boxes
    */
-  static drawCaseBoxForRotation(pdf, labelData, x, y, width, height, boxNumber, totalBoxes) {
-    let currentY = y + 12;
-    const boxHeight = 14;
+  static drawEnlargedCaseBoxSection(pdf, labelData, x, y, width, height, boxNumber, totalBoxes) {
+    let currentY = y + 15;
+    const boxHeight = 18; // Increased from 14
     
-    // Case Qty Box
+    // ENLARGED Case Qty Box
     pdf.setDrawColor(0, 0, 0);
     pdf.setLineWidth(1);
     pdf.rect(x, currentY, width, boxHeight);
     
     pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(8);
+    pdf.setFontSize(10); // Increased from 8
     pdf.setTextColor(0, 0, 0);
     const caseQtyValue = labelData.caseQuantity || '___';
     const caseQtyText = `Case: ${caseQtyValue}`;
     const caseQtyWidth = pdf.getTextWidth(caseQtyText);
-    pdf.text(caseQtyText, x + (width - caseQtyWidth) / 2, currentY + 10);
+    pdf.text(caseQtyText, x + (width - caseQtyWidth) / 2, currentY + 12);
     
-    currentY += boxHeight + 8;
+    currentY += boxHeight + 12; // More spacing
     
-    // Box Number Box
+    // ENLARGED Box Number Box
     pdf.rect(x, currentY, width, boxHeight);
     
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(10); // Increased from 8
     const boxText = `Box ${boxNumber}/${totalBoxes}`;
     const boxTextWidth = pdf.getTextWidth(boxText);
-    pdf.text(boxText, x + (width - boxTextWidth) / 2, currentY + 10);
+    pdf.text(boxText, x + (width - boxTextWidth) / 2, currentY + 12);
   }
 
   /**
@@ -532,7 +522,7 @@ export class PDFGenerator {
       
       JsBarcode(canvas, validation.cleanValue, {
         format: 'CODE39',
-        width: Math.max(2, Math.floor(width / 40)),
+        width: Math.max(2, Math.floor(width / 35)), // Slightly wider bars
         height: height * 2,
         displayValue: false,
         margin: 0,
@@ -563,12 +553,12 @@ export class PDFGenerator {
   }
 
   /**
-   * Generate test PDF for S-5492 corrected layout verification
+   * Generate test PDF for S-5492 final enhanced layout verification
    * @returns {Promise<Blob>} - Test PDF blob
    */
   static async generateTestPDF() {
     const testData = [{
-      sku: 'TEST-S5492-CORRECTED',
+      sku: 'TEST-S5492-FINAL',
       barcode: 'TEST123456',
       productName: 'Curaleaf Pink Champagne Premium Cannabis Capsules [10mg THC] 30-Count Test Product',
       brand: 'Test Brand',
@@ -586,8 +576,8 @@ export class PDFGenerator {
   }
 
   /**
-   * Generate alignment test PDF showing corrected layout mapping
-   * @returns {Promise<Blob>} - Test PDF with corrected layout
+   * Generate alignment test PDF showing final enhanced layout
+   * @returns {Promise<Blob>} - Test PDF with final layout
    */
   static async generateAlignmentTestPDF() {
     const pdf = new jsPDF({
@@ -609,9 +599,9 @@ export class PDFGenerator {
     // Title
     pdf.setFontSize(14);
     pdf.setTextColor(0, 0, 0);
-    pdf.text('S-5492 CORRECTED ROTATION MAPPING Test', 50, 30);
+    pdf.text('S-5492 FINAL ENHANCED LAYOUT Test', 50, 30);
 
-    // Draw all 4 label positions with corrected layout indicators
+    // Draw all 4 label positions with enhanced layout indicators
     for (let i = 0; i < 4; i++) {
       const pos = this.calculateUlineS5492PositionSideways(i);
       
@@ -623,38 +613,39 @@ export class PDFGenerator {
       // Position info
       pdf.setFontSize(10);
       pdf.setTextColor(255, 0, 0);
-      pdf.text(`Label ${i + 1} - CORRECTED MAPPING`, pos.x + 5, pos.y + 15);
+      pdf.text(`Label ${i + 1} - FINAL ENHANCED`, pos.x + 5, pos.y + 15);
       pdf.text(`PDF: ${pos.width}×${pos.height}pt`, pos.x + 5, pos.y + 28);
-      pdf.text('Rotated view: 432×288pt', pos.x + 5, pos.y + 41);
+      pdf.text('All elements enlarged', pos.x + 5, pos.y + 41);
       
-      // Show content zones
+      // Show enhanced content zones
       pdf.setDrawColor(0, 128, 255);
       pdf.setLineWidth(1);
       
-      // Top area (will be bottom when rotated) - Product Name
-      pdf.rect(pos.x + 50, pos.y + pos.height - 120, pos.width - 55, 115);
+      // Enhanced Product Name area (enlarged)
+      pdf.rect(pos.x + 15, pos.y + pos.height - 170, pos.width - 20, 160);
       pdf.setFontSize(8);
-      pdf.text('Product Name Area', pos.x + 60, pos.y + pos.height - 60);
+      pdf.text('ENLARGED Product Name', pos.x + 25, pos.y + pos.height - 100);
       
-      // Bottom area (will be top when rotated) - Controls
-      pdf.rect(pos.x + 5, pos.y + 5, pos.width - 10, 85);
-      pdf.text('Controls Area', pos.x + 15, pos.y + 50);
+      // Enhanced Controls area (enlarged)
+      pdf.rect(pos.x + 5, pos.y + 5, pos.width - 10, 105);
+      pdf.text('ENLARGED Controls', pos.x + 15, pos.y + 60);
       
-      // Left area (will be right when rotated) - Audit
-      pdf.rect(pos.x + 5, pos.y + pos.height - 50, 40, 45);
-      pdf.text('Audit', pos.x + 10, pos.y + pos.height - 25);
+      // Audit corner
+      pdf.rect(pos.x + 5, pos.y + pos.height - 15, 80, 10);
+      pdf.text('Audit Corner', pos.x + 10, pos.y + pos.height - 8);
     }
 
-    // Corrected layout instructions
+    // Final enhanced layout instructions
     pdf.setFontSize(12);
     pdf.setTextColor(0, 0, 0);
-    pdf.text('CORRECTED ROTATION MAPPING:', 50, 80);
+    pdf.text('FINAL ENHANCED LAYOUT FEATURES:', 50, 80);
     pdf.setFontSize(10);
-    pdf.text('1. Content positioned to appear correctly when paper rotated 90°', 50, 95);
-    pdf.text('2. Audit Trail: Top-left when rotated (bottom-left in PDF)', 50, 110);
-    pdf.text('3. Product Name: Top-center/right when rotated (bottom-center/right in PDF)', 50, 125);
-    pdf.text('4. Controls: Bottom row when rotated (top row in PDF)', 50, 140);
-    pdf.text('5. Layout: Barcode | Store | Dates | Case/Box (left to right when rotated)', 50, 155);
+    pdf.text('1. Audit Trail: Bottom-left corner (very small, out of the way)', 50, 95);
+    pdf.text('2. Product Name: ENLARGED section with fonts up to 42pt', 50, 110);
+    pdf.text('3. Barcode: ENLARGED with bigger numeric display (9pt)', 50, 125);
+    pdf.text('4. Store Box: CENTERED with larger box and 11pt fonts', 50, 140);
+    pdf.text('5. Dates: ENLARGED fonts (11pt) with more spacing', 50, 155);
+    pdf.text('6. Case/Box: ENLARGED boxes and 10pt fonts', 50, 170);
 
     return pdf.output('blob');
   }
@@ -693,11 +684,11 @@ export class PDFGenerator {
       warnings,
       totalLabels,
       estimatedPages: Math.ceil(totalLabels / 4),
-      labelFormat: 'S-5492 (CORRECTED ROTATION MAPPING)',
+      labelFormat: 'S-5492 (FINAL ENHANCED LAYOUT)',
       pageSize: 'Legal (8.5" × 14")',
       labelsPerPage: 4,
-      contentLayout: 'Content positioned for optimal rotated view',
-      rotationNote: 'Labels positioned sideways - rotate paper 90° clockwise for optimal layout'
+      contentLayout: 'All elements enlarged with optimal positioning',
+      rotationNote: 'Labels positioned sideways - rotate paper 90° clockwise for enhanced layout'
     };
   }
 
@@ -711,38 +702,42 @@ export class PDFGenerator {
     }
 
     return {
-      migration: 'S-5492 CORRECTED ROTATION MAPPING',
-      version: '6.3.2',
-      rotationMapping: {
-        concept: 'Content positioned in PDF to appear correctly when paper rotated 90° clockwise',
-        auditTrail: 'Bottom-left in PDF → Top-left when rotated',
-        productName: 'Bottom-center/right in PDF → Top-center/right when rotated',
-        barcode: 'Top-left in PDF → Bottom-left when rotated',
-        storeBox: 'Top-center-left in PDF → Bottom-center-left when rotated',
-        dates: 'Top-center-right in PDF → Bottom-center-right when rotated',
-        caseBox: 'Top-right in PDF → Bottom-right when rotated'
+      migration: 'S-5492 FINAL ENHANCED LAYOUT',
+      version: '6.4.0',
+      enhancedFeatures: {
+        auditTrail: 'Bottom-left corner, very small (5pt), out of the way',
+        productName: 'ENLARGED section (160pt height), fonts up to 42pt',
+        barcode: 'ENLARGED (75×100pt), numeric display 9pt',
+        storeBox: 'CENTERED position (85pt from left), 11pt fonts, larger box',
+        dates: 'ENLARGED fonts (11pt), more spacing between elements',
+        caseBox: 'ENLARGED boxes (18pt height), 10pt fonts'
       },
-      coordinateTransform: {
-        pdfDimensions: '288pt × 432pt (4" × 6")',
-        rotatedDimensions: '432pt × 288pt (6" × 4")',
-        transformType: 'Position mapping without PDF transformations',
-        compatibility: 'All PDF viewers and printers'
+      sizingComparisons: {
+        productNameSection: 'Increased from 120pt to 160pt height',
+        barcodeSection: 'Increased from 65×80pt to 75×100pt',
+        storeBox: 'Increased from 60×80pt to 70×100pt, more centered',
+        productNameFont: 'Increased from 32pt to 42pt maximum',
+        barcodeNumeric: 'Increased from 7pt to 9pt',
+        datesFont: 'Increased from 9pt to 11pt',
+        caseBoxFont: 'Increased from 8pt to 10pt'
+      },
+      coordinateMapping: {
+        concept: 'Content positioned in PDF to appear correctly when paper rotated 90° clockwise',
+        auditTrail: 'PDF bottom-left corner → Rotated top-left corner',
+        productName: 'PDF bottom-center/right → Rotated top-center/right',
+        barcode: 'PDF top-left → Rotated bottom-left',
+        storeBox: 'PDF top-center-left → Rotated bottom-center-left',
+        dates: 'PDF top-center-right → Rotated bottom-center-right',
+        caseBox: 'PDF top-right → Rotated bottom-right'
       },
       layoutSpecs: {
         dimensions: '4" × 6" (positioned sideways)',
-        orientation: 'SIDEWAYS containers with mapped content',
+        orientation: 'SIDEWAYS containers with enhanced content',
         labelsPerSheet: 4,
         layout: '2×2 grid of sideways labels',
-        workflow: 'Print → Rotate paper 90° clockwise → Perfect layout'
+        workflow: 'Print → Rotate paper 90° clockwise → Perfect enhanced layout'
       },
-      positions: positions,
-      technicalApproach: [
-        'NO PDF transformation functions used',
-        'Simple coordinate mapping based on rotation',
-        'Content positioned at calculated PDF coordinates',
-        'Appears correctly when paper physically rotated',
-        'Compatible with all PDF viewers and printers'
-      ]
+      positions: positions
     };
   }
 
@@ -751,8 +746,8 @@ export class PDFGenerator {
     return this.calculateUlineS5492PositionSideways(labelIndex % 4);
   }
 
-  // Backwards compatibility - redirect to corrected method
+  // Backwards compatibility - redirect to final method
   static async drawSidewaysLabel(pdf, labelData, position, boxNumber, totalBoxes, debug, currentUser) {
-    return this.drawSidewaysLabelCorrectedLayout(pdf, labelData, position, boxNumber, totalBoxes, debug, currentUser);
+    return this.drawSidewaysLabelFinalLayout(pdf, labelData, position, boxNumber, totalBoxes, debug, currentUser);
   }
 }
