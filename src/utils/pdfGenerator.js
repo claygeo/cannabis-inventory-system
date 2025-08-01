@@ -1,4 +1,4 @@
-// SIMPLE VISUAL-FIRST PDF GENERATOR - Direct HTML Layout Replication
+// FINAL ROTATED VIEW PDF GENERATOR - Position for Physical Paper Rotation
 import { jsPDF } from 'jspdf';
 import 'jspdf/dist/jspdf.es.min.js';
 
@@ -8,16 +8,16 @@ import { EVENT_TYPES } from '../constants.js';
 import storage from './storage.js';
 
 /**
- * PDF Generation using Simple Visual-First approach
- * Directly replicate the HTML layout without complex coordinate math
- * Position elements exactly where they visually appear in the final result
+ * PDF Generation designed for final rotated view
+ * Position everything exactly where it should appear when paper is rotated 90° clockwise
+ * NO PDF rotation - just strategic positioning for physical paper rotation
  */
 export class PDFGenerator {
   /**
    * Generate PDF with labels positioned for Uline S-12212 sheets
    */
   static async generateLabels(labelDataArray, options = {}) {
-    console.log('🏷️ Starting SIMPLE VISUAL-FIRST PDF generation...');
+    console.log('🏷️ Starting FINAL ROTATED VIEW PDF generation...');
     console.log('📋 Label data array length:', labelDataArray.length);
     
     const {
@@ -27,7 +27,7 @@ export class PDFGenerator {
       currentUser = 'Unknown'
     } = options;
 
-    // Create PDF instance
+    // Create PDF instance - PORTRAIT mode for Uline S-12212 compatibility
     const pdf = new jsPDF({
       orientation: 'portrait',
       unit: 'pt',
@@ -69,8 +69,8 @@ export class PDFGenerator {
           // Calculate which box number this label represents
           const boxNumber = Math.floor(labelCopy / Math.max(1, Math.floor(formattedData.labelQuantity / formattedData.boxCount))) + 1;
 
-          // Draw the label using SIMPLE VISUAL approach
-          await this.drawLabelWithSimpleVisualApproach(pdf, formattedData, position, boxNumber, formattedData.boxCount, debug, currentUser);
+          // Draw the label positioned for final rotated view
+          await this.drawLabelForRotatedView(pdf, formattedData, position, boxNumber, formattedData.boxCount, debug, currentUser);
 
           currentLabelIndex++;
         }
@@ -81,10 +81,10 @@ export class PDFGenerator {
       // Add metadata
       pdf.setDocumentProperties({
         title: `Cannabis Inventory Labels - ${new Date().toISOString().slice(0, 10)}`,
-        subject: 'Uline S-12212 Format Labels (Simple Visual-First)',
+        subject: 'Uline S-12212 Format Labels (Final Rotated View)',
         author: 'Cannabis Inventory Management System',
         creator: 'Cannabis Inventory Management System v8.5.0',
-        keywords: 'cannabis, inventory, labels, uline, s-12212, simple-visual, direct-replication'
+        keywords: 'cannabis, inventory, labels, uline, s-12212, rotated-view, physical-rotation'
       });
 
       return pdf.output('blob');
@@ -96,10 +96,10 @@ export class PDFGenerator {
   }
 
   /**
-   * SIMPLE VISUAL APPROACH: Draw exactly what the HTML shows
+   * Draw label positioned for final rotated view (when paper is rotated 90° clockwise)
    */
-  static async drawLabelWithSimpleVisualApproach(pdf, labelData, position, boxNumber, totalBoxes, debug, currentUser) {
-    console.log(`🎨 Drawing label with SIMPLE VISUAL approach...`);
+  static async drawLabelForRotatedView(pdf, labelData, position, boxNumber, totalBoxes, debug, currentUser) {
+    console.log(`🎨 Drawing label positioned for final rotated view...`);
     
     const { x, y, width, height } = position;
 
@@ -109,13 +109,13 @@ export class PDFGenerator {
       pdf.setLineWidth(1);
       pdf.rect(x, y, width, height);
 
-      // Draw the content exactly as it appears in HTML
-      await this.drawSimpleVisualContent(pdf, labelData, position, boxNumber, totalBoxes, currentUser, debug);
+      // Position content for rotated view
+      await this.positionContentForRotatedView(pdf, labelData, position, boxNumber, totalBoxes, currentUser, debug);
       
-      console.log('✅ Simple visual approach successful');
+      console.log('✅ Rotated view positioning successful');
 
     } catch (error) {
-      console.error('❌ Simple visual approach failed:', error);
+      console.error('❌ Rotated view positioning failed:', error);
       
       // Emergency fallback
       pdf.setFontSize(12);
@@ -125,196 +125,195 @@ export class PDFGenerator {
   }
 
   /**
-   * Draw content using simple visual positioning - replicate HTML exactly
+   * Position content for rotated view - when paper is rotated 90° clockwise
+   * Portrait label (4" wide × 6" tall) becomes landscape (6" wide × 4" tall)
    */
-  static async drawSimpleVisualContent(pdf, labelData, position, boxNumber, totalBoxes, currentUser, debug) {
-    console.log(`🎨 Drawing simple visual content - replicating HTML layout`);
+  static async positionContentForRotatedView(pdf, labelData, position, boxNumber, totalBoxes, currentUser, debug) {
+    console.log(`🎨 Positioning content for rotated view`);
     
     const { x, y, width, height } = position;
     
     // Extract brand info
     const brandInfo = this.extractBrandFromProductName(labelData.productName);
     
-    // Simple visual zones (matching HTML percentages)
-    const topZone = Math.floor(height * 0.35);      // 35% - Brand + Product
-    const middleZone = Math.floor(height * 0.35);   // 35% - Store
-    const bottomZone = height - topZone - middleZone; // 30% - Barcode/Dates/Case
+    // When rotated 90° clockwise:
+    // - Portrait width (4") becomes rotated height 
+    // - Portrait height (6") becomes rotated width
+    
+    // ROTATED VIEW ZONES (what user sees after rotating paper):
+    // TOP of rotated view = RIGHT side of portrait PDF
+    // MIDDLE of rotated view = CENTER of portrait PDF  
+    // BOTTOM of rotated view = LEFT side of portrait PDF
     
     const padding = 15;
     
-    // TOP ZONE: Brand + Product (centered horizontally when rotated)
-    let currentTopY = y + padding + 25;
+    // TOP ZONE (Brand + Product) - RIGHT side of portrait PDF
+    const topZoneX = x + width - 120; // Right side of portrait label
+    let topZoneY = y + padding + 30;
     
-    // Brand Name - positioned to appear centered when paper is rotated
+    // Brand Name - positioned to appear at top-left of rotated view
     if (brandInfo.brand) {
-      const brandFontSize = Math.min(22, Math.max(16, 26 - Math.floor(brandInfo.brand.length / 4)));
+      const brandFontSize = Math.min(20, Math.max(14, 24 - Math.floor(brandInfo.brand.length / 4)));
       
       pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(brandFontSize);
       pdf.setTextColor(44, 85, 48); // Dark green
       
-      // Position for horizontal centering when rotated 90° clockwise
-      const brandX = x + width / 2;
-      pdf.text(brandInfo.brand, brandX, currentTopY, { angle: 90, align: 'center' });
-      
-      currentTopY += brandFontSize + 10;
+      // Text rotated 90° clockwise to read properly when paper is rotated
+      pdf.text(brandInfo.brand, topZoneX, topZoneY, { angle: 90 });
+      topZoneY += 80; // Move down for next element
     }
     
-    // Product Name - multi-line, centered
-    const productFontSize = this.calculateOptimalFontSize(brandInfo.productName, height * 0.8, 24, 14);
+    // Product Name - multiple lines, positioned for rotated view
+    const productFontSize = this.calculateOptimalFontSize(brandInfo.productName, 300, 18, 12);
     
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(productFontSize);
     pdf.setTextColor(0, 0, 0);
     
-    const productLines = this.wrapText(brandInfo.productName, height * 0.75, productFontSize);
-    const productX = x + width / 2;
-    
+    const productLines = this.wrapText(brandInfo.productName, 40, productFontSize);
     productLines.slice(0, 3).forEach((line, index) => {
-      pdf.text(line, productX, currentTopY + (index * (productFontSize + 3)), { 
-        angle: 90, 
-        align: 'center' 
-      });
+      pdf.text(line, topZoneX, topZoneY + (index * 60), { angle: 90 });
     });
     
-    // MIDDLE ZONE: Store Label + Textbox
-    const middleStartY = y + topZone + padding;
+    // MIDDLE ZONE (Store) - CENTER of portrait PDF
+    const storeZoneX = x + width / 2;
+    const storeZoneY = y + padding + 30;
     
-    // "Store:" label - positioned above textbox area
+    // "Store:" label - positioned to appear above textbox in rotated view
     pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(16);
+    pdf.setFontSize(14);
     pdf.setTextColor(0, 0, 0);
+    pdf.text('Store:', storeZoneX - 20, storeZoneY, { angle: 90 });
     
-    const storeLabelX = x + 30; // Left side positioning
-    pdf.text('Store:', storeLabelX, middleStartY + 20, { angle: 90 });
+    // Store textbox - positioned for rotated view
+    const storeBoxWidth = 160; // Will become height when rotated
+    const storeBoxHeight = 40;  // Will become width when rotated
+    const storeBoxX = storeZoneX - storeBoxHeight / 2;
+    const storeBoxY = storeZoneY + 30;
     
-    // Store textbox - centered horizontally, below label
-    const boxWidth = Math.min(width * 0.7, 200);
-    const boxHeight = 45;
-    const boxX = x + (width - boxHeight) / 2; // Center the rotated box
-    const boxY = middleStartY + 35;
-    
-    // Draw textbox (appears horizontal when rotated)
+    // Draw textbox
     pdf.setDrawColor(0, 0, 0);
     pdf.setLineWidth(2);
-    pdf.rect(boxX, boxY, boxHeight, boxWidth); // Swapped for rotation effect
+    pdf.rect(storeBoxX, storeBoxY, storeBoxHeight, storeBoxWidth);
     
     // Writing lines in textbox
     pdf.setDrawColor(200, 200, 200);
     pdf.setLineWidth(0.5);
-    const lineSpacing = boxWidth / 3;
+    const lineSpacing = storeBoxWidth / 3;
     for (let i = 1; i < 3; i++) {
-      const lineY = boxY + (i * lineSpacing);
-      pdf.line(boxX + 4, lineY, boxX + boxHeight - 4, lineY);
+      const lineY = storeBoxY + (i * lineSpacing);
+      pdf.line(storeBoxX + 3, lineY, storeBoxX + storeBoxHeight - 3, lineY);
     }
     
-    // BOTTOM ZONE: Three columns (Barcode | Dates | Case/Box)
-    const bottomStartY = y + topZone + middleZone + padding;
-    const columnSpacing = width / 3;
+    // BOTTOM ZONE (Barcode | Dates | Case/Box) - LEFT side of portrait PDF
+    const bottomZoneX = x + 80; // Left side of portrait label
+    const bottomRowY = y + padding + 40;
+    const columnSpacing = 130; // Spacing between columns in rotated view
     
-    // Column 1: Barcode (left third)
-    const col1X = x + columnSpacing * 0.5;
+    // Column 1: Barcode - positioned for rotated view
+    let col1Y = bottomRowY;
     
-    // Barcode numeric (above barcode when rotated)
+    // Barcode numeric (appears above barcode in rotated view)
     const spacedBarcodeDisplay = this.formatBarcodeWithSpaces(labelData.barcodeDisplay);
     pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(10);
+    pdf.setFontSize(9);
     pdf.setTextColor(102, 102, 102);
-    
-    pdf.text(spacedBarcodeDisplay, col1X, bottomStartY + 15, { angle: 90, align: 'center' });
+    pdf.text(spacedBarcodeDisplay, bottomZoneX, col1Y, { angle: 90 });
     
     // Barcode image
-    const barcodeWidth = 100;
-    const barcodeHeight = 40;
-    const barcodeX = col1X - barcodeHeight / 2;
-    const barcodeY = bottomStartY + 25;
+    const barcodeWidth = 80;
+    const barcodeHeight = 35;
+    const barcodeX = bottomZoneX - barcodeHeight / 2;
+    const barcodeY = col1Y + 15;
     
-    await this.drawEnhancedBarcodeSimple(pdf, labelData.barcode, barcodeX, barcodeY, barcodeHeight, barcodeWidth);
+    await this.drawEnhancedBarcodeForRotatedView(pdf, labelData.barcode, barcodeX, barcodeY, barcodeHeight, barcodeWidth);
     
-    // Column 2: Dates (center third)
-    const col2X = x + columnSpacing * 1.5;
-    
-    let dateY = bottomStartY + 15;
+    // Column 2: Dates - positioned for rotated view  
+    let col2Y = bottomRowY;
     
     pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(12);
+    pdf.setFontSize(11);
     pdf.setTextColor(0, 0, 0);
-    pdf.text('Harvest:', col2X, dateY, { angle: 90, align: 'center' });
+    pdf.text('Harvest:', bottomZoneX, col2Y + columnSpacing, { angle: 90 });
     
-    dateY += 16;
+    col2Y += 15;
     pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(11);
+    pdf.setFontSize(10);
     const harvestDate = labelData.harvestDate || 'MM/DD/YY';
-    pdf.text(harvestDate, col2X, dateY, { angle: 90, align: 'center' });
+    pdf.text(harvestDate, bottomZoneX, col2Y + columnSpacing, { angle: 90 });
     
-    dateY += 22;
+    col2Y += 20;
     pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(12);
-    pdf.text('Package:', col2X, dateY, { angle: 90, align: 'center' });
-    
-    dateY += 16;
-    pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(11);
+    pdf.text('Package:', bottomZoneX, col2Y + columnSpacing, { angle: 90 });
+    
+    col2Y += 15;
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(10);
     const packageDate = labelData.packagedDate || 'MM/DD/YY';
-    pdf.text(packageDate, col2X, dateY, { angle: 90, align: 'center' });
+    pdf.text(packageDate, bottomZoneX, col2Y + columnSpacing, { angle: 90 });
     
-    // Column 3: Case/Box (right third)
-    const col3X = x + columnSpacing * 2.5;
-    
-    let caseY = bottomStartY + 15;
+    // Column 3: Case/Box with textboxes - positioned for rotated view
+    let col3Y = bottomRowY;
     
     // Case textbox
-    const caseBoxSize = 18;
-    const caseBoxX = col3X - caseBoxSize / 2;
+    const caseBoxSize = 15;
+    const caseBoxLength = 50;
+    const caseBoxX = bottomZoneX - caseBoxSize / 2;
+    const caseBoxY = col3Y + (columnSpacing * 2);
     
     pdf.setDrawColor(0, 0, 0);
     pdf.setLineWidth(1);
-    pdf.rect(caseBoxX, caseY - 2, caseBoxSize, 60); // Vertical box for rotation
+    pdf.rect(caseBoxX, caseBoxY, caseBoxSize, caseBoxLength);
     
     pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(10);
+    pdf.setFontSize(9);
     pdf.setTextColor(0, 0, 0);
     const caseQtyValue = labelData.caseQuantity || '___';
-    pdf.text(`Case: ${caseQtyValue}`, col3X, caseY + 25, { angle: 90, align: 'center' });
+    pdf.text(`Case: ${caseQtyValue}`, bottomZoneX, caseBoxY + 30, { angle: 90 });
     
-    caseY += 35;
+    col3Y += 35;
     
     // Box textbox
-    const boxBoxX = col3X - caseBoxSize / 2;
-    pdf.rect(boxBoxX, caseY - 2, caseBoxSize, 60); // Vertical box for rotation
+    const boxBoxX = bottomZoneX - caseBoxSize / 2;
+    const boxBoxY = col3Y + (columnSpacing * 2);
+    
+    pdf.rect(boxBoxX, boxBoxY, caseBoxSize, caseBoxLength);
     
     const boxText = `Box ${boxNumber}/${totalBoxes}`;
-    pdf.text(boxText, col3X, caseY + 25, { angle: 90, align: 'center' });
+    pdf.text(boxText, bottomZoneX, boxBoxY + 25, { angle: 90 });
     
-    // Audit trail (bottom-left corner)
+    // Audit trail - positioned for bottom-left of rotated view
     const auditLine = this.generateAuditLine(currentUser);
     pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(7);
+    pdf.setFontSize(6);
     pdf.setTextColor(102, 102, 102);
     
-    pdf.text(auditLine, x + 20, y + height - 10, { angle: 90 });
+    pdf.text(auditLine, bottomZoneX, y + height - 20, { angle: 90 });
     
     if (debug) {
-      // Debug zones
+      // Debug: Show positioning zones
       pdf.setDrawColor(255, 0, 0);
       pdf.setLineWidth(0.5);
       
-      // Zone boundaries
-      pdf.line(x, y + topZone, x + width, y + topZone); // Top zone
-      pdf.line(x, y + topZone + middleZone, x + width, y + topZone + middleZone); // Middle zone
+      // TOP zone (right side)
+      pdf.rect(x + width - 120, y, 120, height);
       
-      // Column boundaries
-      pdf.line(x + columnSpacing, y + topZone + middleZone, x + columnSpacing, y + height);
-      pdf.line(x + columnSpacing * 2, y + topZone + middleZone, x + columnSpacing * 2, y + height);
+      // MIDDLE zone (center)  
+      pdf.rect(x + width/2 - 40, y, 80, height);
+      
+      // BOTTOM zone (left side)
+      pdf.rect(x, y, 120, height);
     }
     
-    console.log('✅ Simple visual content completed');
+    console.log('✅ Content positioned for rotated view');
   }
 
   /**
-   * Draw barcode using simple approach
+   * Draw barcode for rotated view
    */
-  static async drawEnhancedBarcodeSimple(pdf, barcodeValue, x, y, width, height) {
+  static async drawEnhancedBarcodeForRotatedView(pdf, barcodeValue, x, y, width, height) {
     if (!barcodeValue) return;
 
     try {
@@ -323,7 +322,7 @@ export class PDFGenerator {
       const validation = BarcodeGenerator.validateCode39(cleanBarcodeValue);
       if (!validation.isValid) {
         console.warn('Invalid barcode:', validation.error);
-        this.drawBarcodeErrorSimple(pdf, x, y, width, height);
+        this.drawBarcodeErrorForRotatedView(pdf, x, y, width, height);
         return;
       }
 
@@ -335,7 +334,7 @@ export class PDFGenerator {
       
       JsBarcode(canvas, validation.cleanValue, {
         format: 'CODE39',
-        width: Math.max(2, Math.floor(width / 35)),
+        width: Math.max(2, Math.floor(width / 30)),
         height: height * 2,
         displayValue: false,
         margin: 0,
@@ -345,24 +344,24 @@ export class PDFGenerator {
 
       const barcodeDataURL = canvas.toDataURL('image/png');
       
-      // Add barcode image rotated 90°
+      // Add barcode rotated 90° for proper orientation when paper is rotated
       pdf.addImage(barcodeDataURL, 'PNG', x, y, width, height, undefined, 'NONE', 90);
 
     } catch (error) {
       console.error('Barcode generation error:', error);
-      this.drawBarcodeErrorSimple(pdf, x, y, width, height);
+      this.drawBarcodeErrorForRotatedView(pdf, x, y, width, height);
     }
   }
 
   /**
-   * Draw barcode error placeholder
+   * Draw barcode error for rotated view
    */
-  static drawBarcodeErrorSimple(pdf, x, y, width, height) {
+  static drawBarcodeErrorForRotatedView(pdf, x, y, width, height) {
     pdf.setDrawColor(255, 0, 0);
     pdf.setLineWidth(1);
     pdf.rect(x, y, width, height);
     
-    pdf.setFontSize(8);
+    pdf.setFontSize(7);
     pdf.setTextColor(255, 0, 0);
     pdf.text('Barcode Error', x + width/2, y + height/2, { angle: 90, align: 'center' });
   }
@@ -409,9 +408,9 @@ export class PDFGenerator {
       labelIndex: labelIndex,
       
       // Method info
-      method: 'simple_visual',
-      approach: 'direct_html_replication',
-      complexity: 'low'
+      method: 'final_rotated_view',
+      approach: 'position_for_physical_rotation',
+      rotation: 'none_in_pdf'
     };
   }
 
@@ -477,19 +476,19 @@ export class PDFGenerator {
   }
 
   /**
-   * Calculate optimal font size for available space
+   * Calculate optimal font size
    */
-  static calculateOptimalFontSize(text, availableSpace, maxSize = 24, minSize = 12) {
+  static calculateOptimalFontSize(text, availableSpace, maxSize = 18, minSize = 10) {
     if (!text) return maxSize;
     
     const length = text.length;
     let fontSize = maxSize;
     
     // Simple length-based sizing
-    if (length > 100) fontSize = Math.max(minSize, maxSize - 10);
-    else if (length > 80) fontSize = Math.max(minSize, maxSize - 8);
-    else if (length > 60) fontSize = Math.max(minSize, maxSize - 6);
-    else if (length > 40) fontSize = Math.max(minSize, maxSize - 4);
+    if (length > 100) fontSize = Math.max(minSize, maxSize - 6);
+    else if (length > 80) fontSize = Math.max(minSize, maxSize - 5);
+    else if (length > 60) fontSize = Math.max(minSize, maxSize - 4);
+    else if (length > 40) fontSize = Math.max(minSize, maxSize - 3);
     else if (length > 25) fontSize = Math.max(minSize, maxSize - 2);
     
     return fontSize;
@@ -498,18 +497,16 @@ export class PDFGenerator {
   /**
    * Simple text wrapping
    */
-  static wrapText(text, maxSpace, fontSize) {
+  static wrapText(text, maxLength, fontSize) {
     if (!text) return [''];
     
     const words = text.split(' ');
     const lines = [];
     let currentLine = '';
     
-    const maxCharsPerLine = Math.floor(maxSpace / (fontSize * 0.5));
-    
     words.forEach(word => {
       const testLine = currentLine + (currentLine ? ' ' : '') + word;
-      if (testLine.length <= maxCharsPerLine || currentLine === '') {
+      if (testLine.length <= maxLength || currentLine === '') {
         currentLine = testLine;
       } else {
         lines.push(currentLine);
@@ -526,7 +523,7 @@ export class PDFGenerator {
    * Generate test PDF
    */
   static async generateTestPDF() {
-    console.log('🧪 Generating SIMPLE VISUAL test PDF...');
+    console.log('🧪 Generating FINAL ROTATED VIEW test PDF...');
     
     const testData = [
       {
@@ -568,10 +565,10 @@ export class PDFGenerator {
       warnings,
       totalLabels: labelDataArray.length,
       estimatedPages: Math.ceil(labelDataArray.length / 4),
-      labelFormat: 'Uline S-12212 (Simple Visual-First)',
-      approach: 'Direct HTML replication with simplified positioning',
-      method: 'simple_visual_first',
-      complexity: 'Low'
+      labelFormat: 'Uline S-12212 (Final Rotated View)',
+      approach: 'Position for physical paper rotation - no PDF rotation',
+      method: 'final_rotated_view',
+      compatibility: 'Uline S-12212 label sheets'
     };
   }
 }
