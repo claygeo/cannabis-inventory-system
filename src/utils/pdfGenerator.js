@@ -70,7 +70,7 @@ export class PDFGenerator {
         title: `Cannabis Inventory Labels - ${new Date().toISOString().slice(0, 10)}`,
         subject: 'Uline S-12212 Format Labels (Landscape Content Rotated as Complete Unit)',
         author: 'Cannabis Inventory Management System',
-        creator: 'Cannabis Inventory Management System v8.0.0',
+        creator: 'Cannabis Inventory Management System v8.1.0',
         keywords: 'cannabis, inventory, labels, uline, s-12212, landscape-content, rotated-layout, postcard-style'
       });
 
@@ -105,9 +105,6 @@ export class PDFGenerator {
     // Legal size sheet dimensions (8.5" × 14")
     const pageWidth = 612;   // 8.5" in points  
     const pageHeight = 1008; // 14" in points
-    
-    // HP E877 printer margins: 0.167" on all sides
-    const printerMargin = 12; // 0.167" = 12pt
     
     // S-12212 labels: 4" × 6" 
     const labelWidth = 288;  // 4" in points
@@ -287,13 +284,13 @@ export class PDFGenerator {
     const middleSectionHeight = Math.floor(contentHeight * 0.35);  // ~90pt  
     const bottomSectionHeight = contentHeight - topSectionHeight - middleSectionHeight; // ~78pt
 
-    // Section 1: Brand + Product Name (Top - 35%)
+    // Section 1: Brand + Product Name (Top - 35%) - CENTERED
     await this.drawLandscapeTopSection(pdf, brandInfo, padding, padding, contentWidth, topSectionHeight);
 
-    // Section 2: Store Box (Middle - 35%)
+    // Section 2: Store Box (Middle - 35%) - UPDATED LAYOUT
     this.drawLandscapeStoreSection(pdf, padding, padding + topSectionHeight, contentWidth, middleSectionHeight);
 
-    // Section 3: Bottom Info - Barcode, Dates, Case (Bottom - 30%)
+    // Section 3: Bottom Info - Barcode, Dates, Case (Bottom - 30%) - UPDATED LAYOUT
     await this.drawLandscapeBottomSection(pdf, labelData, padding, padding + topSectionHeight + middleSectionHeight, contentWidth, bottomSectionHeight, boxNumber, totalBoxes);
 
     // Audit trail (bottom-left corner)
@@ -310,12 +307,12 @@ export class PDFGenerator {
   }
 
   /**
-   * Draw top section in landscape layout - Brand and Product Name
+   * Draw top section in landscape layout - Brand and Product Name (CENTERED)
    */
   static async drawLandscapeTopSection(pdf, brandInfo, x, y, width, height) {
     let currentY = y + 20;
     
-    // Brand name (if detected)
+    // Brand name (CENTERED)
     if (brandInfo.brand) {
       const brandFontSize = Math.min(28, Math.max(16, 32 - Math.floor(brandInfo.brand.length / 4)));
       
@@ -323,11 +320,12 @@ export class PDFGenerator {
       pdf.setFontSize(brandFontSize);
       pdf.setTextColor(44, 85, 48); // Dark green
       
-      pdf.text(brandInfo.brand, x, currentY);
+      // CENTER the brand name
+      pdf.text(brandInfo.brand, x + width / 2, currentY, { align: 'center' });
       currentY += brandFontSize + 10;
     }
 
-    // Product name - can use much larger fonts in landscape
+    // Product name - CENTERED with larger fonts in landscape
     const availableWidth = width - 20;
     const availableHeight = height - (currentY - y) - 10;
     
@@ -337,87 +335,86 @@ export class PDFGenerator {
     pdf.setFontSize(productFontSize);
     pdf.setTextColor(0, 0, 0);
     
-    // Handle line wrapping for long product names
+    // Handle line wrapping for long product names - CENTERED
     const lines = this.wrapTextForLandscape(brandInfo.productName, availableWidth, productFontSize);
     
     lines.forEach((line, index) => {
       if (currentY + (productFontSize * (index + 1)) <= y + height - 5) {
-        pdf.text(line, x, currentY);
+        // CENTER each line
+        pdf.text(line, x + width / 2, currentY, { align: 'center' });
         currentY += productFontSize + 4;
       }
     });
   }
 
   /**
-   * Draw store section in landscape layout
+   * Draw store section in landscape layout - UPDATED: Store label above single textbox
    */
   static drawLandscapeStoreSection(pdf, x, y, width, height) {
-    // "Store:" label
+    // "Store:" label - positioned above and to the left of textbox
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(16);
     pdf.setTextColor(0, 0, 0);
-    pdf.text('Store:', x, y + 20);
+    pdf.text('Store:', x + 10, y + 25);
     
-    // Store text boxes - two lines for landscape layout
-    const boxHeight = 25;
-    const boxWidth = width - 80;
-    const startX = x + 60;
+    // Single centered textbox (larger than before)
+    const boxWidth = Math.min(width - 40, 280);
+    const boxHeight = 50;
+    const boxX = x + (width - boxWidth) / 2; // Center the textbox
+    const boxY = y + 35;
     
-    // First line
+    // Main textbox
     pdf.setDrawColor(0, 0, 0);
-    pdf.setLineWidth(1);
-    pdf.rect(startX, y + 5, boxWidth, boxHeight);
+    pdf.setLineWidth(2);
+    pdf.rect(boxX, boxY, boxWidth, boxHeight);
     
-    // Second line  
-    pdf.rect(startX, y + 35, boxWidth, boxHeight);
-    
-    // Writing lines
+    // Writing lines inside textbox
     pdf.setDrawColor(200, 200, 200);
     pdf.setLineWidth(0.5);
     
-    for (let i = 0; i < 2; i++) {
-      const boxY = y + 5 + (i * 30);
-      const numLines = 3;
-      for (let j = 1; j < numLines; j++) {
-        const lineY = boxY + (j * (boxHeight / numLines));
-        pdf.line(startX + 5, lineY, startX + boxWidth - 5, lineY);
-      }
+    const numLines = 3;
+    for (let i = 1; i < numLines; i++) {
+      const lineY = boxY + (i * (boxHeight / numLines));
+      pdf.line(boxX + 8, lineY, boxX + boxWidth - 8, lineY);
     }
   }
 
   /**
    * Draw bottom section in landscape layout - 3 columns: Barcode | Dates | Case/Box
+   * UPDATED: Larger barcode, numeric above, textboxes around case/box
    */
   static async drawLandscapeBottomSection(pdf, labelData, x, y, width, height, boxNumber, totalBoxes) {
     const colWidth = width / 3;
 
-    // Column 1: Barcode
+    // Column 1: Barcode - UPDATED LAYOUT
     await this.drawLandscapeBarcodeColumn(pdf, labelData, x, y, colWidth, height);
     
     // Column 2: Dates  
     this.drawLandscapeDatesColumn(pdf, labelData, x + colWidth, y, colWidth, height);
     
-    // Column 3: Case/Box
+    // Column 3: Case/Box - UPDATED WITH TEXTBOXES
     this.drawLandscapeCaseColumn(pdf, labelData, x + (colWidth * 2), y, colWidth, height, boxNumber, totalBoxes);
   }
 
   /**
-   * Draw barcode column in landscape layout
+   * Draw barcode column in landscape layout - UPDATED: Larger barcode, numeric above
    */
   static async drawLandscapeBarcodeColumn(pdf, labelData, x, y, width, height) {
-    // Barcode numeric display
+    const centerX = x + width / 2;
+    
+    // Barcode numeric display ABOVE barcode
     const spacedBarcodeDisplay = this.formatBarcodeWithSpaces(labelData.barcodeDisplay);
     
     pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(12);
     pdf.setTextColor(102, 102, 102);
-    pdf.text(spacedBarcodeDisplay, x + 5, y + height - 5);
+    pdf.text(spacedBarcodeDisplay, centerX, y + 15, { align: 'center' });
     
-    // Barcode image - larger in landscape
-    const barcodeWidth = Math.min(width - 20, 100);
-    const barcodeHeight = Math.min(height - 25, 45);
-    const barcodeX = x + (width - barcodeWidth) / 2;
-    const barcodeY = y + 10;
+    // Barcode image - LARGER
+    const barcodeWidth = Math.min(width - 10, 110); // Increased size
+    const barcodeHeight = Math.min(height - 25, 50); // Increased size
+    const barcodeX = centerX - barcodeWidth / 2;
+    const barcodeY = y + 20;
     
     await this.drawEnhancedBarcode(pdf, labelData.barcode, barcodeX, barcodeY, barcodeWidth, barcodeHeight);
   }
@@ -433,46 +430,60 @@ export class PDFGenerator {
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(14);
     pdf.setTextColor(0, 0, 0);
-    pdf.text('Harvest:', centerX - 30, currentY, { align: 'left' });
+    pdf.text('Harvest:', centerX, currentY, { align: 'center' });
     
+    currentY += 18;
     pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(13);
     const harvestDate = labelData.harvestDate || 'MM/DD/YY';
-    pdf.text(harvestDate, centerX + 15, currentY);
+    pdf.text(harvestDate, centerX, currentY, { align: 'center' });
     
     currentY += 25;
     
     // Package date
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(14);
-    pdf.text('Package:', centerX - 30, currentY, { align: 'left' });
+    pdf.text('Package:', centerX, currentY, { align: 'center' });
     
+    currentY += 18;
     pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(13);
     const packageDate = labelData.packagedDate || 'MM/DD/YY';
-    pdf.text(packageDate, centerX + 15, currentY);
+    pdf.text(packageDate, centerX, currentY, { align: 'center' });
   }
 
   /**
-   * Draw case/box column in landscape layout
+   * Draw case/box column in landscape layout - WITH TEXTBOXES
    */
   static drawLandscapeCaseColumn(pdf, labelData, x, y, width, height, boxNumber, totalBoxes) {
     const centerX = x + width / 2;
-    let currentY = y + 20;
+    let currentY = y + 15;
     
-    // Case quantity
+    // Case quantity with textbox
+    const caseQtyValue = labelData.caseQuantity || '___';
+    
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(14);
     pdf.setTextColor(0, 0, 0);
     
-    const caseQtyValue = labelData.caseQuantity || '___';
-    pdf.text(`Case: ${caseQtyValue}`, centerX, currentY, { align: 'center' });
+    // Case textbox
+    const caseBoxWidth = width - 20;
+    const boxHeight = 22;
+    const caseBoxX = x + (width - caseBoxWidth) / 2;
     
-    currentY += 25;
+    pdf.setDrawColor(0, 0, 0);
+    pdf.setLineWidth(1);
+    pdf.rect(caseBoxX, currentY, caseBoxWidth, boxHeight);
     
-    // Box info
+    pdf.text(`Case: ${caseQtyValue}`, centerX, currentY + 15, { align: 'center' });
+    
+    currentY += boxHeight + 10;
+    
+    // Box info with textbox
     const boxText = `Box ${boxNumber}/${totalBoxes}`;
-    pdf.text(boxText, centerX, currentY, { align: 'center' });
+    
+    pdf.rect(caseBoxX, currentY, caseBoxWidth, boxHeight);
+    pdf.text(boxText, centerX, currentY + 15, { align: 'center' });
   }
 
   /**
@@ -650,23 +661,63 @@ export class PDFGenerator {
   }
 
   /**
-   * Generate test PDF
+   * Generate test PDF - FIXED: Creates 4 different labels
    */
   static async generateTestPDF() {
-    const testData = [{
-      sku: 'TEST-S12212-LANDSCAPE-CONTENT',
-      barcode: 'TEST123456',
-      productName: 'Curaleaf Pink Champagne Premium Cannabis Capsules [10mg THC] 30-Count',
-      brand: 'Test Brand',
-      enhancedData: {
-        labelQuantity: 4,
-        caseQuantity: '48',
-        boxCount: '2',
-        harvestDate: '01/15/25',
-        packagedDate: '02/20/25'
+    const testData = [
+      {
+        sku: 'CURALEAF-PINK-CHAMPAGNE',
+        barcode: 'CUR19862332',
+        productName: 'Curaleaf Pink Champagne Premium Cannabis Capsules [10mg THC] 30-Count',
+        enhancedData: {
+          labelQuantity: 1, // 1 label per product
+          caseQuantity: '8',
+          boxCount: '2',
+          harvestDate: '04/20/25',
+          packagedDate: '07/10/25'
+        },
+        user: 'TestUser'
       },
-      user: 'TestUser'
-    }];
+      {
+        sku: 'GRASSROOTS-BIRTHDAY-CAKE',
+        barcode: 'GRS19873344',
+        productName: 'Grassroots Birthday Cake Live Resin [1g]',
+        enhancedData: {
+          labelQuantity: 1,
+          caseQuantity: '12',
+          boxCount: '8',
+          harvestDate: '03/15/25',
+          packagedDate: '06/20/25'
+        },
+        user: 'TestUser'
+      },
+      {
+        sku: 'FIND-CLEMENTINE-CART',
+        barcode: 'FND19884455',
+        productName: 'FIND Clementine Cartridge [0.5g]',
+        enhancedData: {
+          labelQuantity: 1,
+          caseQuantity: '6',
+          boxCount: '24',
+          harvestDate: '02/10/25',
+          packagedDate: '05/15/25'
+        },
+        user: 'TestUser'
+      },
+      {
+        sku: 'BNOBLE-BLUE-DREAM',
+        barcode: 'BNB19895566',
+        productName: 'B-Noble Blue Dream Flower [3.5g]',
+        enhancedData: {
+          labelQuantity: 1,
+          caseQuantity: '15',
+          boxCount: '6',
+          harvestDate: '01/05/25',
+          packagedDate: '04/10/25'
+        },
+        user: 'TestUser'
+      }
+    ];
 
     return this.generateLabels(testData, { debug: true, currentUser: 'TestUser' });
   }
@@ -726,7 +777,7 @@ export class PDFGenerator {
 
     return {
       migration: 'Uline S-12212 Landscape Content with Complete Rotation',
-      version: '8.0.0',
+      version: '8.1.0',
       approach: {
         concept: 'Content designed for landscape (6" wide × 4" tall), rotated as complete unit',
         method: 'PDF coordinate transformation with save/restore for entire content area rotation',
@@ -757,18 +808,18 @@ export class PDFGenerator {
       landscapeLayout: {
         designDimensions: '6" wide × 4" tall (432pt × 288pt)',
         sections: {
-          top: 'Brand + Product Name (35% height, larger fonts)',
-          middle: 'Store section with dual text boxes (35% height)',
-          bottom: 'Barcode | Dates | Case/Box in 3 columns (30% height)'
+          top: 'Brand + Product Name (35% height, CENTERED, larger fonts)',
+          middle: 'Store section with single centered textbox and "Store:" label above (35% height)',
+          bottom: 'Barcode (LARGER, numeric above) | Dates | Case/Box (with textboxes) in 3 columns (30% height)'
         },
         fontSizes: {
-          brand: 'Up to 28pt',
-          productName: 'Up to 28pt with line wrapping',
+          brand: 'Up to 28pt (centered)',
+          productName: 'Up to 28pt with line wrapping (centered)',
           storeLabel: '16pt',
           dates: '14pt labels, 13pt values',
-          case: '14pt',
+          case: '14pt (in textboxes)',
           audit: '9pt',
-          barcodeNumeric: '12pt'
+          barcodeNumeric: '12pt (above barcode)'
         }
       },
       labelConnection: {
