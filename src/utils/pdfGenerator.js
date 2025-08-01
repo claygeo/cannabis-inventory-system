@@ -1,4 +1,5 @@
-import jsPDF from 'jspdf';
+// FIXED IMPORT - Use named import instead of default import
+import { jsPDF } from 'jspdf';
 import { BarcodeGenerator } from './barcodeGenerator.js';
 import { LabelFormatter } from './labelFormatter.js';
 import { EVENT_TYPES } from '../constants.js';
@@ -14,7 +15,7 @@ export class PDFGenerator {
    * DEBUG: Check what methods are available on jsPDF instance
    */
   static debugJsPDFInstance() {
-    console.log('🔍 Debugging jsPDF instance...');
+    console.log('🔍 Debugging jsPDF instance with FIXED import...');
     
     const pdf = new jsPDF({
       orientation: 'portrait',
@@ -25,16 +26,9 @@ export class PDFGenerator {
     console.log('📋 PDF instance type:', typeof pdf);
     console.log('📋 PDF constructor:', pdf.constructor.name);
     
-    // Check available methods
-    const methods = Object.getOwnPropertyNames(pdf).concat(Object.getOwnPropertyNames(Object.getPrototypeOf(pdf)));
-    const uniqueMethods = [...new Set(methods)].sort();
-    
-    console.log('📋 Available methods count:', uniqueMethods.length);
-    console.log('📋 First 20 methods:', uniqueMethods.slice(0, 20));
-    
     // Check specific transformation methods
     const transformMethods = ['save', 'restore', 'translate', 'rotate'];
-    console.log('🔄 Transformation methods check:');
+    console.log('🔄 Transformation methods check with FIXED import:');
     transformMethods.forEach(method => {
       const exists = typeof pdf[method] === 'function';
       console.log(`  - ${method}: ${typeof pdf[method]} ${exists ? '✅' : '❌'}`);
@@ -59,10 +53,10 @@ export class PDFGenerator {
   }
 
   /**
-   * TEST: Try different transformation approaches
+   * TEST: Try transformation methods with fixed import
    */
   static async testTransformationMethods() {
-    console.log('🧪 Testing transformation methods...');
+    console.log('🧪 Testing transformation methods with FIXED import...');
     
     const pdf = new jsPDF({
       orientation: 'portrait',
@@ -71,8 +65,7 @@ export class PDFGenerator {
     });
     
     try {
-      // Test 1: Standard jsPDF 2.5.1 approach
-      console.log('📝 Testing standard approach...');
+      console.log('📝 Testing transformation methods...');
       
       if (typeof pdf.save === 'function') {
         console.log('✅ pdf.save() exists - calling it...');
@@ -152,10 +145,10 @@ export class PDFGenerator {
   }
 
   /**
-   * DEBUGGING METHOD: Test rotation without content
+   * DEBUGGING METHOD: Test rotation with fixed import
    */
   static async generateRotationTestPDF() {
-    console.log('🔄 Testing rotation mechanics...');
+    console.log('🔄 Testing rotation mechanics with FIXED import...');
     
     const pdf = new jsPDF({
       orientation: 'portrait',
@@ -253,21 +246,6 @@ export class PDFGenerator {
       }
     }
     
-    // Check for overlaps
-    for (let i = 0; i < 4; i++) {
-      for (let j = i + 1; j < 4; j++) {
-        const pos1 = this.calculateUlineS12212PositionConnected(i);
-        const pos2 = this.calculateUlineS12212PositionConnected(j);
-        
-        const overlapX = pos1.x < pos2.x + pos2.width && pos2.x < pos1.x + pos1.width;
-        const overlapY = pos1.y < pos2.y + pos2.height && pos2.y < pos1.y + pos1.height;
-        
-        if (overlapX && overlapY) {
-          console.warn(`⚠️ Labels ${i} and ${j} overlap!`);
-        }
-      }
-    }
-    
     console.log('✅ Position debugging complete');
   }
 
@@ -278,7 +256,7 @@ export class PDFGenerator {
    * @returns {Promise<Blob>} - PDF blob
    */
   static async generateLabels(labelDataArray, options = {}) {
-    console.log('🏷️ Starting PDF generation with options:', options);
+    console.log('🏷️ Starting PDF generation with FIXED import and options:', options);
     console.log('📋 Label data array length:', labelDataArray.length);
     
     const {
@@ -294,14 +272,14 @@ export class PDFGenerator {
       this.debugPositions();
     }
 
-    // Legal size sheets for S-12212 (8.5" × 14")
+    // Legal size sheets for S-12212 (8.5" × 14") - USING FIXED IMPORT
     const pdf = new jsPDF({
       orientation: 'portrait',
       unit: 'pt',
       format: [612, 1008] // Legal size in points
     });
 
-    console.log('📄 PDF instance created successfully');
+    console.log('📄 PDF instance created successfully with FIXED import');
 
     let currentLabelIndex = 0;
     let currentPage = 1;
@@ -356,7 +334,7 @@ export class PDFGenerator {
         title: `Cannabis Inventory Labels - ${new Date().toISOString().slice(0, 10)}`,
         subject: 'Uline S-12212 Format Labels (Landscape Content Rotated as Complete Unit)',
         author: 'Cannabis Inventory Management System',
-        creator: 'Cannabis Inventory Management System v8.2.0',
+        creator: 'Cannabis Inventory Management System v8.3.0',
         keywords: 'cannabis, inventory, labels, uline, s-12212, landscape-content, rotated-layout, postcard-style'
       });
 
@@ -520,13 +498,13 @@ export class PDFGenerator {
         pdf.text(`L${position.labelIndex + 1} LANDSCAPE`, x + 5, y + 20);
       }
 
-      // Check if transformation methods are available
+      // Check if transformation methods are available WITH FIXED IMPORT
       const hasTransformMethods = typeof pdf.save === 'function' && 
                                   typeof pdf.restore === 'function' && 
                                   typeof pdf.translate === 'function' && 
                                   typeof pdf.rotate === 'function';
 
-      console.log(`🔄 Transform methods available: ${hasTransformMethods}`);
+      console.log(`🔄 Transform methods available with FIXED import: ${hasTransformMethods}`);
 
       if (hasTransformMethods) {
         console.log('✅ Using PDF transformations for rotation');
@@ -553,10 +531,10 @@ export class PDFGenerator {
         console.log('✅ PDF transformation completed successfully');
         
       } else {
-        console.log('⚠️ PDF transformations not available - using fallback method');
+        console.log('⚠️ PDF transformations not available - using enhanced fallback method');
         
-        // Fallback: Draw content without transformation
-        await this.drawFallbackContent(pdf, labelData, x, y, width, height, boxNumber, totalBoxes, currentUser, debug);
+        // Enhanced fallback: Draw content designed for landscape but positioned manually
+        await this.drawEnhancedFallbackContent(pdf, labelData, x, y, width, height, boxNumber, totalBoxes, currentUser, debug);
       }
 
     } catch (error) {
@@ -632,10 +610,10 @@ export class PDFGenerator {
   }
 
   /**
-   * Fallback content drawing method when transformations aren't available
+   * Enhanced fallback content drawing method - mimics landscape layout as much as possible
    */
-  static async drawFallbackContent(pdf, labelData, x, y, width, height, boxNumber, totalBoxes, currentUser, debug) {
-    console.log('⚠️ Drawing fallback content (no transformations)');
+  static async drawEnhancedFallbackContent(pdf, labelData, x, y, width, height, boxNumber, totalBoxes, currentUser, debug) {
+    console.log('⚠️ Drawing enhanced fallback content (landscape-inspired layout)');
     
     const padding = 20;
     
@@ -644,60 +622,157 @@ export class PDFGenerator {
     
     let currentY = y + padding + 20;
     
-    // Brand name
+    // Brand name - CENTERED
     if (brandInfo.brand) {
+      const brandFontSize = Math.min(20, Math.max(14, 24 - Math.floor(brandInfo.brand.length / 4)));
       pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(16);
+      pdf.setFontSize(brandFontSize);
       pdf.setTextColor(44, 85, 48);
       pdf.text(brandInfo.brand, x + width / 2, currentY, { align: 'center' });
-      currentY += 25;
+      currentY += brandFontSize + 8;
     }
     
-    // Product name
+    // Product name - CENTERED with larger fonts
+    const productFontSize = this.calculateFallbackProductFontSize(brandInfo.productName, width - 40);
     pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(14);
+    pdf.setFontSize(productFontSize);
     pdf.setTextColor(0, 0, 0);
     
     const lines = this.wrapTextForFallback(brandInfo.productName, width - 40);
     lines.forEach(line => {
       pdf.text(line, x + width / 2, currentY, { align: 'center' });
-      currentY += 18;
+      currentY += productFontSize + 4;
     });
     
-    currentY += 20;
+    currentY += 15;
     
-    // Store section
-    pdf.setFontSize(12);
-    pdf.text('Store:', x + padding, currentY);
+    // Store section - UPDATED LAYOUT
+    pdf.setFontSize(14);
+    pdf.text('Store:', x + padding + 10, currentY);
     
-    const storeBoxWidth = width - 60;
-    const storeBoxX = x + padding + 10;
-    currentY += 10;
+    const storeBoxWidth = Math.min(width - 60, 200);
+    const storeBoxX = x + (width - storeBoxWidth) / 2; // Center the box
+    currentY += 5;
     
     pdf.setDrawColor(0, 0, 0);
-    pdf.setLineWidth(1);
-    pdf.rect(storeBoxX, currentY, storeBoxWidth, 30);
+    pdf.setLineWidth(2);
+    pdf.rect(storeBoxX, currentY, storeBoxWidth, 40);
     
-    currentY += 50;
+    // Writing lines inside store box
+    pdf.setDrawColor(200, 200, 200);
+    pdf.setLineWidth(0.5);
+    const numLines = 3;
+    for (let i = 1; i < numLines; i++) {
+      const lineY = currentY + (i * (40 / numLines));
+      pdf.line(storeBoxX + 8, lineY, storeBoxX + storeBoxWidth - 8, lineY);
+    }
     
-    // Bottom info
+    currentY += 60;
+    
+    // Bottom section - 3 columns layout (mimicking landscape)
+    const colWidth = (width - 40) / 3;
+    const startX = x + 20;
+    
+    // Column 1: Barcode (larger, numeric above)
+    const barcodeX = startX + colWidth / 2;
+    
+    // Barcode numeric ABOVE
+    const spacedBarcodeDisplay = this.formatBarcodeWithSpaces(labelData.barcodeDisplay);
+    pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(10);
-    pdf.text(`Harvest: ${labelData.harvestDate || 'MM/DD/YY'}`, x + padding, currentY);
-    currentY += 15;
-    pdf.text(`Package: ${labelData.packagedDate || 'MM/DD/YY'}`, x + padding, currentY);
-    currentY += 15;
-    pdf.text(`Case: ${labelData.caseQuantity || '___'}`, x + padding, currentY);
-    currentY += 15;
-    pdf.text(`Box ${boxNumber}/${totalBoxes}`, x + padding, currentY);
+    pdf.setTextColor(102, 102, 102);
+    pdf.text(spacedBarcodeDisplay, barcodeX, currentY, { align: 'center' });
+    
+    // Larger barcode
+    const barcodeWidth = Math.min(colWidth - 10, 80);
+    const barcodeHeight = 35;
+    await this.drawEnhancedBarcode(pdf, labelData.barcode, barcodeX - barcodeWidth / 2, currentY + 5, barcodeWidth, barcodeHeight);
+    
+    // Column 2: Dates
+    const datesX = startX + colWidth + colWidth / 2;
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(12);
+    pdf.setTextColor(0, 0, 0);
+    pdf.text('Harvest:', datesX, currentY, { align: 'center' });
+    
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(11);
+    pdf.text(labelData.harvestDate || 'MM/DD/YY', datesX, currentY + 15, { align: 'center' });
+    
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(12);
+    pdf.text('Package:', datesX, currentY + 30, { align: 'center' });
+    
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(11);
+    pdf.text(labelData.packagedDate || 'MM/DD/YY', datesX, currentY + 45, { align: 'center' });
+    
+    // Column 3: Case/Box with textboxes
+    const caseX = startX + (colWidth * 2);
+    const caseBoxWidth = colWidth - 20;
+    const boxHeight = 18;
+    
+    // Case textbox
+    pdf.setDrawColor(0, 0, 0);
+    pdf.setLineWidth(1);
+    pdf.rect(caseX + 10, currentY - 5, caseBoxWidth, boxHeight);
+    
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(11);
+    pdf.setTextColor(0, 0, 0);
+    const caseQtyValue = labelData.caseQuantity || '___';
+    pdf.text(`Case: ${caseQtyValue}`, caseX + colWidth / 2, currentY + 8, { align: 'center' });
+    
+    // Box textbox
+    pdf.rect(caseX + 10, currentY + 20, caseBoxWidth, boxHeight);
+    const boxText = `Box ${boxNumber}/${totalBoxes}`;
+    pdf.text(boxText, caseX + colWidth / 2, currentY + 33, { align: 'center' });
     
     // Audit trail
     const now = new Date();
-    const auditLine = `${now.getMonth() + 1}/${now.getDate()}/${now.getFullYear().toString().slice(-2)} ${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`;
+    const month = (now.getMonth() + 1).toString().padStart(2, '0');
+    const day = now.getDate().toString().padStart(2, '0');
+    const year = now.getFullYear().toString().slice(-2);
+    
+    let hours = now.getHours();
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+    const hoursStr = hours.toString();
+    
+    const minutes = now.getMinutes().toString().padStart(2, '0');
+    const auditLine = `${month}/${day}/${year} ${hoursStr}:${minutes}${ampm} EST (${(currentUser || 'Unknown').substring(0, 8)})`;
+    
     pdf.setFontSize(8);
     pdf.setTextColor(128, 128, 128);
     pdf.text(auditLine, x + padding, y + height - 15);
     
-    console.log('✅ Fallback content drawing completed');
+    console.log('✅ Enhanced fallback content drawing completed');
+  }
+
+  /**
+   * Calculate font size for fallback product names
+   */
+  static calculateFallbackProductFontSize(text, availableWidth) {
+    if (!text) return 16;
+    
+    const length = text.length;
+    let fontSize = 18; // Start with reasonable size for fallback
+    
+    // Adjust based on text length
+    if (length > 80) fontSize = 12;
+    else if (length > 60) fontSize = 14;
+    else if (length > 40) fontSize = 15;
+    else if (length > 25) fontSize = 16;
+    else if (length > 15) fontSize = 17;
+    
+    // Check if it fits in available space
+    const estimatedWidth = length * (fontSize * 0.6);
+    if (estimatedWidth > availableWidth) {
+      fontSize = Math.max(10, Math.floor((availableWidth / length) * 1.4));
+    }
+    
+    return Math.min(fontSize, 18);
   }
 
   /**
@@ -1096,7 +1171,7 @@ export class PDFGenerator {
    * Generate test PDF - FIXED: Creates 4 different labels
    */
   static async generateTestPDF() {
-    console.log('🧪 Generating test PDF with 4 different products...');
+    console.log('🧪 Generating test PDF with FIXED import and 4 different products...');
     
     const testData = [
       {
@@ -1153,7 +1228,7 @@ export class PDFGenerator {
       }
     ];
 
-    console.log('📋 Test data created:', testData.length, 'products');
+    console.log('📋 Test data created with FIXED import:', testData.length, 'products');
     return this.generateLabels(testData, { debug: true, currentUser: 'TestUser' });
   }
 
@@ -1212,7 +1287,8 @@ export class PDFGenerator {
 
     return {
       migration: 'Uline S-12212 Landscape Content with Complete Rotation',
-      version: '8.2.0',
+      version: '8.3.0',
+      importMethod: 'Named import: import { jsPDF } from "jspdf"',
       approach: {
         concept: 'Content designed for landscape (6" wide × 4" tall), rotated as complete unit',
         method: 'PDF coordinate transformation with save/restore for entire content area rotation',
