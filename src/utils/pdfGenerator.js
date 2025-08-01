@@ -1,4 +1,4 @@
-// FINAL REFINED CANVAS-BASED PDF GENERATOR - Fixed text formatting & sizing
+// BALANCED CANVAS-BASED PDF GENERATOR - Optimized spacing & font sizes
 import { jsPDF } from 'jspdf';
 import 'jspdf/dist/jspdf.es.min.js';
 
@@ -8,18 +8,18 @@ import { EVENT_TYPES } from '../constants.js';
 import storage from './storage.js';
 
 /**
- * Final Refined Canvas-based PDF Generator for Uline S-12212 labels
- * Fixed Case/Box formatting, package date positioning, and increased text sizes
+ * Balanced Canvas-based PDF Generator for Uline S-12212 labels
+ * Optimized spacing and modest font size increases to prevent cutoff
  */
 export class PDFGenerator {
   /**
-   * Generate PDF labels using final refined Canvas approach
+   * Generate PDF labels using balanced Canvas approach
    * @param {Array} labelDataArray - Array of label data objects
    * @param {Object} options - Generation options
    * @returns {Blob} - PDF blob
    */
   static async generateLabels(labelDataArray, options = {}) {
-    console.log('🎨 Starting FINAL REFINED Canvas-based PDF generation...');
+    console.log('🎨 Starting BALANCED Canvas-based PDF generation...');
     console.log('📋 Label data array length:', labelDataArray.length);
     
     const {
@@ -37,7 +37,7 @@ export class PDFGenerator {
       format: [612, 1008] // Legal size: 8.5" × 14"
     });
 
-    console.log('📄 PDF instance created for final refined Canvas generation');
+    console.log('📄 PDF instance created for balanced Canvas generation');
 
     let currentLabelIndex = 0;
     let currentPage = 1;
@@ -64,8 +64,8 @@ export class PDFGenerator {
           // For single label debugging, center it on page
           if (startWithSingle) {
             const centerPosition = this.calculateSingleLabelCenterPosition();
-            await this.drawFinalRefinedCanvasLabel(pdf, formattedData, centerPosition, 1, 1, debug, currentUser);
-            console.log('🧪 Single final refined Canvas label generated');
+            await this.drawBalancedCanvasLabel(pdf, formattedData, centerPosition, 1, 1, debug, currentUser);
+            console.log('🧪 Single balanced Canvas label generated');
             break;
           }
           
@@ -82,8 +82,8 @@ export class PDFGenerator {
           // Calculate box number
           const boxNumber = Math.floor(labelCopy / Math.max(1, Math.floor(formattedData.labelQuantity / formattedData.boxCount))) + 1;
 
-          // Draw the label using final refined Canvas approach
-          await this.drawFinalRefinedCanvasLabel(pdf, formattedData, position, boxNumber, formattedData.boxCount, debug, currentUser);
+          // Draw the label using balanced Canvas approach
+          await this.drawBalancedCanvasLabel(pdf, formattedData, position, boxNumber, formattedData.boxCount, debug, currentUser);
 
           currentLabelIndex++;
         }
@@ -91,27 +91,27 @@ export class PDFGenerator {
         if (startWithSingle) break;
       }
 
-      console.log(`✅ Generated ${currentLabelIndex} final refined Canvas labels across ${currentPage} pages`);
+      console.log(`✅ Generated ${currentLabelIndex} balanced Canvas labels across ${currentPage} pages`);
 
       // Add metadata
       pdf.setDocumentProperties({
-        title: `Cannabis Inventory Labels - Final Refined Canvas - ${new Date().toISOString().slice(0, 10)}`,
-        subject: 'Uline S-12212 Labels - Final Refined Canvas Generation',
+        title: `Cannabis Inventory Labels - Balanced Canvas - ${new Date().toISOString().slice(0, 10)}`,
+        subject: 'Uline S-12212 Labels - Balanced Canvas Generation',
         author: 'Cannabis Inventory Management System',
-        creator: 'Cannabis Inventory Management System v9.2.0',
-        keywords: 'cannabis, inventory, labels, uline, s-12212, final-refined-canvas'
+        creator: 'Cannabis Inventory Management System v9.3.0',
+        keywords: 'cannabis, inventory, labels, uline, s-12212, balanced-canvas'
       });
 
       return pdf.output('blob');
 
     } catch (error) {
-      console.error('❌ Final refined Canvas PDF generation error:', error);
-      throw new Error(`Final refined Canvas PDF generation failed: ${error.message}`);
+      console.error('❌ Balanced Canvas PDF generation error:', error);
+      throw new Error(`Balanced Canvas PDF generation failed: ${error.message}`);
     }
   }
 
   /**
-   * Draw label using final refined Canvas approach
+   * Draw label using balanced Canvas approach
    * @param {Object} pdf - jsPDF instance
    * @param {Object} labelData - Formatted label data
    * @param {Object} position - Label position
@@ -120,8 +120,8 @@ export class PDFGenerator {
    * @param {boolean} debug - Debug mode
    * @param {string} currentUser - Current user
    */
-  static async drawFinalRefinedCanvasLabel(pdf, labelData, position, boxNumber, totalBoxes, debug, currentUser) {
-    console.log(`🎨 Drawing final refined Canvas label...`);
+  static async drawBalancedCanvasLabel(pdf, labelData, position, boxNumber, totalBoxes, debug, currentUser) {
+    console.log(`🎨 Drawing balanced Canvas label...`);
     
     const { x, y, width, height } = position;
 
@@ -149,8 +149,8 @@ export class PDFGenerator {
       ctx.lineWidth = 1;
       ctx.strokeRect(0, 0, width, height);
       
-      // Draw final refined content for landscape application
-      await this.drawFinalRefinedCanvasContent(ctx, labelData, width, height, boxNumber, totalBoxes, currentUser, debug);
+      // Draw balanced content for landscape application
+      await this.drawBalancedCanvasContent(ctx, labelData, width, height, boxNumber, totalBoxes, currentUser, debug);
       
       // Convert canvas to image and add to PDF
       const imgData = canvas.toDataURL('image/png', 1.0);
@@ -159,10 +159,10 @@ export class PDFGenerator {
       // Clean up
       canvas.remove();
       
-      console.log('✅ Final refined Canvas label drawn successfully');
+      console.log('✅ Balanced Canvas label drawn successfully');
 
     } catch (error) {
-      console.error('❌ Final refined Canvas label drawing failed:', error);
+      console.error('❌ Balanced Canvas label drawing failed:', error);
       
       // Emergency fallback - simple text
       pdf.setFontSize(12);
@@ -173,8 +173,8 @@ export class PDFGenerator {
   }
 
   /**
-   * Draw final refined content on canvas for landscape application
-   * Fixed Case/Box formatting, package date positioning, increased text sizes
+   * Draw balanced content on canvas for landscape application
+   * Optimized spacing and modest font increases to prevent cutoff
    * @param {CanvasRenderingContext2D} ctx - Canvas context
    * @param {Object} labelData - Label data
    * @param {number} width - Canvas width
@@ -184,8 +184,8 @@ export class PDFGenerator {
    * @param {string} currentUser - Current user
    * @param {boolean} debug - Debug mode
    */
-  static async drawFinalRefinedCanvasContent(ctx, labelData, width, height, boxNumber, totalBoxes, currentUser, debug) {
-    console.log(`🎨 Drawing final refined Canvas content for landscape application`);
+  static async drawBalancedCanvasContent(ctx, labelData, width, height, boxNumber, totalBoxes, currentUser, debug) {
+    console.log(`🎨 Drawing balanced Canvas content for landscape application`);
     
     // Save context state
     ctx.save();
@@ -210,36 +210,36 @@ export class PDFGenerator {
     const padding = 15;
     let currentY = padding;
     
-    // SECTION 1: BRAND NAME (centered at top) - INCREASED SIZE
+    // SECTION 1: BRAND NAME (centered at top) - MODEST INCREASE
     if (brandInfo.brand) {
-      const brandFontSize = this.calculateEnlargedBrandFontSize(brandInfo.brand);
+      const brandFontSize = this.calculateBalancedBrandFontSize(brandInfo.brand);
       ctx.font = `bold ${brandFontSize}px Arial, sans-serif`;
       ctx.textAlign = 'center';
       
       ctx.fillText(brandInfo.brand, landscapeWidth / 2, currentY);
-      currentY += brandFontSize + 15;
+      currentY += brandFontSize + 12; // Reduced spacing from 15
     }
     
-    // SECTION 2: PRODUCT NAME (large, centered, multi-line) - INCREASED SIZE
-    const productFontSize = this.calculateEnlargedProductFontSize(brandInfo.productName);
+    // SECTION 2: PRODUCT NAME (large, centered, multi-line) - MODEST INCREASE
+    const productFontSize = this.calculateBalancedProductFontSize(brandInfo.productName);
     ctx.font = `bold ${productFontSize}px Arial, sans-serif`;
     ctx.textAlign = 'center';
     
     const productLines = this.wrapTextForCanvas(ctx, brandInfo.productName, landscapeWidth - 60);
     productLines.slice(0, 3).forEach((line, index) => {
-      ctx.fillText(line, landscapeWidth / 2, currentY + (index * (productFontSize + 5)));
+      ctx.fillText(line, landscapeWidth / 2, currentY + (index * (productFontSize + 4))); // Reduced line spacing
     });
-    currentY += (productLines.length * (productFontSize + 5)) + 25;
+    currentY += (productLines.length * (productFontSize + 4)) + 18; // Reduced spacing from 25
     
-    // SECTION 3: STORE SECTION (centered)
+    // SECTION 3: STORE SECTION (centered) - MOVED UP
     ctx.font = 'bold 14px Arial, sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText('Store:', landscapeWidth / 2, currentY);
-    currentY += 20;
+    currentY += 18; // Reduced from 20
     
     // Store textbox
     const storeBoxWidth = Math.min(200, landscapeWidth - 60);
-    const storeBoxHeight = 35;
+    const storeBoxHeight = 32; // Slightly reduced from 35
     const storeBoxX = (landscapeWidth - storeBoxWidth) / 2;
     
     ctx.strokeStyle = '#000000';
@@ -257,28 +257,28 @@ export class PDFGenerator {
       ctx.lineTo(storeBoxX + storeBoxWidth - 5, lineY);
       ctx.stroke();
     }
-    currentY += storeBoxHeight + 25;
+    currentY += storeBoxHeight + 18; // Reduced spacing from 25
     
-    // SECTION 4: BOTTOM ROW (3 columns: Barcode | Dates | Case/Box)
+    // SECTION 4: BOTTOM ROW (3 columns: Barcode | Dates | Case/Box) - MOVED UP
     const bottomRowY = currentY;
-    const bottomRowHeight = landscapeHeight - currentY - padding - 20; // Space for audit
+    const bottomRowHeight = landscapeHeight - currentY - padding - 15; // Reduced audit space
     const columnWidth = landscapeWidth / 3;
     
     // Column 1: BARCODE (left)
-    await this.drawFinalBarcodeColumn(ctx, labelData, padding, bottomRowY, columnWidth, bottomRowHeight);
+    await this.drawBalancedBarcodeColumn(ctx, labelData, padding, bottomRowY, columnWidth, bottomRowHeight);
     
-    // Column 2: DATES (center) - FIXED PACKAGE DATE POSITIONING
-    this.drawFinalDatesColumn(ctx, labelData, columnWidth, bottomRowY, columnWidth, bottomRowHeight);
+    // Column 2: DATES (center) - OPTIMIZED SPACING
+    this.drawBalancedDatesColumn(ctx, labelData, columnWidth, bottomRowY, columnWidth, bottomRowHeight);
     
-    // Column 3: CASE/BOX (right) - FIXED TEXT FORMATTING
-    this.drawFinalCaseBoxColumn(ctx, labelData, boxNumber, totalBoxes, columnWidth * 2, bottomRowY, columnWidth, bottomRowHeight);
+    // Column 3: CASE/BOX (right) - OPTIMIZED SPACING
+    this.drawBalancedCaseBoxColumn(ctx, labelData, boxNumber, totalBoxes, columnWidth * 2, bottomRowY, columnWidth, bottomRowHeight);
     
-    // AUDIT TRAIL (bottom-left)
+    // AUDIT TRAIL (bottom-left) - MOVED UP SLIGHTLY
     const auditLine = this.generateAuditLine(currentUser);
     ctx.font = '6px Arial, sans-serif';
     ctx.fillStyle = '#666666';
     ctx.textAlign = 'left';
-    ctx.fillText(auditLine, padding, landscapeHeight - 10);
+    ctx.fillText(auditLine, padding, landscapeHeight - 8); // Moved up from -10
     
     // Debug overlay
     if (debug) {
@@ -310,13 +310,13 @@ export class PDFGenerator {
     // Restore context state
     ctx.restore();
     
-    console.log('✅ Final refined Canvas content drawn for landscape application');
+    console.log('✅ Balanced Canvas content drawn for landscape application');
   }
 
   /**
-   * Draw final barcode column on canvas
+   * Draw balanced barcode column on canvas
    */
-  static async drawFinalBarcodeColumn(ctx, labelData, x, y, width, height) {
+  static async drawBalancedBarcodeColumn(ctx, labelData, x, y, width, height) {
     const centerX = x + width / 2;
     
     // Barcode numeric display
@@ -324,12 +324,12 @@ export class PDFGenerator {
     ctx.textAlign = 'center';
     ctx.fillStyle = '#000000';
     const spacedBarcode = this.formatBarcodeWithSpaces(labelData.barcodeDisplay);
-    ctx.fillText(spacedBarcode, centerX, y + 15);
+    ctx.fillText(spacedBarcode, centerX, y + 12); // Moved up slightly
     
     // Enhanced barcode generation
-    const barcodeY = y + 30;
+    const barcodeY = y + 25; // Moved up slightly
     const barcodeWidth = Math.min(width - 20, 100);
-    const barcodeHeight = 30;
+    const barcodeHeight = 28; // Slightly reduced
     const barcodeX = centerX - barcodeWidth / 2;
     
     try {
@@ -405,11 +405,11 @@ export class PDFGenerator {
   }
 
   /**
-   * Draw final dates column on canvas - FIXED PACKAGE DATE POSITIONING
+   * Draw balanced dates column on canvas - OPTIMIZED SPACING
    */
-  static drawFinalDatesColumn(ctx, labelData, x, y, width, height) {
+  static drawBalancedDatesColumn(ctx, labelData, x, y, width, height) {
     const centerX = x + width / 2;
-    let textY = y + 10; // Start higher to prevent cutoff
+    let textY = y + 8; // Start higher
     
     ctx.textAlign = 'center';
     ctx.fillStyle = '#000000';
@@ -417,34 +417,34 @@ export class PDFGenerator {
     // Harvest date - ENLARGED
     ctx.font = 'bold 13px Arial, sans-serif';
     ctx.fillText('Harvest:', centerX, textY);
-    textY += 16; // Reduced spacing
+    textY += 14; // Reduced spacing
     
     ctx.font = '12px Arial, sans-serif';
     ctx.fillText(labelData.harvestDate || 'MM/DD/YY', centerX, textY);
-    textY += 22; // Reduced spacing to prevent cutoff
+    textY += 18; // Reduced spacing
     
-    // Package date - ENLARGED and MOVED UP
+    // Package date - ENLARGED and OPTIMIZED POSITION
     ctx.font = 'bold 13px Arial, sans-serif';
     ctx.fillText('Package:', centerX, textY);
-    textY += 16; // Reduced spacing
+    textY += 14; // Reduced spacing
     
     ctx.font = '12px Arial, sans-serif';
     ctx.fillText(labelData.packagedDate || 'MM/DD/YY', centerX, textY);
   }
 
   /**
-   * Draw final case/box column on canvas - FIXED TEXT FORMATTING (Case: X, Box X:X)
+   * Draw balanced case/box column on canvas - OPTIMIZED SPACING
    */
-  static drawFinalCaseBoxColumn(ctx, labelData, boxNumber, totalBoxes, x, y, width, height) {
+  static drawBalancedCaseBoxColumn(ctx, labelData, boxNumber, totalBoxes, x, y, width, height) {
     const centerX = x + width / 2;
-    let textY = y + 15;
+    let textY = y + 12; // Start higher
     
     ctx.textAlign = 'center';
     ctx.fillStyle = '#000000';
     
-    // Case quantity with textbox - FIXED FORMATTING
-    const caseBoxWidth = 75;  // Wider to accommodate "Case: X" format
-    const caseBoxHeight = 20;
+    // Case quantity with textbox - OPTIMIZED
+    const caseBoxWidth = 75;
+    const caseBoxHeight = 18; // Slightly reduced
     const caseBoxX = centerX - caseBoxWidth / 2;
     
     // Draw case textbox
@@ -452,22 +452,22 @@ export class PDFGenerator {
     ctx.lineWidth = 1.5;
     ctx.strokeRect(caseBoxX, textY, caseBoxWidth, caseBoxHeight);
     
-    // Case text - "Case: X" INSIDE THE TEXTBOX (NO WRAPPING)
+    // Case text - "Case: X" INSIDE THE TEXTBOX
     ctx.font = 'bold 10px Arial, sans-serif';
-    ctx.textBaseline = 'middle'; // Center vertically
+    ctx.textBaseline = 'middle';
     const caseText = `Case: ${labelData.caseQuantity || '___'}`;
     ctx.fillText(caseText, centerX, textY + caseBoxHeight / 2);
     
-    textY += caseBoxHeight + 25; // Move down for next section
+    textY += caseBoxHeight + 18; // Reduced spacing
     
-    // Box quantity with textbox - FIXED FORMATTING
+    // Box quantity with textbox - OPTIMIZED
     const boxBoxX = centerX - caseBoxWidth / 2;
     
     // Draw box textbox
     ctx.strokeRect(boxBoxX, textY, caseBoxWidth, caseBoxHeight);
     
-    // Box text - "Box X:X" INSIDE THE TEXTBOX (NO WRAPPING)
-    ctx.textBaseline = 'middle'; // Center vertically
+    // Box text - "Box X:X" INSIDE THE TEXTBOX
+    ctx.textBaseline = 'middle';
     const boxText = `Box ${boxNumber}:${totalBoxes}`;
     ctx.fillText(boxText, centerX, textY + caseBoxHeight / 2);
     
@@ -532,7 +532,7 @@ export class PDFGenerator {
       width: labelWidth,
       height: labelHeight,
       row, col, labelIndex,
-      method: 'final_refined_canvas_s12212'
+      method: 'balanced_canvas_s12212'
     };
   }
 
@@ -550,7 +550,7 @@ export class PDFGenerator {
       y: (pageHeight - labelHeight) / 2,
       width: labelWidth,
       height: labelHeight,
-      method: 'single_label_final_refined_canvas_debug',
+      method: 'single_label_balanced_canvas_debug',
       centered: true
     };
   }
@@ -611,40 +611,40 @@ export class PDFGenerator {
 
     const dashMatch = trimmed.match(/^([A-Za-z\s&'-]+?)\s*[-–:]\s*(.+)$/);
     if (dashMatch && dashMatch[1].length <= 25) {
-      return { brand: dashMatch[1].trim(), productName: dashMatch[2].trim() };
+      return { brand: dashMatch[1].trim(), productName: dashImage[2].trim() };
     }
 
     return { brand: '', productName: trimmed };
   }
 
   /**
-   * Calculate enlarged brand font size - INCREASED SIZES
+   * Calculate balanced brand font size - MODEST INCREASE (2-3px)
    */
-  static calculateEnlargedBrandFontSize(brandText) {
-    if (!brandText) return 24; // Increased from 18
+  static calculateBalancedBrandFontSize(brandText) {
+    if (!brandText) return 20; // Increased from 18 by 2px
     const length = brandText.length;
-    if (length <= 8) return 26;  // Increased from 20
-    if (length <= 12) return 24; // Increased from 18
-    if (length <= 16) return 22; // Increased from 16
-    return 20; // Increased from 14
+    if (length <= 8) return 22;  // Increased from 20 by 2px
+    if (length <= 12) return 20; // Increased from 18 by 2px
+    if (length <= 16) return 18; // Increased from 16 by 2px
+    return 16; // Increased from 14 by 2px
   }
 
   /**
-   * Calculate enlarged product font size - INCREASED SIZES
+   * Calculate balanced product font size - MODEST INCREASE (2-3px)
    */
-  static calculateEnlargedProductFontSize(productText) {
-    if (!productText) return 30; // Increased from 24
+  static calculateBalancedProductFontSize(productText) {
+    if (!productText) return 26; // Increased from 24 by 2px
     
     const length = productText.length;
-    let fontSize = 30; // Increased from 24
+    let fontSize = 26; // Increased from 24 by 2px
     
-    if (length > 80) fontSize = 18;      // Increased from 14
-    else if (length > 60) fontSize = 20; // Increased from 16
-    else if (length > 40) fontSize = 24; // Increased from 18
-    else if (length > 25) fontSize = 26; // Increased from 20
-    else if (length > 15) fontSize = 28; // Increased from 22
+    if (length > 80) fontSize = 16;      // Increased from 14 by 2px
+    else if (length > 60) fontSize = 18; // Increased from 16 by 2px
+    else if (length > 40) fontSize = 20; // Increased from 18 by 2px
+    else if (length > 25) fontSize = 22; // Increased from 20 by 2px
+    else if (length > 15) fontSize = 24; // Increased from 22 by 2px
     
-    return Math.max(fontSize, 16); // Increased minimum from 12
+    return Math.max(fontSize, 14); // Increased minimum from 12 by 2px
   }
 
   /**
@@ -741,9 +741,9 @@ export class PDFGenerator {
       LABELS_PER_SHEET: 4,
       SHEET_WIDTH: 8.5,
       SHEET_HEIGHT: 14,
-      ORIENTATION: 'portrait_pdf_final_refined_canvas',
+      ORIENTATION: 'portrait_pdf_balanced_canvas',
       FORMAT: 'S-12212',
-      LAYOUT: 'final_refined_canvas_landscape_content',
+      LAYOUT: 'balanced_canvas_landscape_content',
       
       LABEL_WIDTH_PT: 288,
       LABEL_HEIGHT_PT: 432,
@@ -756,7 +756,7 @@ export class PDFGenerator {
    * Generate test PDF (single label for debugging)
    */
   static async generateTestPDF() {
-    console.log('🧪 Generating final refined Canvas test PDF (single label)...');
+    console.log('🧪 Generating balanced Canvas test PDF (single label)...');
     
     const testData = [
       {
@@ -786,7 +786,7 @@ export class PDFGenerator {
    * Generate full sheet test PDF (4 connected labels)
    */
   static async generateFullSheetTestPDF() {
-    console.log('🧪 Generating final refined Canvas full sheet test PDF...');
+    console.log('🧪 Generating balanced Canvas full sheet test PDF...');
     
     const testData = [
       {
@@ -840,9 +840,9 @@ export class PDFGenerator {
       warnings,
       totalLabels: labelDataArray.length,
       estimatedPages: Math.ceil(labelDataArray.length / 4),
-      labelFormat: 'Uline S-12212 (Final Refined Canvas Generation)',
-      approach: 'Final refined Canvas-based rendering with fixed text formatting and sizing',
-      method: 'final_refined_canvas_reliable',
+      labelFormat: 'Uline S-12212 (Balanced Canvas Generation)',
+      approach: 'Balanced Canvas-based rendering with optimized spacing and modest font increases',
+      method: 'balanced_canvas_reliable',
       compatibility: 'Uline S-12212 label sheets on legal paper'
     };
   }
