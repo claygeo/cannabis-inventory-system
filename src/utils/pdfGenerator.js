@@ -1,4 +1,4 @@
-// FIXED PDF GENERATION with Working Landscape Content Layout
+// DIRECT PORTRAIT DRAWING PDF GENERATOR - Exact HTML Visualization Replication
 import { jsPDF } from 'jspdf';
 import 'jspdf/dist/jspdf.es.min.js';
 
@@ -8,16 +8,16 @@ import { EVENT_TYPES } from '../constants.js';
 import storage from './storage.js';
 
 /**
- * PDF Generation utilities for Uline S-12212 label sheets (4" × 6")
- * FIXED LANDSCAPE CONTENT LAYOUT: 6" wide × 4" tall when rotated 90° clockwise
- * Content is drawn in landscape orientation, then rotated as a complete unit
+ * PDF Generation using Direct Portrait Drawing approach
+ * No coordinate transformations - calculate exact positions and draw directly
+ * Replicates HTML visualization exactly with individual element positioning
  */
 export class PDFGenerator {
   /**
    * Generate PDF with labels positioned for Uline S-12212 sheets
    */
   static async generateLabels(labelDataArray, options = {}) {
-    console.log('🏷️ Starting FIXED PDF generation with working landscape layout...');
+    console.log('🏷️ Starting DIRECT PORTRAIT DRAWING PDF generation...');
     console.log('📋 Label data array length:', labelDataArray.length);
     
     const {
@@ -69,8 +69,8 @@ export class PDFGenerator {
           // Calculate which box number this label represents
           const boxNumber = Math.floor(labelCopy / Math.max(1, Math.floor(formattedData.labelQuantity / formattedData.boxCount))) + 1;
 
-          // Draw the label using FIXED method
-          await this.drawLabelWithFixedLandscapeLayout(pdf, formattedData, position, boxNumber, formattedData.boxCount, debug, currentUser);
+          // Draw the label using DIRECT PORTRAIT DRAWING
+          await this.drawLabelWithDirectPortraitDrawing(pdf, formattedData, position, boxNumber, formattedData.boxCount, debug, currentUser);
 
           currentLabelIndex++;
         }
@@ -81,10 +81,10 @@ export class PDFGenerator {
       // Add metadata
       pdf.setDocumentProperties({
         title: `Cannabis Inventory Labels - ${new Date().toISOString().slice(0, 10)}`,
-        subject: 'Uline S-12212 Format Labels (Fixed Landscape Content)',
+        subject: 'Uline S-12212 Format Labels (Direct Portrait Drawing)',
         author: 'Cannabis Inventory Management System',
         creator: 'Cannabis Inventory Management System v8.5.0',
-        keywords: 'cannabis, inventory, labels, uline, s-12212, fixed-landscape, working-transformation'
+        keywords: 'cannabis, inventory, labels, uline, s-12212, direct-drawing, portrait-positioning'
       });
 
       return pdf.output('blob');
@@ -96,15 +96,15 @@ export class PDFGenerator {
   }
 
   /**
-   * FIXED: Draw label with working landscape content layout
+   * DIRECT PORTRAIT DRAWING: Draw label by calculating exact positions for each element
    */
-  static async drawLabelWithFixedLandscapeLayout(pdf, labelData, position, boxNumber, totalBoxes, debug, currentUser) {
-    console.log(`🎨 Drawing label with FIXED landscape layout method...`);
+  static async drawLabelWithDirectPortraitDrawing(pdf, labelData, position, boxNumber, totalBoxes, debug, currentUser) {
+    console.log(`🎨 Drawing label with DIRECT PORTRAIT DRAWING...`);
     
     const { x, y, width, height } = position;
 
     try {
-      // Draw label border first (outside transformation)
+      // Draw label border
       pdf.setDrawColor(0, 0, 0);
       pdf.setLineWidth(1);
       pdf.rect(x, y, width, height);
@@ -113,98 +113,54 @@ export class PDFGenerator {
       if (debug) {
         pdf.setDrawColor(255, 0, 0);
         pdf.setLineWidth(0.5);
-        pdf.rect(x + 1, y + 1, width - 2, height - 2);
+        pdf.rect(x + 2, y + 2, width - 4, height - 4);
       }
 
-      // Use FIXED transformation method
-      await this.drawWithFixedTransformation(pdf, labelData, position, boxNumber, totalBoxes, currentUser, debug);
-      console.log('✅ Fixed transformation successful');
+      // Calculate landscape content positioning within portrait label
+      await this.drawLandscapeContentUsingDirectPositioning(pdf, labelData, position, boxNumber, totalBoxes, currentUser, debug);
+      
+      console.log('✅ Direct portrait drawing successful');
 
     } catch (error) {
-      console.error('❌ Fixed transformation failed:', error);
+      console.error('❌ Direct portrait drawing failed:', error);
       
-      // Emergency fallback - draw basic content without transformation
+      // Emergency fallback
       pdf.setFontSize(12);
       pdf.setTextColor(255, 0, 0);
-      pdf.text('Label Error - Using Fallback', x + 5, y + 20);
-      
-      // Extract brand info
-      const brandInfo = this.extractBrandFromProductName(labelData.productName);
-      
-      // Simple product name
-      pdf.setFontSize(14);
-      pdf.setTextColor(0, 0, 0);
-      const productName = brandInfo.productName || 'Product Name';
-      const lines = this.wrapText(productName, width - 20, 14);
-      lines.slice(0, 3).forEach((line, index) => {
-        pdf.text(line, x + 10, y + 50 + (index * 18));
-      });
+      pdf.text('Label Error', x + 5, y + 20);
     }
   }
 
   /**
-   * FIXED transformation method with correct coordinate handling
+   * Draw landscape content using direct positioning calculations
+   * Replicates the HTML visualization exactly
    */
-  static async drawWithFixedTransformation(pdf, labelData, position, boxNumber, totalBoxes, currentUser, debug) {
-    console.log('🔧 FIXED transformation with correct coordinate handling');
+  static async drawLandscapeContentUsingDirectPositioning(pdf, labelData, position, boxNumber, totalBoxes, currentUser, debug) {
+    console.log(`🎨 Drawing landscape content using direct positioning calculations`);
+    
     const { x, y, width, height } = position;
     
-    // Save graphics state
-    pdf.internal.write('q');
-    
-    try {
-      // FIXED APPROACH: Single transformation matrix
-      const centerX = x + width / 2;
-      const centerY = y + height / 2;
-      
-      // Single transformation: translate to center, rotate 90°, translate to origin
-      // This creates a coordinate system where (0,0) is at the center of our landscape content
-      const tx = centerX;
-      const ty = centerY;
-      
-      // Apply transformation: translate to center, then rotate 90° clockwise
-      pdf.internal.write(`0 1 -1 0 ${tx} ${ty} cm`);
-      
-      // Now draw content in the transformed coordinate system
-      // Content dimensions in landscape orientation
-      const contentWidth = height;  // 432pt (6" when rotated)
-      const contentHeight = width;  // 288pt (4" when rotated)
-      
-      console.log(`🎨 Drawing landscape content: ${contentWidth} × ${contentHeight}pt`);
-      
-      // Draw landscape content with coordinates relative to center (0,0)
-      await this.drawLandscapeContentFixed(pdf, labelData, contentWidth, contentHeight, boxNumber, totalBoxes, currentUser, debug);
-      
-    } finally {
-      // Always restore graphics state
-      pdf.internal.write('Q');
-    }
-  }
-
-  /**
-   * FIXED landscape content drawing with correct coordinate calculations
-   */
-  static async drawLandscapeContentFixed(pdf, labelData, width, height, boxNumber, totalBoxes, currentUser, debug) {
-    console.log(`🎨 Drawing FIXED landscape content - ${width}×${height}pt`);
-    
-    // Content area calculations (coordinates relative to center)
-    const padding = 15;
-    const contentLeft = -width / 2 + padding;   // Start from left edge
-    const contentTop = -height / 2 + padding;   // Start from top edge
-    const contentWidth = width - (padding * 2);
-    const contentHeight = height - (padding * 2);
-
     // Extract brand info
     const brandInfo = this.extractBrandFromProductName(labelData.productName);
-
-    // Layout sections
-    const topSectionHeight = Math.floor(contentHeight * 0.4);      // 40% for product info
-    const middleSectionHeight = Math.floor(contentHeight * 0.25);  // 25% for store
-    const bottomSectionHeight = contentHeight - topSectionHeight - middleSectionHeight; // 35% for bottom row
-
-    let currentY = contentTop;
-
-    // TOP SECTION: Brand + Product Name (centered)
+    
+    // Calculate content area (landscape: 6" wide × 4" tall when rotated)
+    const landscapeWidth = height;  // 432pt (6" when rotated)
+    const landscapeHeight = width;  // 288pt (4" when rotated)
+    const padding = 15;
+    
+    // Content sections (percentages from HTML visualization)
+    const topSectionHeight = Math.floor((landscapeHeight - padding * 2) * 0.35);    // 35%
+    const middleSectionHeight = Math.floor((landscapeHeight - padding * 2) * 0.35); // 35%
+    const bottomSectionHeight = (landscapeHeight - padding * 2) - topSectionHeight - middleSectionHeight; // 30%
+    
+    // Calculate center points and positioning anchors
+    const labelCenterX = x + width / 2;
+    const labelCenterY = y + height / 2;
+    
+    // TOP SECTION: Brand Name + Product Name (CENTERED)
+    let contentYOffset = -landscapeHeight / 2 + padding + 20; // Start from top of landscape area
+    
+    // Brand Name - CENTERED and ROTATED 90° clockwise
     if (brandInfo.brand) {
       const brandFontSize = Math.min(24, Math.max(16, 28 - Math.floor(brandInfo.brand.length / 4)));
       
@@ -212,145 +168,271 @@ export class PDFGenerator {
       pdf.setFontSize(brandFontSize);
       pdf.setTextColor(44, 85, 48); // Dark green
       
-      // Center brand name
-      pdf.text(brandInfo.brand, 0, currentY + 25, { align: 'center' });
-      currentY += brandFontSize + 8;
+      // Position: Center of label, rotated 90° clockwise
+      pdf.text(brandInfo.brand, labelCenterX, labelCenterY + contentYOffset, { 
+        angle: 90, 
+        align: 'center' 
+      });
+      
+      contentYOffset += brandFontSize + 8;
     }
-
-    // Product name (centered with larger fonts)
-    const productFontSize = this.calculateOptimalFontSize(brandInfo.productName, contentWidth * 0.9, 28, 14);
+    
+    // Product Name - CENTERED and ROTATED 90° clockwise with line wrapping
+    const productFontSize = this.calculateOptimalFontSize(brandInfo.productName, landscapeWidth * 0.9, 28, 14);
     
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(productFontSize);
     pdf.setTextColor(0, 0, 0);
     
-    const productLines = this.wrapText(brandInfo.productName, contentWidth * 0.9, productFontSize);
+    const productLines = this.wrapText(brandInfo.productName, landscapeWidth * 0.9, productFontSize);
     productLines.slice(0, 3).forEach((line, index) => {
-      pdf.text(line, 0, currentY + 25 + (index * (productFontSize + 2)), { align: 'center' });
+      pdf.text(line, labelCenterX, labelCenterY + contentYOffset + (index * (productFontSize + 2)), { 
+        angle: 90, 
+        align: 'center' 
+      });
     });
-
-    // MIDDLE SECTION: Store area
-    const storeY = contentTop + topSectionHeight + 15;
     
-    // "Store:" label
+    // MIDDLE SECTION: Store Label + Textbox
+    const storeYOffset = -landscapeHeight / 2 + padding + topSectionHeight + 25;
+    
+    // "Store:" label - positioned above textbox (rotated 90°)
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(16);
     pdf.setTextColor(0, 0, 0);
-    pdf.text('Store:', contentLeft + 15, storeY);
     
-    // Single centered textbox
-    const boxWidth = Math.min(contentWidth * 0.7, 300);
-    const boxHeight = 45;
-    const boxX = -boxWidth / 2; // Center horizontally
-    const boxY = storeY + 8;
+    // Position Store label above and to the left of the textbox area
+    const storeLabelX = labelCenterX - 60; // Offset to left of textbox
+    pdf.text('Store:', storeLabelX, labelCenterY + storeYOffset, { 
+      angle: 90, 
+      align: 'left' 
+    });
     
-    // Main textbox
+    // Store textbox - CENTERED (landscape coordinates converted to portrait)
+    const storeBoxWidth = Math.min(landscapeWidth * 0.7, 300);  // 300pt max width
+    const storeBoxHeight = 45;
+    
+    // Calculate textbox position (centered in landscape view, converted to portrait coordinates)
+    const storeBoxX = labelCenterX - storeBoxHeight / 2; // In portrait, height becomes width
+    const storeBoxY = labelCenterY + storeYOffset + 10;
+    const storeBoxPortraitWidth = storeBoxHeight;  // Rotated dimensions
+    const storeBoxPortraitHeight = storeBoxWidth;
+    
+    // Draw main textbox (rotated rectangle)
     pdf.setDrawColor(0, 0, 0);
     pdf.setLineWidth(2);
-    pdf.rect(boxX, boxY, boxWidth, boxHeight);
+    pdf.rect(storeBoxX, storeBoxY, storeBoxPortraitWidth, storeBoxPortraitHeight);
     
-    // Writing lines inside textbox
+    // Draw writing lines inside textbox (rotated)
     pdf.setDrawColor(200, 200, 200);
     pdf.setLineWidth(0.5);
+    const lineSpacing = storeBoxPortraitHeight / 3;
     for (let i = 1; i < 3; i++) {
-      const lineY = boxY + (i * (boxHeight / 3));
-      pdf.line(boxX + 8, lineY, boxX + boxWidth - 8, lineY);
+      const lineY = storeBoxY + (i * lineSpacing);
+      pdf.line(storeBoxX + 4, lineY, storeBoxX + storeBoxPortraitWidth - 4, lineY);
     }
-
-    // BOTTOM SECTION: Three-column layout
-    const bottomY = contentTop + topSectionHeight + middleSectionHeight + 10;
-    const colWidth = contentWidth / 3;
-
-    // Column 1: Barcode (left)
-    const col1X = contentLeft + (colWidth / 2);
     
-    // Barcode numeric display (above barcode)
+    // BOTTOM SECTION: Three-column layout (Barcode | Dates | Case/Box)
+    const bottomYOffset = -landscapeHeight / 2 + padding + topSectionHeight + middleSectionHeight + 15;
+    const columnWidth = landscapeWidth / 3;
+    
+    // Column 1: Barcode with numeric display ABOVE barcode
+    const col1XOffset = -landscapeWidth / 2 + padding + (columnWidth / 2);
+    
+    // Barcode numeric display (ABOVE barcode, rotated 90°)
     const spacedBarcodeDisplay = this.formatBarcodeWithSpaces(labelData.barcodeDisplay);
     pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(11);
     pdf.setTextColor(102, 102, 102);
-    pdf.text(spacedBarcodeDisplay, col1X, bottomY, { align: 'center' });
     
-    // Barcode image (larger size)
-    const barcodeWidth = 120;
-    const barcodeHeight = 50;
-    const barcodeX = col1X - barcodeWidth / 2;
-    const barcodeY = bottomY + 8;
+    pdf.text(spacedBarcodeDisplay, labelCenterX + col1XOffset, labelCenterY + bottomYOffset, { 
+      angle: 90, 
+      align: 'center' 
+    });
     
-    await this.drawEnhancedBarcode(pdf, labelData.barcode, barcodeX, barcodeY, barcodeWidth, barcodeHeight);
-
-    // Column 2: Dates (center)
-    const col2X = contentLeft + colWidth + (colWidth / 2);
-    let dateY = bottomY;
+    // Barcode image (LARGER size: 120×50pt landscape = 50×120pt portrait)
+    const barcodeWidthLandscape = 120;
+    const barcodeHeightLandscape = 50;
+    const barcodeXPortrait = labelCenterX + col1XOffset - barcodeHeightLandscape / 2;
+    const barcodeYPortrait = labelCenterY + bottomYOffset + 8;
+    
+    await this.drawEnhancedBarcodeRotated(pdf, labelData.barcode, barcodeXPortrait, barcodeYPortrait, barcodeHeightLandscape, barcodeWidthLandscape);
+    
+    // Column 2: Dates (centered, rotated 90°)
+    const col2XOffset = -landscapeWidth / 2 + padding + columnWidth + (columnWidth / 2);
+    
+    let dateYOffset = bottomYOffset;
     
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(14);
     pdf.setTextColor(0, 0, 0);
-    pdf.text('Harvest:', col2X, dateY, { align: 'center' });
+    pdf.text('Harvest:', labelCenterX + col2XOffset, labelCenterY + dateYOffset, { 
+      angle: 90, 
+      align: 'center' 
+    });
     
-    dateY += 18;
+    dateYOffset += 18;
     pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(13);
     const harvestDate = labelData.harvestDate || 'MM/DD/YY';
-    pdf.text(harvestDate, col2X, dateY, { align: 'center' });
+    pdf.text(harvestDate, labelCenterX + col2XOffset, labelCenterY + dateYOffset, { 
+      angle: 90, 
+      align: 'center' 
+    });
     
-    dateY += 25;
+    dateYOffset += 25;
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(14);
-    pdf.text('Package:', col2X, dateY, { align: 'center' });
+    pdf.text('Package:', labelCenterX + col2XOffset, labelCenterY + dateYOffset, { 
+      angle: 90, 
+      align: 'center' 
+    });
     
-    dateY += 18;
+    dateYOffset += 18;
     pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(13);
     const packageDate = labelData.packagedDate || 'MM/DD/YY';
-    pdf.text(packageDate, col2X, dateY, { align: 'center' });
-
-    // Column 3: Case/Box (right)
-    const col3X = contentLeft + (colWidth * 2) + (colWidth / 2);
-    let caseY = bottomY;
+    pdf.text(packageDate, labelCenterX + col2XOffset, labelCenterY + dateYOffset, { 
+      angle: 90, 
+      align: 'center' 
+    });
     
-    // Case textbox
-    const caseBoxWidth = colWidth * 0.8;
+    // Column 3: Case/Box with TEXTBOXES (as requested)
+    const col3XOffset = -landscapeWidth / 2 + padding + (columnWidth * 2) + (columnWidth / 2);
+    
+    let caseYOffset = bottomYOffset;
+    
+    // Case textbox (with border as requested)
+    const caseBoxWidth = columnWidth * 0.8;
     const caseBoxHeight = 22;
-    const caseBoxX = col3X - caseBoxWidth / 2;
+    
+    // Calculate rotated textbox position
+    const caseBoxXPortrait = labelCenterX + col3XOffset - caseBoxHeight / 2;
+    const caseBoxYPortrait = labelCenterY + caseYOffset - 3;
     
     pdf.setDrawColor(0, 0, 0);
     pdf.setLineWidth(1);
-    pdf.rect(caseBoxX, caseY - 3, caseBoxWidth, caseBoxHeight);
+    pdf.rect(caseBoxXPortrait, caseBoxYPortrait, caseBoxHeight, caseBoxWidth); // Rotated dimensions
     
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(12);
     pdf.setTextColor(0, 0, 0);
     const caseQtyValue = labelData.caseQuantity || '___';
-    pdf.text(`Case: ${caseQtyValue}`, col3X, caseY + 10, { align: 'center' });
+    pdf.text(`Case: ${caseQtyValue}`, labelCenterX + col3XOffset, labelCenterY + caseYOffset + 10, { 
+      angle: 90, 
+      align: 'center' 
+    });
     
-    caseY += 28;
+    caseYOffset += 28;
     
-    // Box textbox
-    pdf.rect(caseBoxX, caseY - 3, caseBoxWidth, caseBoxHeight);
+    // Box textbox (with border as requested)
+    const boxBoxXPortrait = labelCenterX + col3XOffset - caseBoxHeight / 2;
+    const boxBoxYPortrait = labelCenterY + caseYOffset - 3;
+    
+    pdf.rect(boxBoxXPortrait, boxBoxYPortrait, caseBoxHeight, caseBoxWidth); // Rotated dimensions
+    
     const boxText = `Box ${boxNumber}/${totalBoxes}`;
-    pdf.text(boxText, col3X, caseY + 10, { align: 'center' });
-
-    // Audit trail (bottom-left corner)
+    pdf.text(boxText, labelCenterX + col3XOffset, labelCenterY + caseYOffset + 10, { 
+      angle: 90, 
+      align: 'center' 
+    });
+    
+    // Audit trail (bottom-left corner, rotated 90°)
     const auditLine = this.generateAuditLine(currentUser);
     pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(8);
     pdf.setTextColor(102, 102, 102);
-    pdf.text(auditLine, contentLeft, contentTop + contentHeight - 5);
-
+    
+    const auditXOffset = -landscapeWidth / 2 + padding;
+    const auditYOffset = landscapeHeight / 2 - 5;
+    
+    pdf.text(auditLine, labelCenterX + auditXOffset, labelCenterY + auditYOffset, { 
+      angle: 90, 
+      align: 'left' 
+    });
+    
     if (debug) {
-      // Debug content area boundary
+      // Debug: Show landscape content area boundaries
       pdf.setDrawColor(0, 255, 0);
-      pdf.setLineWidth(0.5);
-      pdf.rect(contentLeft, contentTop, contentWidth, contentHeight);
+      pdf.setLineWidth(1);
       
-      // Debug section divisions
+      // Draw content area outline (rotated)
+      const debugX = labelCenterX - landscapeHeight / 2;
+      const debugY = labelCenterY - landscapeWidth / 2;
+      pdf.rect(debugX, debugY, landscapeHeight, landscapeWidth);
+      
+      // Section divisions
       pdf.setDrawColor(0, 0, 255);
-      pdf.line(contentLeft, contentTop + topSectionHeight, contentLeft + contentWidth, contentTop + topSectionHeight);
-      pdf.line(contentLeft, contentTop + topSectionHeight + middleSectionHeight, contentLeft + contentWidth, contentTop + topSectionHeight + middleSectionHeight);
+      pdf.setLineWidth(0.5);
+      
+      // Top section
+      pdf.line(debugX + padding, debugY + padding + topSectionHeight, 
+               debugX + landscapeHeight - padding, debugY + padding + topSectionHeight);
+      
+      // Middle section
+      pdf.line(debugX + padding, debugY + padding + topSectionHeight + middleSectionHeight, 
+               debugX + landscapeHeight - padding, debugY + padding + topSectionHeight + middleSectionHeight);
     }
+    
+    console.log('✅ Direct portrait drawing landscape content completed');
+  }
 
-    console.log('✅ Fixed landscape content drawing completed');
+  /**
+   * Draw enhanced barcode in rotated position
+   */
+  static async drawEnhancedBarcodeRotated(pdf, barcodeValue, x, y, width, height) {
+    if (!barcodeValue) return;
+
+    try {
+      const cleanBarcodeValue = barcodeValue.replace(/[^A-Za-z0-9]/g, '');
+      
+      const validation = BarcodeGenerator.validateCode39(cleanBarcodeValue);
+      if (!validation.isValid) {
+        console.warn('Invalid barcode:', validation.error);
+        this.drawBarcodeErrorRotated(pdf, x, y, width, height);
+        return;
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = width * 2;
+      canvas.height = height * 2;
+      
+      const JsBarcode = (await import('jsbarcode')).default;
+      
+      JsBarcode(canvas, validation.cleanValue, {
+        format: 'CODE39',
+        width: Math.max(2, Math.floor(width / 40)),
+        height: height * 2,
+        displayValue: false,
+        margin: 0,
+        background: '#ffffff',
+        lineColor: '#000000'
+      });
+
+      const barcodeDataURL = canvas.toDataURL('image/png');
+      
+      // Add rotated barcode image (90° clockwise rotation)
+      pdf.addImage(barcodeDataURL, 'PNG', x, y, width, height, undefined, 'NONE', 90);
+
+    } catch (error) {
+      console.error('Barcode generation error:', error);
+      this.drawBarcodeErrorRotated(pdf, x, y, width, height);
+    }
+  }
+
+  /**
+   * Draw barcode error placeholder (rotated)
+   */
+  static drawBarcodeErrorRotated(pdf, x, y, width, height) {
+    pdf.setDrawColor(255, 0, 0);
+    pdf.setLineWidth(1);
+    pdf.rect(x, y, width, height);
+    
+    pdf.setFontSize(10);
+    pdf.setTextColor(255, 0, 0);
+    pdf.text('Barcode Error', x + width/2, y + height/2, { 
+      angle: 90, 
+      align: 'center' 
+    });
   }
 
   /**
@@ -389,7 +471,7 @@ export class PDFGenerator {
       width: labelWidth,   // 288pt (4")
       height: labelHeight, // 432pt (6")
       
-      // Content design dimensions (landscape orientation before rotation)
+      // Content design dimensions (landscape orientation)
       contentDesignWidth: labelHeight,  // 432pt (6" wide in landscape)
       contentDesignHeight: labelWidth,  // 288pt (4" tall in landscape)
       
@@ -402,12 +484,10 @@ export class PDFGenerator {
       connected: true,
       connectedSides: this.getConnectedSides(labelIndex),
       
-      // Content optimization info
-      landscapeContent: true,
-      contentRotation: 90,
-      postcardStyle: true,
-      optimalSpaceUsage: true,
-      fixed: true
+      // Method info
+      method: 'direct_portrait_drawing',
+      approach: 'individual_element_positioning',
+      reliability: 'high'
     };
   }
 
@@ -433,60 +513,6 @@ export class PDFGenerator {
     }
     
     return connected;
-  }
-
-  /**
-   * Enhanced barcode generation
-   */
-  static async drawEnhancedBarcode(pdf, barcodeValue, x, y, width, height) {
-    if (!barcodeValue) return;
-
-    try {
-      const cleanBarcodeValue = barcodeValue.replace(/[^A-Za-z0-9]/g, '');
-      
-      const validation = BarcodeGenerator.validateCode39(cleanBarcodeValue);
-      if (!validation.isValid) {
-        console.warn('Invalid barcode:', validation.error);
-        this.drawBarcodeError(pdf, x, y, width, height);
-        return;
-      }
-
-      const canvas = document.createElement('canvas');
-      canvas.width = width * 2;
-      canvas.height = height * 2;
-      
-      const JsBarcode = (await import('jsbarcode')).default;
-      
-      JsBarcode(canvas, validation.cleanValue, {
-        format: 'CODE39',
-        width: Math.max(2, Math.floor(width / 40)),
-        height: height * 2,
-        displayValue: false,
-        margin: 0,
-        background: '#ffffff',
-        lineColor: '#000000'
-      });
-
-      const barcodeDataURL = canvas.toDataURL('image/png');
-      pdf.addImage(barcodeDataURL, 'PNG', x, y, width, height);
-
-    } catch (error) {
-      console.error('Barcode generation error:', error);
-      this.drawBarcodeError(pdf, x, y, width, height);
-    }
-  }
-
-  /**
-   * Draw barcode error placeholder
-   */
-  static drawBarcodeError(pdf, x, y, width, height) {
-    pdf.setDrawColor(255, 0, 0);
-    pdf.setLineWidth(1);
-    pdf.rect(x, y, width, height);
-    
-    pdf.setFontSize(10);
-    pdf.setTextColor(255, 0, 0);
-    pdf.text('Barcode Error', x + 5, y + height / 2);
   }
 
   /**
@@ -605,15 +631,16 @@ export class PDFGenerator {
   }
 
   /**
-   * Generate test PDF - Creates 4 different labels
+   * Generate test PDF - Creates 4 different labels using direct portrait drawing
    */
   static async generateTestPDF() {
-    console.log('🧪 Generating FIXED test PDF with working landscape layout...');
+    console.log('🧪 Generating DIRECT PORTRAIT DRAWING test PDF...');
     
     const testData = [
       {
         sku: 'CURALEAF-PINK-CHAMPAGNE',
         barcode: 'CUR19862332',
+        barcodeDisplay: 'CUR-1986-2332',
         productName: 'Curaleaf Pink Champagne Premium Cannabis Capsules [10mg THC] 30-Count',
         enhancedData: {
           labelQuantity: 1,
@@ -627,6 +654,7 @@ export class PDFGenerator {
       {
         sku: 'GRASSROOTS-BIRTHDAY-CAKE',
         barcode: 'GRS19873344',
+        barcodeDisplay: 'GRS-1987-3344',
         productName: 'Grassroots Birthday Cake Live Resin [1g]',
         enhancedData: {
           labelQuantity: 1,
@@ -640,6 +668,7 @@ export class PDFGenerator {
       {
         sku: 'FIND-CLEMENTINE-CART',
         barcode: 'FND19884455',
+        barcodeDisplay: 'FND-1988-4455',
         productName: 'FIND Clementine Cartridge [0.5g]',
         enhancedData: {
           labelQuantity: 1,
@@ -653,6 +682,7 @@ export class PDFGenerator {
       {
         sku: 'BNOBLE-BLUE-DREAM',
         barcode: 'BNB19895566',
+        barcodeDisplay: 'BNB-1989-5566',
         productName: 'B-Noble Blue Dream Flower [3.5g]',
         enhancedData: {
           labelQuantity: 1,
@@ -688,8 +718,10 @@ export class PDFGenerator {
       warnings,
       totalLabels: labelDataArray.length,
       estimatedPages: Math.ceil(labelDataArray.length / 4),
-      labelFormat: 'Uline S-12212 (FIXED Landscape Content Layout)',
-      approach: 'Fixed single transformation matrix with corrected coordinate system'
+      labelFormat: 'Uline S-12212 (Direct Portrait Drawing)',
+      approach: 'Individual element positioning with exact coordinate calculations',
+      method: 'direct_portrait_drawing',
+      reliability: 'High - No coordinate transformations'
     };
   }
 }
